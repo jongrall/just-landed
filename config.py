@@ -1,4 +1,8 @@
+import os
+
 config = {}
+
+config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 
 ###############################################################################
 """External Services API Keys"""

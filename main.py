@@ -3,12 +3,13 @@ import sys
 import logging
 from zlib import adler32
 
-from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 
-from tracker import TrackHandler
+from lib import webapp2 as webapp
+from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
-template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+from config import config
+template_dir = config['template_dir']
 
 APP_VERSION = os.environ.get('CURRENT_VERSION_ID', '')
 SERVER_SOFTWARE = os.environ.get('SERVER_SOFTWARE', '')
@@ -17,51 +18,42 @@ template_context = {
     'version' : VERSION_CHKSM,
 }
 
-
-class BaseHandler(webapp.RequestHandler):
-
-    def handle_exception(self, exception, debug):
-        if isinstance(exception, TemplateDoesNotExist):
-            self.error(404)
-        else:
-            self.error(500)
+def handle_404(request, response, exception):
+    handle_exception(request, response, exception, code=404)
 
 
-    def error(self, code):
-        super(BaseHandler, self).error(code)
-        if code == 404:
-            path = os.path.join(template_dir, '404.html')
-            self.response.out.write(template.render(path, template_context))
-            return
-        elif code == 500:
-            path = os.path.join(template_dir, '500.html')
-            self.response.out.write(template.render(path, template_context))
-            return
+def handle_500(request, response, exception):
+    handle_exception(request, response, exception, code=500)
 
 
-class StaticHandler(BaseHandler):
-    def get(self, page_name):
-        template_name = page_name
+def handle_exception(request, response, exception, code=500):
+    logging.exception(exception)
+    path = os.path.join(template_dir, '%d.html' % code)
+    response.write(template.render(path, template_context))
+    response.set_status(code)
 
-        if not page_name or page_name.count('index'):
-            template_name = 'index.html'
-            template_path = os.path.join(template_dir, template_name)
-        else:
-            if not template_name.endswith('.html'):
-                template_name = template_name + '.html'
+################################################################################
+# WSGI APP CONFIGURATION
+################################################################################
 
-            template_path = os.path.join(template_dir, template_name)
+routes = [
+    PathPrefixRoute('/api/v1', [
+        HandlerPrefixRoute('api_handlers.',[
+        webapp.Route('/track/<flight_id:[^/]+>', 'TrackHandler'),
+        webapp.Route('/search/<flight_number:[^/]+>', 'SearchHandler'),
+        webapp.Route('/handle_alert', 'AlertHandler'),
+        webapp.Route('/untrack/<flight_id:[^/]+>', 'UntrackHandler'),
+        ]),
+    ]),
 
-        template_context['current_page'] = template_name
-        self.response.out.write(template.render(template_path, template_context))
-
-
-application = webapp.WSGIApplication([('/track/(.+)', TrackHandler),
-                                    ('/(.*)', StaticHandler)],
-                                     debug=False)
+    webapp.Route('/', 'web_handlers.StaticHandler'),
+]
+app = webapp.WSGIApplication(routes, debug=False)
+app.error_handlers[404] = handle_404
+app.error_handlers[500] = handle_500
 
 def main():
-    application.run()
+    app.run()
 
 if __name__ == "__main__":
     main()
