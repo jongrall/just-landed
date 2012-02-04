@@ -18,19 +18,18 @@ template_context = {
     'version' : VERSION_CHKSM,
 }
 
+def handle_exception(request, response, exception, code=500):
+    logging.exception(exception)
+    path = os.path.join(template_dir, '%d.html' % code)
+    response.write(template.render(path, template_context))
+    response.set_status(code)
+
 def handle_404(request, response, exception):
     handle_exception(request, response, exception, code=404)
 
 
 def handle_500(request, response, exception):
     handle_exception(request, response, exception, code=500)
-
-
-def handle_exception(request, response, exception, code=500):
-    logging.exception(exception)
-    path = os.path.join(template_dir, '%d.html' % code)
-    response.write(template.render(path, template_context))
-    response.set_status(code)
 
 ################################################################################
 # WSGI APP CONFIGURATION
