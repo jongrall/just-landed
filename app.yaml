@@ -1,0 +1,27 @@
+application: just-landed
+version: 1-0
+runtime: python27
+api_version: 1
+threadsafe: false
+
+inbound_services:
+- warmup
+
+builtins:
+- remote_api: on
+
+handlers:
+# robots.txt and favicon.ico
+- url: /(robots\.txt|favicon\.ico)
+  static_files: static/\1
+  expiration: "30d"
+  upload: static/(.*)
+
+# Static content directory
+- url: /static
+  expiration: "14d"
+  static_dir: static
+
+# Catch-all: everything else
+- url: /.*
+  script: main.py
