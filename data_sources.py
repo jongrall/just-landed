@@ -2,14 +2,16 @@
 
 __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed"
-__credits__ = ["Jon Grall", "Sean Nelson", "Graham Beer"]
-__license__ = "GPL"
-__maintainer__ = "Jon Grall"
 __email__ = "grall@alum.mit.edu"
 
-from config import config
-
+import logging
 import json
+
+from google.appengine.api import memcache
+
+from config import config
+from api_exceptions import *
+
 
 class FlightDataSource (object):
 
@@ -61,8 +63,25 @@ class FlightAwareSource (FlightDataSource):
         pass
 
     def lookup_flights(self, flight_number, **kwargs):
-        resp = self.conn.request_get('/FlightInfo', args={'ident':flight_number, 'howMany': 3})
-        return json.loads(resp['body'])
+        memcache_key = "%s-lookup_flights-%s" % (self.__class__.__name__,
+                                                flight_number)
+        flights = memcache.get(memcache_key)
+
+        if flights is not None:
+            return flights
+        else:
+            resp = self.conn.request_get('/FlightInfoEx',
+                                         args={'ident':flight_number,
+                                               'howMany': 15})
+            flights = json.loads(resp['body'])
+
+            if flights.get('error'):
+                raise FlightNotFoundException()
+            else:
+                flights = flights['FlightInfoExResult']['flights']
+            if not memcache.set(memcache_key, flights, 10800):
+                logging.error("Unable to cache lookup response!")
+            return flights
 
     def process_alert(self, alert_body):
         pass
