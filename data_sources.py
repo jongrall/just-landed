@@ -123,7 +123,7 @@ class FlightAwareSource (FlightDataSource):
         # TODO(jon): Cache entire flight info dict
 
         # Find the flight
-        flights = self.lookup_flights(flight_number, convert_icao=False)
+        flights = self.lookup_flights(flight_number)
         matching_flights = [f for f in flights if f['flightID'] == flight_id]
 
         if not matching_flights:
@@ -134,8 +134,18 @@ class FlightAwareSource (FlightDataSource):
         flight_info = matching_flights[0]
 
         # Get information about the airports
-        flight_info['origin'] = self.airport_info(flight_info['origin'])
-        flight_info['destination'] = self.airport_info(flight_info['destination'])
+        origin = flight_info['origin']
+        destination = flight_info['destination']
+
+        if utils.is_valid_iata(origin):
+            flight_info['origin'] = self.airport_info(iata_code=origin)
+        else:
+            flight_info['origin'] = self.airport_info(icao_code=origin)
+
+        if utils.is_valid_iata(destination):
+            flight_info['destination'] = self.airport_info(iata_code=destination)
+        else:
+            flight_info['destination'] = self.airport_info(icao_code=destination)
 
         # Get detailed terminal & gate information
         airline_info_key = "%s-airline_info-%s" % (self.__class__.__name__,
@@ -206,7 +216,7 @@ class FlightAwareSource (FlightDataSource):
         return flight_info
 
 
-    def lookup_flights(self, flight_number, convert_icao=True, **kwargs):
+    def lookup_flights(self, flight_number, **kwargs):
         """Looks up information about upcoming flights using a flight number."""
         # First check to see if the flight information is cached
         sanitized_f_num = utils.sanitize_flight_number(flight_number)
@@ -252,13 +262,9 @@ class FlightAwareSource (FlightDataSource):
                 # Re-insert formatted flight number
                 for f in flights:
                     f['flightNumber'] = flight_number
-
-                # Convert ICAO airport codes to IATA codes
-                if convert_icao:
-                    for f in flights:
-                        f['origin'] = utils.icao_to_iata(f['origin']) or f['origin']
-                        f['destination'] = utils.icao_to_iata(f['destination']) or \
-                                           f['destination']
+                    f['origin'] = utils.icao_to_iata(f['origin']) or f['origin']
+                    f['destination'] = utils.icao_to_iata(f['destination']) or \
+                                        f['destination']
 
             if not memcache.set(memcache_key, flights, 10800):
                 logging.error("Unable to cache lookup response!")
