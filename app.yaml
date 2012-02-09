@@ -22,6 +22,18 @@ handlers:
   expiration: "14d"
   static_dir: static
 
+# Admin
+- url: /admin/.*
+  script: $PYTHON_LIB/google/appengine/ext/admin
+  login: admin
+
 # Catch-all
 - url: /.*
   script: main.py
+
+admin_console:
+  pages:
+  - name: My Console
+    url: /admin/interactive
+  - name: My Memcache
+    url: /admin/memcache
