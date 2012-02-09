@@ -54,7 +54,7 @@ class TrackHandler(BaseAPIHandler):
             # TODO(jon): Lookup the driving time & distance to the airport
             pass
 
-        info = utils.sub_dict_strict(info, config['track_fields'])
+        info = utils.sub_dict_select(info, config['track_fields'])
         self.respond(info)
 
 class SearchHandler(BaseAPIHandler):

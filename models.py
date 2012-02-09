@@ -1,6 +1,7 @@
 import logging
 
 from google.appengine.ext.ndb import model, tasklets
+import utils
 
 ################################################################################
 """Airport Model Class"""
@@ -32,6 +33,6 @@ class Airport(model.Model):
         return dict(city=self.city,
                     icaoCode=self.key.string_id(),
                     iataCode=self.iata_code,
-                    latitude=self.location.lat,
-                    longitude=self.location.lon,
+                    latitude=utils.round_coord(self.location.lat),
+                    longitude=utils.round_coord(self.location.lon),
                     name=self.name)

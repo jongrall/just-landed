@@ -20,7 +20,7 @@ config['track_fields'] = [
     'lastUpdated',
     'latitude',
     'longitude',
-    'map_url',
+    'mapUrl',
     'origin',
     'scheduledDepartureTime',
     'scheduledFlightTime',

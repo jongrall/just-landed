@@ -105,6 +105,10 @@ class FlightAwareSource (FlightDataSource):
                         airport['icaoCode'] = icao_code
                         airport['iataCode'] = None
 
+                        # Round lat & long
+                        airport['latitude'] = utils.round_coord(airport['latitude'])
+                        airport['longitude'] = utils.round_coord(airport['longitude'])
+
                         if not memcache.set(memcache_key, airport):
                             logging.error("Unable to cache airport info!")
                         return airport
@@ -128,7 +132,7 @@ class FlightAwareSource (FlightDataSource):
 
         if not matching_flights:
             # Probably tracking an old flight
-            raise OldFlightException(flight_number=filght_number,
+            raise OldFlightException(flight_number=flight_number,
                                      flight_id=flight_id)
 
         flight_info = matching_flights[0]
@@ -198,12 +202,26 @@ class FlightAwareSource (FlightDataSource):
                 info = utils.sub_dict_strict(info, fields)
                 info = utils.map_dict_keys(info, self.api_key_mapping())
 
+                # Round latitude
+                info['latitude'] = utils.round_coord(info['latitude'])
+                info['longitude'] = utils.round_coord(info['longitude'])
+
+                # Convert waypoints
+                waypoints = info['waypoints'].split()
+                formatted_waypoints = []
+                for lat, lon in zip(waypoints[::2], waypoints[1::2]):
+                    formatted_waypoints.append(
+                        '%f,%f' % (utils.round_coord(float(lat)),
+                                  utils.round_coord(float(lon))))
+
+                info['waypoints'] = '|'.join(formatted_waypoints)
+
                 # Cache the result
                 if not memcache.set(inflight_info_key, info, 600):
                     logging.error("Unable to cache inflight info!")
                 flight_info.update(info)
 
-        utils.add_map_url(flight_info)
+        flight_info['mapUrl'] = utils.map_url(flight_info)
 
         # Keep only desired fields, move others
         flight_info['origin']['city'] = flight_info['originCity']
@@ -265,6 +283,10 @@ class FlightAwareSource (FlightDataSource):
                     f['origin'] = utils.icao_to_iata(f['origin']) or f['origin']
                     f['destination'] = utils.icao_to_iata(f['destination']) or \
                                         f['destination']
+                    # Convert flight times
+                    flight_time = f['scheduledFlightTime'].split(':')
+                    secs = (int(flight_time[0]) * 3600) + (int(flight_time[1]) * 60)
+                    f['scheduledFlightTime'] = secs
 
             if not memcache.set(memcache_key, flights, 10800):
                 logging.error("Unable to cache lookup response!")
