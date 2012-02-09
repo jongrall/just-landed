@@ -27,3 +27,11 @@ class Airport(model.Model):
     location = model.GeoPtProperty()
     name = model.StringProperty()
     timezone_offset = model.FloatProperty()
+
+    def dict_for_client(self):
+        return dict(city=self.city,
+                    icaoCode=self.key.string_id(),
+                    iataCode=self.iata_code,
+                    latitude=self.location.lat,
+                    longitude=self.location.lon,
+                    name=self.name)

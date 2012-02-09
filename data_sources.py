@@ -13,6 +13,7 @@ from config import config
 from api_exceptions import *
 
 import utils
+from models import Airport
 
 class FlightDataSource (object):
 
@@ -30,7 +31,7 @@ class FlightDataSource (object):
     def register_alert_endpoint(self, url, **kwargs):
         pass
 
-    def flight_info(self, flight_number, **kwargs):
+    def flight_info(self, flight_id, **kwargs):
         pass
 
     def lookup_flights(self, flight_number, **kwargs):
@@ -63,15 +64,150 @@ class FlightAwareSource (FlightDataSource):
             password=config['flightaware']['key'])
 
     def airport_info(self, icao_code="", iata_code=""):
-        pass
+        """Looks up information about an airport using its ICAO or IATA code"""
+        if utils.is_valid_iata(iata_code):
+            # Check the DB
+            qry = Airport.query(Airport.iata_code == iata_code)
+            airport = qry.get()
+            return (airport and airport.dict_for_client()) or None
+        elif utils.is_valid_icao(icao_code):
+            # Check the DB first
+            airport = Airport.get_by_id(icao_code)
+            if airport:
+                return airport.dict_for_client()
+            else:
+                # Check FlightAware for the AiportInfo
+                memcache_key = "%s-airport_info-%s" % (self.__class__.__name__,
+                                                       icao_code)
+                airport = memcache.get(memcache_key)
+                if airport is not None:
+                    return airport
+                else:
+                    resp = self.conn.request_get('/AirportInfo',
+                                                 args={'airportCode':icao_code})
+                    # Turn the JSON response into a dict
+                    result = json.loads(resp['body'])
+
+                    if result.get('error'):
+                        raise AirportNotFoundException(iata_code)
+                    else:
+                        airport = result['AirportInfoResult']
+
+                        # Filter out fields we don't want
+                        fields = config['flightaware']['airport_info_fields']
+                        airport = utils.sub_dict_strict(airport, fields)
+
+                        # Map field names
+                        airport = utils.map_dict_keys(airport,
+                                                      self.api_key_mapping())
+
+                        # Add ICAO & IATA code back in
+                        airport['icaoCode'] = icao_code
+                        airport['iataCode'] = None
+
+                        if not memcache.set(memcache_key, airport):
+                            logging.error("Unable to cache airport info!")
+                        return airport
+        else:
+            raise AirportNotFoundException(icao_code or iata_code)
 
     def register_alert_endpoint(self, url, **kwargs):
         pass
 
-    def flight_info(self, flight_number, **kwargs):
-        pass
+    def flight_info(self, flight_id, **kwargs):
+        flight_number = kwargs.get('flight_number')
 
-    def lookup_flights(self, flight_number, **kwargs):
+        if not flight_id or not flight_number:
+            raise FlightNotFoundException(flight_number)
+
+        # TODO(jon): Cache entire flight info dict
+
+        # Find the flight
+        flights = self.lookup_flights(flight_number, convert_icao=False)
+        matching_flights = [f for f in flights if f['flightID'] == flight_id]
+
+        if not matching_flights:
+            # Probably tracking an old flight
+            raise OldFlightException(flight_number=filght_number,
+                                     flight_id=flight_id)
+
+        flight_info = matching_flights[0]
+
+        # Get information about the airports
+        flight_info['origin'] = self.airport_info(flight_info['origin'])
+        flight_info['destination'] = self.airport_info(flight_info['destination'])
+
+        # Get detailed terminal & gate information
+        airline_info_key = "%s-airline_info-%s" % (self.__class__.__name__,
+                                                   flight_id)
+        airline_info = memcache.get(airline_info_key)
+
+        if airline_info is not None:
+            # Add in the airline info
+            flight_info.update(airline_info)
+        else:
+            resp = self.conn.request_get('/AirlineFlightInfo',
+                                         args={'faFlightID': flight_id})
+            # Turn the JSON response into a dict
+            result = json.loads(resp['body'])
+
+            if result.get('error'):
+                raise TerminalsUnknownException(flight_id)
+
+            # Filter & map the result
+            fields = config['flightaware']['airline_flight_info_fields']
+            info = result['AirlineFlightInfoResult']
+            info = utils.sub_dict_strict(info, fields)
+            info = utils.map_dict_keys(info, self.api_key_mapping())
+
+            if not memcache.set(airline_info_key, info):
+                logging.error("Unable to cache airline flight info!")
+            flight_info.update(info)
+
+        # If in flight, get flight path etc.
+        if utils.is_in_flight(flight_info):
+            inflight_info_key = "%s-inflight_info-%s" % (self.__class__.__name__,
+                                                        flight_number)
+            inflight_info = memcache.get(inflight_info_key)
+
+            if inflight_info is not None:
+                # Add in the inflight info
+                flight_info.update(inflight_info)
+            else:
+                resp = self.conn.request_get('/InFlightInfo',
+                                             args={'ident': flight_number})
+                # Turn the JSON response into a dict
+                result = json.loads(resp['body'])
+
+                if result.get('error'):
+                    raise MissingInflightInfoException(flight_number)
+
+                # Filter & map the result
+                fields = config['flightaware']['inflight_info_fields']
+                info = result['InFlightInfoResult']
+                info = utils.sub_dict_strict(info, fields)
+                info = utils.map_dict_keys(info, self.api_key_mapping())
+
+                # Cache the result
+                if not memcache.set(inflight_info_key, info, 600):
+                    logging.error("Unable to cache inflight info!")
+                flight_info.update(info)
+
+        utils.add_map_url(flight_info)
+
+        # Keep only desired fields, move others
+        flight_info['origin']['city'] = flight_info['originCity']
+        flight_info['origin']['name'] = flight_info['originName']
+        flight_info['origin']['terminal'] = flight_info['originTerminal']
+        flight_info['destination']['city'] = flight_info['destinationCity']
+        flight_info['destination']['name'] = flight_info['destinationName']
+        flight_info['destination']['terminal'] = flight_info['destinationTerminal']
+        flight_info['destination']['bag_claim'] = flight_info['bagClaim']
+        return flight_info
+
+
+    def lookup_flights(self, flight_number, convert_icao=True, **kwargs):
+        """Looks up information about upcoming flights using a flight number."""
         # First check to see if the flight information is cached
         sanitized_f_num = utils.sanitize_flight_number(flight_number)
         memcache_key = "%s-lookup_flights-%s" % (self.__class__.__name__,
@@ -94,13 +230,13 @@ class FlightAwareSource (FlightDataSource):
             flights = json.loads(resp['body'])
 
             if flights.get('error'):
-                raise FlightNotFoundException()
+                raise FlightNotFoundException(sanitized_f_num)
             else:
                 flights = flights['FlightInfoExResult']['flights']
 
                 # Keep a subset of the response fields
-                desired_fields = config['flightaware']['flight_info_fields']
-                flights = [utils.sub_dict_strict(f, desired_fields)
+                fields = config['flightaware']['flight_info_fields']
+                flights = [utils.sub_dict_strict(f, fields)
                            for f in flights]
 
                 # Map the response dict keys
@@ -113,12 +249,16 @@ class FlightAwareSource (FlightDataSource):
                 # Sort by departure date (earliest first)
                 flights.sort(key=lambda f: f['scheduledDepartureTime'])
 
-                # Convert ICAO airport codes to IATA codes
+                # Re-insert formatted flight number
                 for f in flights:
                     f['flightNumber'] = flight_number
-                    f['origin'] = utils.icao_to_iata(f['origin']) or f['origin']
-                    f['destination'] = utils.icao_to_iata(f['destination']) or \
-                                       f['destination']
+
+                # Convert ICAO airport codes to IATA codes
+                if convert_icao:
+                    for f in flights:
+                        f['origin'] = utils.icao_to_iata(f['origin']) or f['origin']
+                        f['destination'] = utils.icao_to_iata(f['destination']) or \
+                                           f['destination']
 
             if not memcache.set(memcache_key, flights, 10800):
                 logging.error("Unable to cache lookup response!")

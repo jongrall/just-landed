@@ -8,6 +8,25 @@ config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 """External Services API Keys"""
 ###############################################################################
 
+# Fields to send on /track
+config['track_fields'] = [
+    'actualArrivalTime',
+    'actualDepartureTime',
+    'destination',
+    'estimatedArrivalTime',
+    'flightID',
+    'flightNumber',
+    'heading',
+    'lastUpdated',
+    'latitude',
+    'longitude',
+    'map_url',
+    'origin',
+    'scheduledDepartureTime',
+    'scheduledFlightTime',
+    'waypoints'
+]
+
 # Flight Aware API keys & secrets
 config['flightaware'] = {
     'username' : 'airportpickupapp',
@@ -16,6 +35,7 @@ config['flightaware'] = {
         'actualarrivaltime' : 'actualArrivalTime',
         'actualdeparturetime' : 'actualDepartureTime',
         'aircrafttype' : 'aircraftType',
+        'bag_claim' : 'bagClaim',
         'estimatedarrivaltime' : 'estimatedArrivalTime',
         'faFlightID' : 'flightID',
         'filed_airspeed_kts' : 'filedAirspeed',
@@ -25,7 +45,22 @@ config['flightaware'] = {
         'filed_ete' : 'scheduledFlightTime',
         'filed_time' : 'lastUpdated',
         'ident' : 'flightNumber',
+        'location' : 'city',
+        'terminal_dest' : 'destinationTerminal',
+        'terminal_orig' : 'originTerminal',
+        'timestamp' : 'lastUpdated',
     },
+    'airport_info_fields' : [
+        'name',
+        'location',
+        'longitude',
+        'latitude',
+    ],
+    'airline_flight_info_fields' : [
+        'terminal_orig',
+        'terminal_dest',
+        'bag_claim',
+    ],
     'flight_info_fields' : [
         'actualarrivaltime',
         'actualdeparturetime',
@@ -41,6 +76,13 @@ config['flightaware'] = {
         'origin',
         'originCity',
         'originName'
+    ],
+    'inflight_info_fields' : [
+        'timestamp',
+        'longitude',
+        'latitude',
+        'heading',
+        'waypoints',
     ],
 }
 

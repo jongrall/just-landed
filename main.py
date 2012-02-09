@@ -14,7 +14,7 @@ def handle_500(request, response, exception):
 routes = [
     PathPrefixRoute('/api/v1', [
         HandlerPrefixRoute('api_handlers.',[
-        webapp.Route('/track/<flight_id:[^/]+>', 'TrackHandler'),
+        webapp.Route('/track/<flight_number>/<flight_id:[^/]+>', 'TrackHandler'),
         webapp.Route('/search/<flight_number:[^/]+>', 'SearchHandler'),
         webapp.Route('/handle_alert', 'AlertHandler'),
         webapp.Route('/untrack/<flight_id:[^/]+>', 'UntrackHandler'),
