@@ -24,7 +24,6 @@ config['track_fields'] = [
     'origin',
     'scheduledDepartureTime',
     'scheduledFlightTime',
-    'waypoints'
 ]
 
 # Flight Aware API keys & secrets

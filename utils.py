@@ -82,12 +82,12 @@ def map_url(flight_info):
             size='600x400',
             maptype='terrain',
             markers=[
-                'icon:%s%%26shadow:false|%f,%f' % (
+                'icon:%s|shadow:false|%f,%f' % (
                   origin_icon_url,
                   flight_info['origin']['latitude'],
                   flight_info['origin']['longitude'],
                 ),
-                'icon:%s%%26shadow:false|%f,%f' % (
+                'icon:%s|shadow:false|%f,%f' % (
                   dest_icon_url,
                   flight_info['destination']['latitude'],
                   flight_info['destination']['longitude'],
@@ -115,14 +115,14 @@ def map_url(flight_info):
             flight_longitude = flight_info['origin']['longitude']
 
         params['markers'] = [
-            'icon:%s%%26shadow:false%%7C%f,%f' % (
+            'icon:%s|shadow:false|%f,%f' % (
             flight_icon_url,
             flight_latitude,
             flight_longitude,)] + params['markers']
 
         # Draw the path if the plane is in flight
         if is_in_flight(flight_info):
-            params['path'] = 'color:0x0000ff|weight:1|%s' % flight_info['waypoints']
+            params['path'] = 'color:0x0000ff|weight:3|%s' % flight_info['waypoints']
 
         qry_parts = []
 

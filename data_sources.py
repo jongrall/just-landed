@@ -214,6 +214,14 @@ class FlightAwareSource (FlightDataSource):
                         '%f,%f' % (utils.round_coord(float(lat)),
                                   utils.round_coord(float(lon))))
 
+                # Reduce the number of waypoints
+                if len(formatted_waypoints) > 10:
+                    if len(formatted_waypoints) % 2 == 0:
+                        formatted_waypoints = (formatted_waypoints[0] +
+                                                formatted_waypoints[1::2])
+                    else:
+                        formatted_waypoints = formatted_waypoints[::2]
+
                 info['waypoints'] = '|'.join(formatted_waypoints)
 
                 # Cache the result
