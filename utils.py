@@ -39,8 +39,8 @@ FLIGHT_NUMBER_RE = re.compile('\A[A-Z0-9]{2}[A-Z]{0,1}[0-9]{1,4}[A-Z]{0,1}\Z')
 
 # Static map urls
 map_base_url = 'http://maps.googleapis.com/maps/api/staticmap'
-dest_icon_url = 'http://www.getjustlanded.com/static/dest_icon.png'
-origin_icon_url = 'http://www.getjustlanded.com/static/orig_icon.png'
+dest_icon_url = 'http://www.getjustlanded.com/static/images/dest_icon.png'
+origin_icon_url = 'http://www.getjustlanded.com/static/images/orig_icon.png'
 
 def valid_flight_number(f_num):
     f_num = f_num.upper().replace(' ', '')
@@ -99,17 +99,17 @@ def map_url(flight_info):
         # Add the marker for the plane's location
         flight_latitude = 0.0
         flight_longitude = 0.0
-        flight_icon_url = 'http://www.getjustlanded.com/static/flight0.png'
+        flight_icon_url = 'http://www.getjustlanded.com/static/images/flight0.png'
 
         if is_in_flight(flight_info):
             flight_latitude = flight_info['latitude']
             flight_longitude = flight_info['longitude']
-            flight_icon_url = ('http://www.getjustlanded.com/static/flight%s.png'
+            flight_icon_url = ('http://www.getjustlanded.com/static/images/flight%s.png'
                                 % int(1.5 * round(flight_info['heading']/1.5, -1)))
         elif has_landed(flight_info):
             flight_latitude = flight_info['destination']['latitude']
             flight_longitude = flight_info['destination']['longitude']
-            flight_icon_url = 'http://www.getjustlanded.com/static/flight180.png'
+            flight_icon_url = 'http://www.getjustlanded.com/static/images/flight180.png'
         else:
             flight_latitude = flight_info['origin']['latitude']
             flight_longitude = flight_info['origin']['longitude']
