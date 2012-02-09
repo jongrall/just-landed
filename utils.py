@@ -114,12 +114,11 @@ def map_url(flight_info):
             flight_latitude = flight_info['origin']['latitude']
             flight_longitude = flight_info['origin']['longitude']
 
-        params['markers'].append(
+        params['markers'] = [
             'icon:%s%%26shadow:false%%7C%f,%f' % (
             flight_icon_url,
             flight_latitude,
-            flight_longitude,)
-            )
+            flight_longitude,)].params['markers']
 
         # Draw the path if the plane is in flight
         if is_in_flight(flight_info):
