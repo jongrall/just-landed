@@ -4,15 +4,15 @@ config = {}
 
 config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 
-###############################################################################
-"""External Services API Keys"""
-###############################################################################
+# Buffer in seconds within which a flight is said to be "on time"
+config['on_time_buffer'] = 900
 
 # Fields to send on /track
 config['track_fields'] = [
     'actualArrivalTime',
     'actualDepartureTime',
     'destination',
+    'detailedStatus',
     'estimatedArrivalTime',
     'flightID',
     'flightNumber',
@@ -24,10 +24,19 @@ config['track_fields'] = [
     'origin',
     'scheduledDepartureTime',
     'scheduledFlightTime',
+    'status',
 ]
+
+
+###############################################################################
+"""External Services API Keys"""
+###############################################################################
 
 # Flight Aware API keys & secrets
 config['flightaware'] = {
+    'inflight_info_cache_time' : 600,
+    'flight_path_cache_time' : 600,
+    'flight_info_cache_time' : 10800,
     'username' : 'airportpickupapp',
     'key' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
     'key_mapping' : {
@@ -67,6 +76,7 @@ config['flightaware'] = {
         'destinationCity',
         'destinationName',
         'estimatedarrivaltime',
+        'diverted',
         'faFlightID',
         'filed_departuretime',
         'filed_ete',
@@ -82,6 +92,10 @@ config['flightaware'] = {
         'latitude',
         'heading',
         'waypoints',
+    ],
+    'historical_flight_path_fields' : [
+        'latitude',
+        'longitude',
     ],
 }
 

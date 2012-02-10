@@ -215,21 +215,55 @@ class FlightAwareSource (FlightDataSource):
                                   utils.round_coord(float(lon))))
 
                 # Reduce the number of waypoints
-                if len(formatted_waypoints) > 10:
-                    if len(formatted_waypoints) % 2 == 0:
-                        formatted_waypoints = (formatted_waypoints[0] +
-                                                formatted_waypoints[1::2])
-                    else:
-                        formatted_waypoints = formatted_waypoints[::2]
-
+                formatted_waypoints = utils.sample_waypoints(formatted_waypoints)
                 info['waypoints'] = '|'.join(formatted_waypoints)
 
                 # Cache the result
-                if not memcache.set(inflight_info_key, info, 600):
+                if not memcache.set(inflight_info_key, info,
+                            config['flightaware']['inflight_info_cache_time']):
                     logging.error("Unable to cache inflight info!")
                 flight_info.update(info)
 
+            # Get historical flight path
+            flight_path_key = "%s-historical_flight_track-%s" % (self.__class__.__name__,
+                                                                 flight_id)
+            flight_path = memcache.get(flight_path_key)
+
+            if flight_path is not None:
+                # Add in the flight path
+                flight_info.update(flight_path)
+            else:
+                resp = self.conn.request_get('/GetHistoricalTrack',
+                                             args={'faFlightID': flight_id})
+                # Turn the JSON response into a dict
+                result = json.loads(resp['body'])
+
+                if result.get('error'):
+                    raise MissingFlightPathException(flight_id)
+
+                # Filter & map the result
+                fields = config['flightaware']['inflight_info_fields']
+                path_info = result['GetHistoricalTrackResult']['data']
+                points = []
+                for p in path_info:
+                    points.append(
+                        '%f,%f' % (utils.round_coord(p['latitude']),
+                        utils.round_coord(p['longitude']))
+                    )
+
+                # Reduce the number of path points
+                points = utils.sample_waypoints(points)
+                path_info = {'flightPath': '|'.join(points)}
+                flight_info.update(path_info)
+
+                # Cache the result
+                if not memcache.set(flight_path_key, path_info,
+                            config['flightaware']['flight_path_cache_time']):
+                    logging.error("Unable to cache flight path info!")
+
         flight_info['mapUrl'] = utils.map_url(flight_info)
+        flight_info['status'] = utils.flight_status(flight_info)
+        flight_info['detailedStatus'] = utils.detailed_status(flight_info)
 
         # Keep only desired fields, move others
         flight_info['origin']['city'] = flight_info['originCity']
@@ -296,7 +330,8 @@ class FlightAwareSource (FlightDataSource):
                     secs = (int(flight_time[0]) * 3600) + (int(flight_time[1]) * 60)
                     f['scheduledFlightTime'] = secs
 
-            if not memcache.set(memcache_key, flights, 10800):
+            if not memcache.set(memcache_key, flights,
+                                config['flightaware']['flight_info_cache_time']):
                 logging.error("Unable to cache lookup response!")
             return flights
 

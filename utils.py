@@ -2,8 +2,10 @@ import time
 import logging
 from datetime import tzinfo, timedelta, datetime
 import re
+import math
 
 import models
+from config import config
 
 def text_to_html(text):
     def reindent(line):
@@ -30,12 +32,43 @@ def map_dict_keys(somedict, mapping):
 def round_coord(lat_or_long, sf=6):
     return round(lat_or_long, sf)
 
+def sample_waypoints(coords, max_samples=30):
+    count = len(coords)
+
+    if count < max_samples:
+        return coords
+
+    new_coords = []
+    interval = int(math.ceil(count / float(max_samples)))
+
+    if count % interval == 1:
+        return coords[::interval]
+    else:
+        # 1 too many samples, but who cares
+        return coords[::interval] + [coords[-1]]
+
+class Enum(set):
+  """Solution for Enums
+
+  Usage:
+  Animals = Enum(["DOG", "CAT", "Horse"])
+  print Animals.DOG
+  """
+  def __getattr__(self, name):
+    if name in self:
+      return name
+    raise AttributeError
+
 ###############################################################################
 """Flight Utilities"""
 ###############################################################################
 
 # Flight number format is xx(a)n(n)(n)(n)(a)
 FLIGHT_NUMBER_RE = re.compile('\A[A-Z0-9]{2}[A-Z]{0,1}[0-9]{1,4}[A-Z]{0,1}\Z')
+
+# Flight status
+FLIGHT_STATES = Enum(['SCHEDULED', 'ON_TIME', 'DELAYED', 'CANCELED',
+                        'DIVERTED', 'LANDED', 'EARLY'])
 
 # Static map urls
 map_base_url = 'http://maps.googleapis.com/maps/api/staticmap'
@@ -122,7 +155,10 @@ def map_url(flight_info):
 
         # Draw the path if the plane is in flight
         if is_in_flight(flight_info):
-            params['path'] = 'color:0x0000ff|weight:3|%s' % flight_info['waypoints']
+            params['path'] = [
+                'color:0x0000ff|weight:3|%s' % flight_info['flightPath'],
+                #'color:0x555555|weight:3|%s' % flight_info['waypoints'],
+            ]
 
         qry_parts = []
 
@@ -157,9 +193,64 @@ def is_old_flight(flight):
     return ((arrival_timestamp > 0 and arrival_time < hour_ago) or
             est_arrival_time < hour_ago)
 
+def pretty_time_interval(num_secs):
+    num_secs = abs(num_secs)
+    days = int(math.floor(num_secs / 86400.0))
+    hours = int(math.floor((num_secs - days * 86400.0) / 3600.0))
+    minutes = int(math.floor((num_secs - days * 86400.0 - hours * 3600.0) / 60.0))
+
+    if days:
+        return '%d days %d hours %d minutes' % (days, hours, minutes)
+    elif hours:
+        return '%d hours %d minutes' % (hours, minutes)
+    elif minutes:
+        return '%d minutes' % minutes
+    else:
+        return '%d seconds' % num_secs
+
 def is_in_flight(flight):
     return (flight['actualDepartureTime'] > 0 and
             flight['actualArrivalTime'] == 0)
 
 def has_landed(flight):
     return flight['actualArrivalTime'] != 0
+
+def flight_status(flight):
+    if flight['actualDepartureTime'] == 0:
+        return FLIGHT_STATES.SCHEDULED
+    elif flight['diverted']:
+        return FLIGHT_STATES.DIVERTED
+    elif flight['actualDepartureTime'] == -1:
+        return FLIGHT_STATES.CANCELED
+    elif flight['actualArrivalTime'] > 0:
+        return FLIGHT_STATES.LANDED
+    else:
+        time_diff = (flight['estimatedArrivalTime'] -
+            (flight['scheduledDepartureTime'] + flight['scheduledFlightTime']))
+
+        time_buff = config['on_time_buffer']
+        if abs(time_diff) < time_buff:
+            return FLIGHT_STATES.ON_TIME
+        elif time_diff < 0:
+            return FLIGHT_STATES.EARLY
+        else:
+            return FLIGHT_STATES.DELAYED
+
+def detailed_status(flight):
+    status = flight_status(flight)
+
+    if status == FLIGHT_STATES.SCHEDULED:
+        interval = flight['scheduledDepartureTime'] - timestamp(datetime.utcnow())
+        return 'Departs in %s' % pretty_time_interval(interval)
+    elif status == FLIGHT_STATES.LANDED:
+        interval = timestamp(datetime.utcnow()) - flight['actualArrivalTime']
+        return 'Landed %s ago' % pretty_time_interval(interval)
+    else:
+        interval = (flight['estimatedArrivalTime'] -
+            (flight['scheduledDepartureTime'] + flight['scheduledFlightTime']))
+        if status == FLIGHT_STATES.EARLY:
+            return '%s early' % pretty_time_interval(interval)
+        elif status == FLIGHT_STATES.DELAYED:
+            return '%s late' % pretty_time_interval(interval)
+        else:
+            return ''

@@ -4,11 +4,19 @@ runtime: python27
 api_version: 1
 threadsafe: false
 
+builtins:
+- remote_api: on
+
 inbound_services:
 - warmup
 
-builtins:
-- remote_api: on
+# Generates a Workflows link in admin with graphviz state machine diagrams
+admin_console:
+  pages:
+  - name: Console
+    url: /gae-admin/interactive
+  - name: Memcache
+    url: /gae-admin/memcache
 
 handlers:
 # robots.txt and favicon.ico
@@ -22,18 +30,11 @@ handlers:
   expiration: "14d"
   static_dir: static
 
-# Admin
-- url: /admin/.*
+# Additional admin functionality
+- url: /gae-admin/.*
   script: $PYTHON_LIB/google/appengine/ext/admin
   login: admin
 
 # Catch-all
 - url: /.*
   script: main.py
-
-admin_console:
-  pages:
-  - name: My Console
-    url: /admin/interactive
-  - name: My Memcache
-    url: /admin/memcache
