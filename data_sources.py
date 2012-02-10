@@ -343,3 +343,72 @@ class FlightAwareSource (FlightDataSource):
 
     def delete_alert(self, alert_id):
         pass
+
+
+class DrivingTimeDataSource (object):
+
+    @classmethod
+    def base_url(cls):
+        pass
+
+    def driving_time(origin_lat, origin_lon, dest_lat, dest_lon):
+        pass
+
+
+class GoogleDistanceSource (DrivingTimeDataSource):
+
+    @classmethod
+    def base_url(cls):
+        return 'http://maps.googleapis.com/maps/api/distancematrix'
+
+    def __init__(self):
+        from lib.python_rest_client.restful_lib import Connection
+        self.conn = Connection(self.base_url(),
+            username=config['flightaware']['username'],
+            password=config['flightaware']['key'])
+
+    def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon):
+        driving_cache_key = '%s-driving_time-%f,%f,%f,%f' % (
+            self.__class__.__name__,
+            utils.round_coord(origin_lat, sf=2),
+            utils.round_coord(origin_lon, sf=2),
+            utils.round_coord(dest_lat, sf=2),
+            utils.round_coord(dest_lon, sf=2),
+        )
+
+        time = memcache.get(driving_cache_key)
+
+        if time is not None:
+            return time
+        else:
+            params = dict(
+                origins='%f,%f' % (origin_lat, origin_lon),
+                destinations='%f,%f' % (dest_lat, dest_lon),
+                sensor='true',
+                mode='driving',
+                units='imperial',
+            )
+            resp = self.conn.request_get('/json', args=params)
+
+            # Turn the JSON response into a dict
+            result = json.loads(resp['body'])
+            status = result['status']
+
+            if status == 'OK':
+                if result['rows'] and result['rows'][0]['elements']:
+                    time = result['rows'][0]['elements'][0]['duration']['value']
+                    if not memcache.set(driving_cache_key, time):
+                        logging.error("Unable to cache driving time!")
+                    return time
+                else:
+                    raise UnknownDrivingTimeException(origin_lat, origin_lon,
+                                                      dest_lat, dest_lon)
+            elif status == 'REQUEST_DENIED':
+                raise DrivingDistanceDeniedException(origin_lat, origin_lon,
+                                                     dest_lat, dest_lon)
+            elif status == 'OVER_QUERY_LIMIT':
+                raise DrivingAPIQuotaException()
+            else:
+                raise UnknownDrivingTimeException(origin_lat, origin_lon,
+                                                  dest_lat, dest_lon)
+

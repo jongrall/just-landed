@@ -4,8 +4,12 @@ from datetime import tzinfo, timedelta, datetime
 import re
 import math
 
+
 import models
 from config import config
+
+EARTH_RADIUS = 6378135
+METERS_IN_MILE = 1609.344
 
 def text_to_html(text):
     def reindent(line):
@@ -31,6 +35,17 @@ def map_dict_keys(somedict, mapping):
 
 def round_coord(lat_or_long, sf=6):
     return round(lat_or_long, sf)
+
+def distance(p1lat, p1lon, p2lat, p2lon):
+  """Calculates the great circle distance between two points (law of cosines).
+
+  Returns:
+    The 2D great-circle distance between the two given points, in meters.
+  """
+  p1lat, p1lon = math.radians(p1lat), math.radians(p1lon)
+  p2lat, p2lon = math.radians(p2lat), math.radians(p2lon)
+  return EARTH_RADIUS * math.acos(math.sin(p1lat) * math.sin(p2lat) +
+      math.cos(p1lat) * math.cos(p2lat) * math.cos(p2lon - p1lon))
 
 def sample_waypoints(coords, max_samples=30):
     count = len(coords)
@@ -58,6 +73,13 @@ class Enum(set):
     if name in self:
       return name
     raise AttributeError
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 ###############################################################################
 """Flight Utilities"""
@@ -198,15 +220,30 @@ def pretty_time_interval(num_secs):
     days = int(math.floor(num_secs / 86400.0))
     hours = int(math.floor((num_secs - days * 86400.0) / 3600.0))
     minutes = int(math.floor((num_secs - days * 86400.0 - hours * 3600.0) / 60.0))
+    pretty = []
 
-    if days:
-        return '%d days %d hours %d minutes' % (days, hours, minutes)
-    elif hours:
-        return '%d hours %d minutes' % (hours, minutes)
-    elif minutes:
-        return '%d minutes' % minutes
+    if days > 0:
+        if days > 1:
+            pretty.append('%d days' % days)
+        else:
+            pretty.append('1 day')
+    if hours > 0:
+        if hours > 1:
+            pretty.append('%d hours' % hours)
+        else:
+            pretty.append('1 hour')
+    if minutes > 0:
+        if minutes > 1:
+            pretty.append('%d minutes' % minutes)
+        else:
+            pretty.append('1 minute')
+    if not pretty:
+        if num_secs > 1:
+            return '%d seconds' % num_secs
+        else:
+            return '1 second'
     else:
-        return '%d seconds' % num_secs
+        return ' '.join(pretty)
 
 def is_in_flight(flight):
     return (flight['actualDepartureTime'] > 0 and
@@ -254,3 +291,32 @@ def detailed_status(flight):
             return '%s late' % pretty_time_interval(interval)
         else:
             return ''
+
+def leave_for_airport(flight, driving_time):
+    now = timestamp(datetime.utcnow())
+    time_diff = flight['estimatedArrivalTime'] - (now + driving_time)
+    if time_diff > 0:
+        return dict(
+            leaveForAirportTime=now + time_diff,
+            leaveForAirportRecommendation='Leave for %s in %s' % (
+                flight['destination'].get('iataCode') or
+                flight['destination'].get('icaoCode'),
+                pretty_time_interval(time_diff)
+            )
+        )
+    else:
+        return dict(
+            leaveForAirportTime=now + time_diff,
+            leaveForAirportRecommendation="Leave for %s now!" % (
+                flight['destination'].get('iataCode') or
+                flight['destination'].get('icaoCode'),
+        ))
+
+def too_close_or_far(orig_lat, orig_lon, dest_lat, dest_lon):
+    approx_dist = distance(orig_lat, orig_lon, dest_lat, dest_lon)
+    approx_dist = approx_dist / METERS_IN_MILE # In miles
+
+    if config['close_to_airport'] < approx_dist < config['far_from_airport']:
+        return False
+    else:
+        return True

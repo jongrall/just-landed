@@ -3,8 +3,9 @@ import json
 
 from lib import webapp2 as webapp
 
-from data_sources import FlightAwareSource
+from data_sources import FlightAwareSource, GoogleDistanceSource
 source = FlightAwareSource()
+distance_source = GoogleDistanceSource()
 
 import utils
 from config import config
@@ -48,11 +49,22 @@ class TrackHandler(BaseAPIHandler):
             pass
 
         latitude = self.request.params.get('latitude')
+        latitude = utils.is_number(latitude) and float(latitude)
         longitude = self.request.params.get('longitude')
+        longitude = utils.is_number(longitude) and float(longitude)
+        dest_latitude = info['destination']['latitude']
+        dest_longitude = info['destination']['longitude']
 
-        if latitude and longitude:
-            # TODO(jon): Lookup the driving time & distance to the airport
-            pass
+        if (latitude and longitude and utils.is_in_flight(info) and
+            not utils.too_close_or_far(latitude,
+                                        longitude,
+                                        dest_latitude,
+                                        dest_longitude)):
+            driving_time = distance_source.driving_time(latitude,
+                                                        longitude,
+                                                        dest_latitude,
+                                                        dest_longitude)
+            info.update(utils.leave_for_airport(info, driving_time))
 
         info = utils.sub_dict_select(info, config['track_fields'])
         self.respond(info)

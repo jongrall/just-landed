@@ -7,6 +7,12 @@ config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 # Buffer in seconds within which a flight is said to be "on time"
 config['on_time_buffer'] = 900
 
+# Num. of miles to the airport below which driving estimate isn't needed
+config['close_to_airport'] = 1.0
+
+# Num. of miles to the airport above which driving estimate isn't needed
+config['far_from_airport'] = 200.0
+
 # Fields to send on /track
 config['track_fields'] = [
     'actualArrivalTime',
@@ -19,6 +25,8 @@ config['track_fields'] = [
     'heading',
     'lastUpdated',
     'latitude',
+    'leaveForAirportTime',
+    'leaveForAirportRecommendation',
     'longitude',
     'mapUrl',
     'origin',

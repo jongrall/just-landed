@@ -32,3 +32,20 @@ class OldFlightException (Exception):
     def __init__(self, flight_number='', flight_id=''):
         self.message = 'Old flight: %s %s' % (flight_number, flight_id)
         self.code = 410 # Gone
+
+class UnknownDrivingTimeException (Exception):
+    def __init__(self, orig_lat, orig_lon, dest_lat, dest_lon):
+        self.message = "Can't get driving distance (%f,%f) to (%f,%f)" % (
+                        orig_lat, orig_lon, dest_lat, dest_lon)
+        self.code = 404 # Not found
+
+class DrivingAPIQuotaException (Exception):
+    def __init__(self):
+        self.message = 'Exceeded driving API quota.'
+        self.code = 403 # Forbidden
+
+class DrivingDistanceDeniedException (Exception):
+    def __init__(self, orig_lat, orig_lon, dest_lat, dest_lon):
+        self.message = 'Driving distance request denied (%f,%f) to (%f,%f)' % (
+                        orig_lat, orig_lon, dest_lat, dest_lon)
+        self.code = 403 # Forbidden
