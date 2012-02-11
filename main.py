@@ -1,16 +1,23 @@
+#!/usr/bin/python
+
+"""main.py: Main WSGI app instantiation and configuration for Just Landed."""
+
+__author__ = "Jon Grall"
+__copyright__ = "Copyright 2012, Just Landed"
+__email__ = "grall@alum.mit.edu"
+
 import logging
 
+# Avoid using the webapp2 version hosted by Google - it changes often.
 from lib import webapp2 as webapp
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
-################################################################################
-# WSGI APP CONFIGURATION
-################################################################################
-
 def handle_500(request, response, exception):
+    """Custom 500 error handler that overrides the WSGI app default."""
     logging.exception(exception)
     response.set_status(500)
 
+# Configuration of supported routes
 routes = [
     PathPrefixRoute('/api/v1', [
         HandlerPrefixRoute('api_handlers.',[
@@ -23,7 +30,10 @@ routes = [
     webapp.Route('/', 'web_handlers.StaticHandler'),
 ]
 
+# Instantiate the app. IMPORTANT: set debug to False in production.
 app = webapp.WSGIApplication(routes, debug=True)
+
+# Register custom error handlers.
 app.error_handlers[404] = 'web_handlers.handle_404'
 app.error_handlers[500] = handle_500
 

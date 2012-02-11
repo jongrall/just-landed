@@ -1,5 +1,27 @@
 #!/usr/bin/python
 
+"""data_sources.py: This module defines all the data sources that power
+the Just Landed app.
+
+Flight data is pulled from either commercial APIs or from the datastore (in the
+case of static data such as airport codes and locations). Commercial flight API
+data sources are made to conform to a common FlightDataSource interface in
+anticipation of possibly switching to alternate datasources in the future.
+
+In addition to flight data, Just Landed estimates the user's driving time to the
+airport so that it can make recommendations about when you should leave to
+pick someone up at the terminal. This data also comes from commercial APIs, and
+again is made to conform to a common DrivingTimeDataSource in case we switch
+to new datasources in the future.
+
+In addition to conforming to common interfaces, datasource responses are also
+mapped to a predetermined JSON data format, and the JSON keys used are
+standardized in config.py so that switching to new data sources in the future
+will not break clients that are expecting a specific API from the JustLanded
+server.
+
+"""
+
 __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
@@ -7,64 +29,105 @@ __email__ = "grall@alum.mit.edu"
 import logging
 import json
 
+# We use memcache service to cache results from 3rd party APIs. This improves
+# performance and also reduces our bill :)
 from google.appengine.api import memcache
 
 from config import config
-from api_exceptions import *
-
-import utils
+from datasource_exceptions import *
 from models import Airport
+import utils
+
+###############################################################################
+"""Flight Data Sources"""
+###############################################################################
 
 class FlightDataSource (object):
-
-    @classmethod
-    def base_url(cls):
+    """A class that defines a FlightDataSource interface that flight data
+    sources should implement."""
+    @property
+    def base_url(self):
+        """Returns the base URL of the API used by the datasource."""
         pass
 
-    @classmethod
-    def api_key_mapping(cls):
-        pass
+    @property
+    def api_key_mapping(self):
+        """Returns a mapping of keys from the commercial API to keys used
+        by the Just Landed API which is in turn consumed by our clients. This
+        translation ensures that new datasources don't break clients.
 
-    def airport_info(self, icao_code="", iata_code=""):
+        """
         pass
 
     def register_alert_endpoint(self, url, **kwargs):
+        """Registers a Just Landed endpoint with the 3rd party API. This
+        endpoint will handle flight status callbacks e.g. by triggering push
+        notifications to clients.
+
+        """
         pass
 
     def flight_info(self, flight_id, **kwargs):
+        """Looks up and returns a specific Flight. The amount of information
+        returned depends on whether or not the flight is en route or whether it
+        is commercial, private or international.
+
+        """
         pass
 
     def lookup_flights(self, flight_number, **kwargs):
+        """Looks up flights by flight/tail number. This number is made up of
+        the airline code and the flight number e.g. 'CO 1101'. Returns a list of
+        flights matching this flight number. Flights returned should include
+        only flights that are no older than those that landed an hour or so ago.
+
+        The flights are sorted by departure time from earliest to latest.
+
+        """
         pass
 
     def process_alert(self, alert_body):
+        """Processes an incoming alert body posted to a Just Landed endpoint
+        by a 3rd party API callback and returns an instance of a FlightAlert
+        to the Just Landed application.
+
+        """
         pass
 
     def set_alert(self, **kwargs):
+        """Registers a callback with the 3rd party API for a specific flight."""
         pass
 
     def delete_alert(self, alert_id):
+        """Deletes a callback from the 3rd party API e.g. when a flight is no
+        longer being tracked by the user.
+
+        """
         pass
 
-
 class FlightAwareSource (FlightDataSource):
+    """Concrete subclass of FlightDataSource that pulls its data from the
+    commercial FlightAware FlightXML2 API:
 
-    @classmethod
-    def base_url(cls):
+    http://flightaware.com/commercial/flightxml/documentation2.rvt
+
+    """
+    @property
+    def base_url(self):
         return "http://flightxml.flightaware.com/json/FlightXML2/"
 
-    @classmethod
-    def api_key_mapping(cls):
+    @property
+    def api_key_mapping(self):
         return config['flightaware']['key_mapping']
 
     def __init__(self):
         from lib.python_rest_client.restful_lib import Connection
-        self.conn = Connection(self.base_url(),
+        self.conn = Connection(self.base_url,
             username=config['flightaware']['username'],
             password=config['flightaware']['key'])
 
     def airport_info(self, icao_code="", iata_code=""):
-        """Looks up information about an airport using its ICAO or IATA code"""
+        """Looks up information about an airport using its ICAO or IATA code."""
         if utils.is_valid_iata(iata_code):
             # Check the DB
             qry = Airport.query(Airport.iata_code == iata_code)
@@ -99,7 +162,7 @@ class FlightAwareSource (FlightDataSource):
 
                         # Map field names
                         airport = utils.map_dict_keys(airport,
-                                                      self.api_key_mapping())
+                                                      self.api_key_mapping)
 
                         # Add ICAO & IATA code back in
                         airport['icaoCode'] = icao_code
@@ -124,15 +187,15 @@ class FlightAwareSource (FlightDataSource):
         if not flight_id or not flight_number:
             raise FlightNotFoundException(flight_number)
 
-        # TODO(jon): Cache entire flight info dict
+        sanitized_f_num = utils.sanitize_flight_number(flight_number)
 
         # Find the flight
-        flights = self.lookup_flights(flight_number)
+        flights = self.lookup_flights(sanitized_f_num)
         matching_flights = [f for f in flights if f['flightID'] == flight_id]
 
         if not matching_flights:
             # Probably tracking an old flight
-            raise OldFlightException(flight_number=flight_number,
+            raise OldFlightException(flight_number=sanitized_f_num,
                                      flight_id=flight_id)
 
         flight_info = matching_flights[0]
@@ -172,7 +235,7 @@ class FlightAwareSource (FlightDataSource):
             fields = config['flightaware']['airline_flight_info_fields']
             info = result['AirlineFlightInfoResult']
             info = utils.sub_dict_strict(info, fields)
-            info = utils.map_dict_keys(info, self.api_key_mapping())
+            info = utils.map_dict_keys(info, self.api_key_mapping)
 
             if not memcache.set(airline_info_key, info):
                 logging.error("Unable to cache airline flight info!")
@@ -181,7 +244,7 @@ class FlightAwareSource (FlightDataSource):
         # If in flight, get flight path etc.
         if utils.is_in_flight(flight_info):
             inflight_info_key = "%s-inflight_info-%s" % (self.__class__.__name__,
-                                                        flight_number)
+                                                        sanitized_f_num)
             inflight_info = memcache.get(inflight_info_key)
 
             if inflight_info is not None:
@@ -189,18 +252,18 @@ class FlightAwareSource (FlightDataSource):
                 flight_info.update(inflight_info)
             else:
                 resp = self.conn.request_get('/InFlightInfo',
-                                             args={'ident': flight_number})
+                                             args={'ident': sanitized_f_num})
                 # Turn the JSON response into a dict
                 result = json.loads(resp['body'])
 
                 if result.get('error'):
-                    raise MissingInflightInfoException(flight_number)
+                    raise MissingInflightInfoException(sanitized_f_num)
 
                 # Filter & map the result
                 fields = config['flightaware']['inflight_info_fields']
                 info = result['InFlightInfoResult']
                 info = utils.sub_dict_strict(info, fields)
-                info = utils.map_dict_keys(info, self.api_key_mapping())
+                info = utils.map_dict_keys(info, self.api_key_mapping)
 
                 # Round latitude
                 info['latitude'] = utils.round_coord(info['latitude'])
@@ -266,19 +329,17 @@ class FlightAwareSource (FlightDataSource):
         flight_info['detailedStatus'] = utils.detailed_status(flight_info)
 
         # Keep only desired fields, move others
+        flight_info['flightNumber'] = sanitized_f_num
         flight_info['origin']['city'] = flight_info['originCity']
         flight_info['origin']['name'] = flight_info['originName']
         flight_info['origin']['terminal'] = flight_info['originTerminal']
         flight_info['destination']['city'] = flight_info['destinationCity']
         flight_info['destination']['name'] = flight_info['destinationName']
         flight_info['destination']['terminal'] = flight_info['destinationTerminal']
-        flight_info['destination']['bag_claim'] = flight_info['bagClaim']
+        flight_info['destination']['bagClaim'] = flight_info['bagClaim']
         return flight_info
 
-
     def lookup_flights(self, flight_number, **kwargs):
-        """Looks up information about upcoming flights using a flight number."""
-        # First check to see if the flight information is cached
         sanitized_f_num = utils.sanitize_flight_number(flight_number)
         memcache_key = "%s-lookup_flights-%s" % (self.__class__.__name__,
                                                 sanitized_f_num)
@@ -310,7 +371,7 @@ class FlightAwareSource (FlightDataSource):
                            for f in flights]
 
                 # Map the response dict keys
-                flights = [utils.map_dict_keys(f, self.api_key_mapping())
+                flights = [utils.map_dict_keys(f, self.api_key_mapping)
                            for f in flights]
 
                 # Filter out old flights
@@ -319,9 +380,9 @@ class FlightAwareSource (FlightDataSource):
                 # Sort by departure date (earliest first)
                 flights.sort(key=lambda f: f['scheduledDepartureTime'])
 
-                # Re-insert formatted flight number
+                # Try to convert to IATA airport codes & clean up flight time
                 for f in flights:
-                    f['flightNumber'] = flight_number
+                    f['flightNumber'] = sanitized_f_num
                     f['origin'] = utils.icao_to_iata(f['origin']) or f['origin']
                     f['destination'] = utils.icao_to_iata(f['destination']) or \
                                         f['destination']
@@ -344,26 +405,44 @@ class FlightAwareSource (FlightDataSource):
     def delete_alert(self, alert_id):
         pass
 
+###############################################################################
+"""Driving Time Data Sources"""
+###############################################################################
 
 class DrivingTimeDataSource (object):
+    """A class that defines a DrivingTimeDataSource interface that driving time
+    data sources should implement."""
 
-    @classmethod
-    def base_url(cls):
+    @property
+    def base_url(self):
+        """Returns the base URL of the API used by the datasource."""
         pass
 
     def driving_time(origin_lat, origin_lon, dest_lat, dest_lon):
+        """Returns an estimate of the driving time from (origin_lat, origin_lon)
+        to (dest_lat, dest_lon) or throws an exception if this estimate cannot
+        be calculated - either due to a problem with the datasource, or due
+        to there being no driving route between the two points.
+
+        The driving time returned is in seconds.
+
+        """
         pass
 
-
 class GoogleDistanceSource (DrivingTimeDataSource):
+    """Concrete subclass of DrivingTimeDataSource that pulls its data from the
+    commercial Google Distance Matrix API:
 
-    @classmethod
-    def base_url(cls):
+    http://code.google.com/apis/maps/documentation/distancematrix/
+
+    """
+    @property
+    def base_url(self):
         return 'http://maps.googleapis.com/maps/api/distancematrix'
 
     def __init__(self):
         from lib.python_rest_client.restful_lib import Connection
-        self.conn = Connection(self.base_url(),
+        self.conn = Connection(self.base_url,
             username=config['flightaware']['username'],
             password=config['flightaware']['key'])
 
@@ -391,16 +470,16 @@ class GoogleDistanceSource (DrivingTimeDataSource):
             resp = self.conn.request_get('/json', args=params)
 
             # Turn the JSON response into a dict
-            result = json.loads(resp['body'])
-            status = result['status']
+            result = json.loads(resp.get('body'))
+            status = result.get('status')
 
             if status == 'OK':
-                if result['rows'] and result['rows'][0]['elements']:
+                try:
                     time = result['rows'][0]['elements'][0]['duration']['value']
                     if not memcache.set(driving_cache_key, time):
                         logging.error("Unable to cache driving time!")
                     return time
-                else:
+                except Exception:
                     raise UnknownDrivingTimeException(origin_lat, origin_lon,
                                                       dest_lat, dest_lon)
             elif status == 'REQUEST_DENIED':
@@ -411,4 +490,3 @@ class GoogleDistanceSource (DrivingTimeDataSource):
             else:
                 raise UnknownDrivingTimeException(origin_lat, origin_lon,
                                                   dest_lat, dest_lon)
-

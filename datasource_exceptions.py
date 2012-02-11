@@ -1,3 +1,23 @@
+#!/usr/bin/python
+
+"""datasource_exceptions.py: This module defines all the exceptions thrown by
+the various data sources used by the Just Landed app.
+
+"""
+
+__author__ = "Jon Grall"
+__copyright__ = "Copyright 2012, Just Landed"
+__email__ = "grall@alum.mit.edu"
+
+###############################################################################
+"""Flight Data Source Exceptions"""
+###############################################################################
+
+class InvalidFlightNumberException (Exception):
+    def __init__(self, flight_number=''):
+        self.message = 'Invalid flight number: %s' % flight_number
+        self.code = 400 # Bad request
+
 class FlightNotFoundException (Exception):
     def __init__(self, flight=''):
         self.message = 'Flight not found: %s' % flight
@@ -18,11 +38,6 @@ class AirportNotFoundException (Exception):
         self.message = 'Airport not found: %s' % airport
         self.code = 404 # Not found
 
-class InvalidFlightNumber (Exception):
-    def __init__(self, flight_number=''):
-        self.message = 'Invalid flight number: %s' % flight_number
-        self.code = 400 # Bad request
-
 class MissingInflightInfoException (Exception):
     def __init__(self, flight_number=''):
         self.message = "Can't get in-flight info: %s" % flight_number
@@ -32,6 +47,10 @@ class OldFlightException (Exception):
     def __init__(self, flight_number='', flight_id=''):
         self.message = 'Old flight: %s %s' % (flight_number, flight_id)
         self.code = 410 # Gone
+
+###############################################################################
+"""Driving Time Data Source Exceptions"""
+###############################################################################
 
 class UnknownDrivingTimeException (Exception):
     def __init__(self, orig_lat, orig_lon, dest_lat, dest_lon):

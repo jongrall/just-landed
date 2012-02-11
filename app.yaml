@@ -10,7 +10,7 @@ builtins:
 inbound_services:
 - warmup
 
-# Generates a Workflows link in admin with graphviz state machine diagrams
+# Adds memcache and console admin pages to the admin dashboard
 admin_console:
   pages:
   - name: Console
@@ -35,6 +35,11 @@ handlers:
   script: $PYTHON_LIB/google/appengine/ext/admin
   login: admin
 
-# Catch-all
+# Admin methods that require admin credentials
+- url: /admin/.*
+  script: main.py
+  login: admin
+
+# Everything else
 - url: /.*
   script: main.py

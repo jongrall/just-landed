@@ -1,3 +1,11 @@
+#!/usr/bin/python
+
+"""utils.py: Utility methods used by the Just Landed app."""
+
+__author__ = "Jon Grall"
+__copyright__ = "Copyright 2012, Just Landed"
+__email__ = "grall@alum.mit.edu"
+
 import time
 import logging
 from datetime import tzinfo, timedelta, datetime
@@ -79,6 +87,8 @@ def is_number(s):
         float(s)
         return True
     except ValueError:
+        return False
+    except TypeError:
         return False
 
 ###############################################################################
@@ -315,6 +325,7 @@ def leave_for_airport(flight, driving_time):
 def too_close_or_far(orig_lat, orig_lon, dest_lat, dest_lon):
     approx_dist = distance(orig_lat, orig_lon, dest_lat, dest_lon)
     approx_dist = approx_dist / METERS_IN_MILE # In miles
+    logging.info('%f' % approx_dist)
 
     if config['close_to_airport'] < approx_dist < config['far_from_airport']:
         return False

@@ -1,17 +1,20 @@
+#!/usr/bin/python
+
+"""config.py: This module contains all settings for the Just Landed app."""
+
+__author__ = "Jon Grall"
+__copyright__ = "Copyright 2012, Just Landed"
+__email__ = "grall@alum.mit.edu"
+
 import os
 
 config = {}
 
+# The directory where templates are found
 config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 
-# Buffer in seconds within which a flight is said to be "on time"
-config['on_time_buffer'] = 900
-
-# Num. of miles to the airport below which driving estimate isn't needed
-config['close_to_airport'] = 1.0
-
-# Num. of miles to the airport above which driving estimate isn't needed
-config['far_from_airport'] = 200.0
+# Buffer within which a flight is said to be "on time". Buffer is in seconds.
+config['on_time_buffer'] = 600
 
 # Fields to send on /track
 config['track_fields'] = [
@@ -35,18 +38,22 @@ config['track_fields'] = [
     'status',
 ]
 
-
 ###############################################################################
-"""External Services API Keys"""
+"""Flight Data API Keys & Settings"""
 ###############################################################################
 
-# Flight Aware API keys & secrets
+# FlightAware settings
 config['flightaware'] = {
+    # Credentials
+    'username' : 'airportpickupapp',
+    'key' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
+
+    # Caching settings
     'inflight_info_cache_time' : 600,
     'flight_path_cache_time' : 600,
     'flight_info_cache_time' : 10800,
-    'username' : 'airportpickupapp',
-    'key' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
+
+    # Mapping of FlightAware API response keys to Just Landed API response keys
     'key_mapping' : {
         'actualarrivaltime' : 'actualArrivalTime',
         'actualdeparturetime' : 'actualDepartureTime',
@@ -66,17 +73,23 @@ config['flightaware'] = {
         'terminal_orig' : 'originTerminal',
         'timestamp' : 'lastUpdated',
     },
+
+    # Fields that should be retained from an AirportInfo response
     'airport_info_fields' : [
         'name',
         'location',
         'longitude',
         'latitude',
     ],
+
+    # Fields that should be retained from an AirlineFlightInfo response
     'airline_flight_info_fields' : [
         'terminal_orig',
         'terminal_dest',
         'bag_claim',
     ],
+
+    # Fields that should be retained from a FlightInfoEx response
     'flight_info_fields' : [
         'actualarrivaltime',
         'actualdeparturetime',
@@ -94,6 +107,8 @@ config['flightaware'] = {
         'originCity',
         'originName'
     ],
+
+    # Fields that should be retained from an InFlightInfo response
     'inflight_info_fields' : [
         'timestamp',
         'longitude',
@@ -101,21 +116,37 @@ config['flightaware'] = {
         'heading',
         'waypoints',
     ],
+
+    # Fields that should be retained from a GetHistoricalTrack response
     'historical_flight_path_fields' : [
         'latitude',
         'longitude',
     ],
 }
 
-# Urban Airship development and production API keys and secrets
+###############################################################################
+"""Driving Time Settings"""
+###############################################################################
+
+# Number of miles to the airport below which driving estimate isn't needed
+config['close_to_airport'] = 1.0
+
+# Number of miles to the airport above which driving estimate isn't needed
+config['far_from_airport'] = 200.0
+
+###############################################################################
+"""Push Notification Settings & API Keys"""
+###############################################################################
+
+# Urban Airship development and production API keys and secrets for Just Landed
 config['urbanairship'] = {
   'development': {
-    'key': '',
-    'secret': '',
+    'key': '9HBQrA0ISk2WzkJkWAst1g',
+    'secret': 'v3FyOzaAS22xZJqHiPyYgw',
   },
 
   'production': {
-    'key': '',
-    'secret': '',
+    'key': 'WZR0ix1mRCeTBmIaLUIi8g',
+    'secret': 'dPA6KgPSTzOVTe1NCzHQRw',
   },
 }
