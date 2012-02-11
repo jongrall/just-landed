@@ -28,19 +28,9 @@ class TerminalsUnknownException(Exception):
         self.message = 'Terminal info not found: %s' % flight_id
         self.code = 404 # Not found
 
-class MissingFlightPathException(Exception):
-    def __init__(self, flight_id=''):
-        self.message = 'Flight path not found: %s' % flight_id
-        self.code = 404 # Not found
-
 class AirportNotFoundException (Exception):
     def __init__(self, airport=''):
         self.message = 'Airport not found: %s' % airport
-        self.code = 404 # Not found
-
-class MissingInflightInfoException (Exception):
-    def __init__(self, flight_number=''):
-        self.message = "Can't get in-flight info: %s" % flight_number
         self.code = 404 # Not found
 
 class OldFlightException (Exception):

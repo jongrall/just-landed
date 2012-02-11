@@ -25,13 +25,9 @@ config['track_fields'] = [
     'estimatedArrivalTime',
     'flightID',
     'flightNumber',
-    'heading',
     'lastUpdated',
-    'latitude',
     'leaveForAirportTime',
     'leaveForAirportRecommendation',
-    'longitude',
-    'mapUrl',
     'origin',
     'scheduledDepartureTime',
     'scheduledFlightTime',
@@ -49,9 +45,7 @@ config['flightaware'] = {
     'key' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
 
     # Caching settings
-    'inflight_info_cache_time' : 600,
-    'flight_path_cache_time' : 600,
-    'flight_info_cache_time' : 10800,
+    'flight_info_cache_time' : 900,
 
     # Mapping of FlightAware API response keys to Just Landed API response keys
     'key_mapping' : {
@@ -106,21 +100,6 @@ config['flightaware'] = {
         'origin',
         'originCity',
         'originName'
-    ],
-
-    # Fields that should be retained from an InFlightInfo response
-    'inflight_info_fields' : [
-        'timestamp',
-        'longitude',
-        'latitude',
-        'heading',
-        'waypoints',
-    ],
-
-    # Fields that should be retained from a GetHistoricalTrack response
-    'historical_flight_path_fields' : [
-        'latitude',
-        'longitude',
     ],
 }
 
