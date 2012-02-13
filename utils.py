@@ -136,9 +136,9 @@ def is_old_flight(flight):
     arrival_timestamp = flight['actualArrivalTime']
     arrival_time = datetime.utcfromtimestamp(arrival_timestamp)
     est_arrival_time = datetime.utcfromtimestamp(flight['estimatedArrivalTime'])
-    hour_ago = datetime.utcnow() - timedelta(hours=1)
-    return ((arrival_timestamp > 0 and arrival_time < hour_ago) or
-            est_arrival_time < hour_ago)
+    hours_ago = datetime.utcnow() - timedelta(hours=config['flight_old_hours'])
+    return ((arrival_timestamp > 0 and arrival_time < hours_ago) or
+            est_arrival_time < hours_ago)
 
 def pretty_time_interval(num_secs):
     num_secs = abs(num_secs)
@@ -240,7 +240,6 @@ def leave_for_airport(flight, driving_time):
 def too_close_or_far(orig_lat, orig_lon, dest_lat, dest_lon):
     approx_dist = distance(orig_lat, orig_lon, dest_lat, dest_lon)
     approx_dist = approx_dist / METERS_IN_MILE # In miles
-    logging.info('%f' % approx_dist)
 
     if config['close_to_airport'] < approx_dist < config['far_from_airport']:
         return False

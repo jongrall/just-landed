@@ -16,6 +16,9 @@ config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 # Buffer within which a flight is said to be "on time". Buffer is in seconds.
 config['on_time_buffer'] = 600
 
+# Hours after a flight lands when it becomes "old"
+config['flight_old_hours'] = 2
+
 # Fields to send on /track
 config['track_fields'] = [
     'actualArrivalTime',
@@ -45,7 +48,8 @@ config['flightaware'] = {
     'key' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
 
     # Caching settings
-    'flight_info_cache_time' : 900,
+    'flight_lookup_cache_time' : 10800,
+    'flight_info_cache_time' : 600,
 
     # Mapping of FlightAware API response keys to Just Landed API response keys
     'key_mapping' : {

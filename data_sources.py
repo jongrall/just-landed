@@ -38,6 +38,8 @@ from datasource_exceptions import *
 from models import Airport
 import utils
 
+debug_cache = True
+
 ###############################################################################
 """Flight Data Sources"""
 ###############################################################################
@@ -144,8 +146,13 @@ class FlightAwareSource (FlightDataSource):
                                                        icao_code)
                 airport = memcache.get(memcache_key)
                 if airport is not None:
+                    if debug_cache:
+                        logging.info('AIRPORT INFO CACHE HIT')
+
                     return airport
                 else:
+                    if debug_cache:
+                        logging.info('AIRPORT INFO CACHE MISS')
                     resp = self.conn.request_get('/AirportInfo',
                                                  args={'airportCode':icao_code})
                     # Turn the JSON response into a dict
@@ -174,6 +181,9 @@ class FlightAwareSource (FlightDataSource):
 
                         if not memcache.set(memcache_key, airport):
                             logging.error("Unable to cache airport info!")
+                        if debug_cache:
+                            logging.info('AIRPORT INFO CACHE SET')
+
                         return airport
         else:
             raise AirportNotFoundException(icao_code or iata_code)
@@ -182,7 +192,19 @@ class FlightAwareSource (FlightDataSource):
         pass
 
     def flight_info(self, flight_id, **kwargs):
+        """Implements flight_info method of FlightDataSource and provides
+        additional kwargs:
+
+        - `no_cache` : Set to True to not use cache.
+        - `flight_number` : Required by FlightAware to lookup flights.
+        """
+        use_cache = not kwargs.get('no_cache')
         flight_number = kwargs.get('flight_number')
+        flight_info = None
+        flight_cache_key = '%s-flight_info-%s' % (self.__class__.__name__,
+                                                  flight_id)
+        airline_cache_key = "%s-airline_info-%s" % (self.__class__.__name__,
+                                                   flight_id)
 
         if not flight_id or not flight_number:
             raise FlightNotFoundException(flight_number)
@@ -190,15 +212,31 @@ class FlightAwareSource (FlightDataSource):
         sanitized_f_num = utils.sanitize_flight_number(flight_number)
 
         # Find the flight
-        flights = self.lookup_flights(sanitized_f_num)
-        matching_flights = [f for f in flights if f['flightID'] == flight_id]
+        if use_cache:
+            flight_info = memcache.get(flight_cache_key)
+            if flight_info and debug_cache:
+                logging.info('FLIGHT INFO CACHE HIT')
 
-        if not matching_flights:
-            # Probably tracking an old flight
+        if flight_info is None:
+            if use_cache and debug_cache:
+                logging.info('FLIGHT INFO CACHE MISS')
+
+            # Do filtered lookup without introducing 2nd layer of caching
+            flights = self.lookup_flights(sanitized_f_num,
+                                          find_flight_id=flight_id,
+                                          no_cache=True)
+            if len(flights):
+                flight_info = flights[0]
+                if use_cache and not memcache.set(flight_cache_key, flight_info,
+                    config['flightaware']['flight_info_cache_time']):
+                    logging.error("Unable to cache flight info lookup!")
+                if use_cache and debug_cache:
+                    logging.info('FLIGHT INFO CACHE SET')
+
+        if not flight_info or utils.is_old_flight(flight_info):
+            # Missing flight indicates probably tracking an old flight
             raise OldFlightException(flight_number=sanitized_f_num,
                                      flight_id=flight_id)
-
-        flight_info = matching_flights[0]
 
         # Get information about the airports
         origin = flight_info['origin']
@@ -215,14 +253,20 @@ class FlightAwareSource (FlightDataSource):
             flight_info['destination'] = self.airport_info(icao_code=destination)
 
         # Get detailed terminal & gate information
-        airline_info_key = "%s-airline_info-%s" % (self.__class__.__name__,
-                                                   flight_id)
-        airline_info = memcache.get(airline_info_key)
+        airline_info = None
+
+        if use_cache:
+            airline_info = memcache.get(airline_cache_key)
 
         if airline_info is not None:
+            if debug_cache:
+                logging.info('AIRLINE INFO CACHE HIT')
+
             # Add in the airline info
             flight_info.update(airline_info)
         else:
+            if use_cache and debug_cache:
+                logging.info('AIRLINE INFO CACHE MISS')
             resp = self.conn.request_get('/AirlineFlightInfo',
                                          args={'faFlightID': flight_id})
             # Turn the JSON response into a dict
@@ -237,8 +281,10 @@ class FlightAwareSource (FlightDataSource):
             info = utils.sub_dict_strict(info, fields)
             info = utils.map_dict_keys(info, self.api_key_mapping)
 
-            if not memcache.set(airline_info_key, info):
+            if use_cache and not memcache.set(airline_cache_key, info):
                 logging.error("Unable to cache airline flight info!")
+            if use_cache and debug_cache:
+                logging.info('AIRLINE INFO CACHE SET')
             flight_info.update(info)
 
         flight_info['status'] = utils.flight_status(flight_info)
@@ -256,20 +302,39 @@ class FlightAwareSource (FlightDataSource):
         return flight_info
 
     def lookup_flights(self, flight_number, **kwargs):
-        sanitized_f_num = utils.sanitize_flight_number(flight_number)
-        memcache_key = "%s-lookup_flights-%s" % (self.__class__.__name__,
-                                                sanitized_f_num)
-        flights = memcache.get(memcache_key)
+        """Concrete implementation of lookup_flights of FlightDataSource.
 
-        def stale(flights):
+        Supports two additional kwargs:
+        - `find_flight_id` : Filter results to look for a specific flight id.
+        - `no_cache` : Set to True to not use any caching.
+
+        """
+        find_flight_id = kwargs.get('find_flight_id')
+        use_cache = not kwargs.get('no_cache') # Cache by default
+        sanitized_f_num = utils.sanitize_flight_number(flight_number)
+        flights = None
+        lookup_cache_key = '%s-lookup_flights-%s' % (self.__class__.__name__,
+                                                    sanitized_f_num)
+
+        if use_cache:
+            flights = memcache.get(lookup_cache_key)
+
+        def cache_stale():
             for f in flights:
                 if utils.is_old_flight(f):
                     return True
             return False
 
-        if flights is not None and not stale(flights):
+        if use_cache and flights is not None and not cache_stale():
+            if debug_cache:
+                logging.info('LOOKUP CACHE HIT')
             return flights
         else:
+            if use_cache and debug_cache:
+                logging.info('LOOKUP CACHE MISS')
+            elif not use_cache and debug_cache:
+                logging.info('LOOKUP IGNORING CACHE')
+
             resp = self.conn.request_get('/FlightInfoEx',
                      args={'ident': sanitized_f_num,
                            'howMany': 15})
@@ -290,8 +355,13 @@ class FlightAwareSource (FlightDataSource):
                 flights = [utils.map_dict_keys(f, self.api_key_mapping)
                            for f in flights]
 
-                # Filter out old flights
-                flights = [f for f in flights if not utils.is_old_flight(f)]
+                # If we're looking for a specific flight, filter out everything
+                # except the flight we're looking for
+                if find_flight_id:
+                    flights = [f for f in flights if f['flightID'] == find_flight_id]
+                else:
+                    # Filter out old flights
+                    flights = [f for f in flights if not utils.is_old_flight(f)]
 
                 # Sort by departure date (earliest first)
                 flights.sort(key=lambda f: f['scheduledDepartureTime'])
@@ -307,9 +377,12 @@ class FlightAwareSource (FlightDataSource):
                     secs = (int(flight_time[0]) * 3600) + (int(flight_time[1]) * 60)
                     f['scheduledFlightTime'] = secs
 
-            if not memcache.set(memcache_key, flights,
-                                config['flightaware']['flight_info_cache_time']):
+            if use_cache and not memcache.set(lookup_cache_key, flights,
+                                config['flightaware']['flight_lookup_cache_time']):
                 logging.error("Unable to cache lookup response!")
+
+            if use_cache and debug_cache:
+                logging.info('LOOKUP CACHE SET')
             return flights
 
     def process_alert(self, alert_body):
@@ -334,7 +407,7 @@ class DrivingTimeDataSource (object):
         """Returns the base URL of the API used by the datasource."""
         pass
 
-    def driving_time(origin_lat, origin_lon, dest_lat, dest_lon):
+    def driving_time(origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
         """Returns an estimate of the driving time from (origin_lat, origin_lon)
         to (dest_lat, dest_lon) or throws an exception if this estimate cannot
         be calculated - either due to a problem with the datasource, or due
@@ -362,7 +435,15 @@ class GoogleDistanceSource (DrivingTimeDataSource):
             username=config['flightaware']['username'],
             password=config['flightaware']['key'])
 
-    def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon):
+    def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
+        """Implements driving_time method of DrivingTimeDataSource. Supports
+        additional kwargs:
+
+        - `no_cache` : Set to True to not use any caching.
+
+        """
+        use_cache = not kwargs.get('no_cache')
+        time = None
         driving_cache_key = '%s-driving_time-%f,%f,%f,%f' % (
             self.__class__.__name__,
             utils.round_coord(origin_lat, sf=2),
@@ -371,11 +452,16 @@ class GoogleDistanceSource (DrivingTimeDataSource):
             utils.round_coord(dest_lon, sf=2),
         )
 
-        time = memcache.get(driving_cache_key)
+        if use_cache:
+            time = memcache.get(driving_cache_key)
 
-        if time is not None:
+        if use_cache and time is not None:
+            if debug_cache:
+                logging.info('DRIVING CACHE HIT')
             return time
         else:
+            if debug_cache:
+                logging.info('DRIVING CACHE MISS')
             params = dict(
                 origins='%f,%f' % (origin_lat, origin_lon),
                 destinations='%f,%f' % (dest_lat, dest_lon),
@@ -392,8 +478,10 @@ class GoogleDistanceSource (DrivingTimeDataSource):
             if status == 'OK':
                 try:
                     time = result['rows'][0]['elements'][0]['duration']['value']
-                    if not memcache.set(driving_cache_key, time):
+                    if use_cache and not memcache.set(driving_cache_key, time):
                         logging.error("Unable to cache driving time!")
+                    if use_cache and debug_cache:
+                        logging.info('DRIVING CACHE SET')
                     return time
                 except Exception:
                     raise UnknownDrivingTimeException(origin_lat, origin_lon,
