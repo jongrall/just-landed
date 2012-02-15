@@ -49,7 +49,7 @@ config['flightaware'] = {
 
     # Caching settings
     'flight_lookup_cache_time' : 10800,
-    'flight_info_cache_time' : 600,
+    'flight_info_cache_time' : 600T,
 
     # Mapping of FlightAware API response keys to Just Landed API response keys
     'key_mapping' : {

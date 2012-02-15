@@ -84,8 +84,10 @@ class TrackHandler(BaseAPIHandler):
         info = source.flight_info(flight_id=flight_id,
                                   flight_number=flight_number)
 
-        push = self.request.params.get('push')
-        begin_track = self.request.params.get('begin_track')
+        push =  (utils.is_number(latitude) and
+                bool(int(self.request.params.get('push'))))
+        begin_track = (utils.is_number(latitude) and
+                        bool(int(self.request.params.get('begin_track'))))
 
         if push and begin_track:
             # TODO(jon): Register the client's UDID for push notifications
