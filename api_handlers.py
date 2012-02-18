@@ -51,10 +51,13 @@ class BaseAPIHandler(webapp.RequestHandler):
         for reading in the browser.
         """
         if debug or self.request.GET.get('debug'):
-            # Pretty print JSON
+            # Pretty print JSON to be read as HTML
+            self.response.content_type = 'text/html'
             formatted_resp = json.dumps(response_dict, sort_keys=True, indent=4)
             self.response.write(utils.text_to_html(formatted_resp))
         else:
+            # Set response content type to JSON
+            self.response.content_type = 'application/json'
             self.response.write(json.dumps(response_dict))
 
 class TrackHandler(BaseAPIHandler):
