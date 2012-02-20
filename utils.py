@@ -8,10 +8,9 @@ __email__ = "grall@alum.mit.edu"
 
 import time
 import logging
-from datetime import tzinfo, timedelta, datetime
+from datetime import datetime
 import re
 import math
-
 
 import models
 from config import config
@@ -83,10 +82,6 @@ def is_number(s):
 # Flight number format is xx(a)n(n)(n)(n)(a)
 FLIGHT_NUMBER_RE = re.compile('\A[A-Z0-9]{2}[A-Z]{0,1}[0-9]{1,4}[A-Z]{0,1}\Z')
 
-# Flight status
-FLIGHT_STATES = Enum(['SCHEDULED', 'ON_TIME', 'DELAYED', 'CANCELED',
-                        'DIVERTED', 'LANDED', 'EARLY'])
-
 def valid_flight_number(f_num):
     f_num = f_num.upper().replace(' ', '')
     matching_nums = FLIGHT_NUMBER_RE.findall(f_num)
@@ -132,14 +127,6 @@ def timestamp(date=None):
   assert isinstance(date, datetime), 'Expected a datetime object'
   return int(time.mktime(date.timetuple()))
 
-def is_old_flight(flight):
-    arrival_timestamp = flight['actualArrivalTime']
-    arrival_time = datetime.utcfromtimestamp(arrival_timestamp)
-    est_arrival_time = datetime.utcfromtimestamp(flight['estimatedArrivalTime'])
-    hours_ago = datetime.utcnow() - timedelta(hours=config['flight_old_hours'])
-    return ((arrival_timestamp > 0 and arrival_time < hours_ago) or
-            est_arrival_time < hours_ago)
-
 def pretty_time_interval(num_secs):
     num_secs = abs(num_secs)
     days = int(math.floor(num_secs / 86400.0))
@@ -169,73 +156,6 @@ def pretty_time_interval(num_secs):
             return '1 second'
     else:
         return ' '.join(pretty)
-
-def is_in_flight(flight):
-    return (flight['actualDepartureTime'] > 0 and
-            flight['actualArrivalTime'] == 0)
-
-def has_landed(flight):
-    return flight['actualArrivalTime'] != 0
-
-def flight_status(flight):
-    if flight['actualDepartureTime'] == 0:
-        return FLIGHT_STATES.SCHEDULED
-    elif flight['diverted']:
-        return FLIGHT_STATES.DIVERTED
-    elif flight['actualDepartureTime'] == -1:
-        return FLIGHT_STATES.CANCELED
-    elif flight['actualArrivalTime'] > 0:
-        return FLIGHT_STATES.LANDED
-    else:
-        time_diff = (flight['estimatedArrivalTime'] -
-            (flight['scheduledDepartureTime'] + flight['scheduledFlightTime']))
-
-        time_buff = config['on_time_buffer']
-        if abs(time_diff) < time_buff:
-            return FLIGHT_STATES.ON_TIME
-        elif time_diff < 0:
-            return FLIGHT_STATES.EARLY
-        else:
-            return FLIGHT_STATES.DELAYED
-
-def detailed_status(flight):
-    status = flight_status(flight)
-
-    if status == FLIGHT_STATES.SCHEDULED:
-        interval = flight['scheduledDepartureTime'] - timestamp(datetime.utcnow())
-        return 'Departs in %s' % pretty_time_interval(interval)
-    elif status == FLIGHT_STATES.LANDED:
-        interval = timestamp(datetime.utcnow()) - flight['actualArrivalTime']
-        return 'Landed %s ago' % pretty_time_interval(interval)
-    else:
-        interval = (flight['estimatedArrivalTime'] -
-            (flight['scheduledDepartureTime'] + flight['scheduledFlightTime']))
-        if status == FLIGHT_STATES.EARLY:
-            return '%s early' % pretty_time_interval(interval)
-        elif status == FLIGHT_STATES.DELAYED:
-            return '%s late' % pretty_time_interval(interval)
-        else:
-            return ''
-
-def leave_for_airport(flight, driving_time):
-    now = timestamp(datetime.utcnow())
-    time_diff = flight['estimatedArrivalTime'] - (now + driving_time)
-    if time_diff > 0:
-        return dict(
-            leaveForAirportTime=now + time_diff,
-            leaveForAirportRecommendation='Leave for %s in %s' % (
-                flight['destination'].get('iataCode') or
-                flight['destination'].get('icaoCode'),
-                pretty_time_interval(time_diff)
-            )
-        )
-    else:
-        return dict(
-            leaveForAirportTime=now + time_diff,
-            leaveForAirportRecommendation="Leave for %s now!" % (
-                flight['destination'].get('iataCode') or
-                flight['destination'].get('icaoCode'),
-        ))
 
 def too_close_or_far(orig_lat, orig_lon, dest_lat, dest_lon):
     approx_dist = distance(orig_lat, orig_lon, dest_lat, dest_lon)

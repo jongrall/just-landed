@@ -44,8 +44,9 @@ class BaseAPIHandler(webapp.RequestHandler):
             logging.exception(exception)
             self.response.set_status(500)
 
-    def respond(self, response_dict, debug=False):
-        """Takes a dictionary as input and responds to the client using JSON.
+    def respond(self, response_data, debug=False):
+        """Takes a dictionary or list as input and responds to the client using
+        JSON.
 
         If 'debug' is set to true, the output is nicely formatted and indented
         for reading in the browser.
@@ -53,12 +54,12 @@ class BaseAPIHandler(webapp.RequestHandler):
         if debug or self.request.GET.get('debug'):
             # Pretty print JSON to be read as HTML
             self.response.content_type = 'text/html'
-            formatted_resp = json.dumps(response_dict, sort_keys=True, indent=4)
+            formatted_resp = json.dumps(response_data, sort_keys=True, indent=4)
             self.response.write(utils.text_to_html(formatted_resp))
         else:
             # Set response content type to JSON
             self.response.content_type = 'application/json'
-            self.response.write(json.dumps(response_dict))
+            self.response.write(json.dumps(response_data))
 
 class TrackHandler(BaseAPIHandler):
     """Handles tracking a flight by flight number and id."""
@@ -84,26 +85,28 @@ class TrackHandler(BaseAPIHandler):
         if not utils.valid_flight_number(flight_number):
             raise InvalidFlightNumberException(flight_number)
 
-        info = source.flight_info(flight_id=flight_id,
-                                  flight_number=flight_number)
+        flight = source.flight_info(flight_id=flight_id,
+                                    flight_number=flight_number)
 
-        push =  (utils.is_number(latitude) and
+        latitude = self.request.params.get('latitude')
+        latitude = utils.is_number(latitude) and float(latitude)
+        longitude = self.request.params.get('longitude')
+        longitude = utils.is_number(longitude) and float(longitude)
+        dest_latitude = flight.destination.latitude
+        dest_longitude = flight.destination.longitude
+
+        push =  (latitude and
+                self.request.params.get('push') and
                 bool(int(self.request.params.get('push'))))
-        begin_track = (utils.is_number(latitude) and
+        begin_track = (latitude and
+                        self.request.params.get('begin_track') and
                         bool(int(self.request.params.get('begin_track'))))
 
         if push and begin_track:
             # TODO(jon): Register the client's UDID for push notifications
             pass
 
-        latitude = self.request.params.get('latitude')
-        latitude = utils.is_number(latitude) and float(latitude)
-        longitude = self.request.params.get('longitude')
-        longitude = utils.is_number(longitude) and float(longitude)
-        dest_latitude = info['destination']['latitude']
-        dest_longitude = info['destination']['longitude']
-
-        if (latitude and longitude and utils.is_in_flight(info) and
+        if (latitude and longitude and flight.is_in_flight and
             not utils.too_close_or_far(latitude,
                                         longitude,
                                         dest_latitude,
@@ -114,13 +117,13 @@ class TrackHandler(BaseAPIHandler):
                                                             longitude,
                                                             dest_latitude,
                                                             dest_longitude)
-                info.update(utils.leave_for_airport(info, driving_time))
+
+                flight.set_driving_time(driving_time)
             except (UnknownDrivingTimeException, DrivingDistanceDeniedException,
                     DrivingAPIQuotaException) as e:
                 logging.error(e.message)
 
-        info = utils.sub_dict_select(info, config['track_fields'])
-        self.respond(info)
+        self.respond(flight.dict_for_client())
 
 class SearchHandler(BaseAPIHandler):
     """Handles looking up a flight by flight number."""
@@ -136,7 +139,12 @@ class SearchHandler(BaseAPIHandler):
             raise InvalidFlightNumberException(flight_number)
 
         flights = source.lookup_flights(flight_number)
-        self.respond(flights)
+        flight_data = []
+
+        for f in flights:
+            flight_data.append(f.dict_for_client())
+
+        self.respond(flight_data)
 
 class UntrackHandler(BaseAPIHandler):
     """Handles untracking a specific flight. Usually called when a user is no

@@ -35,7 +35,7 @@ from google.appengine.api import memcache
 
 from config import config
 from datasource_exceptions import *
-from models import Airport
+from models import Airport, Origin, Destination, Flight
 import utils
 
 debug_cache = True
@@ -200,7 +200,7 @@ class FlightAwareSource (FlightDataSource):
         """
         use_cache = not kwargs.get('no_cache')
         flight_number = kwargs.get('flight_number')
-        flight_info = None
+        flight = None
         flight_cache_key = '%s-flight_info-%s' % (self.__class__.__name__,
                                                   flight_id)
         airline_cache_key = "%s-airline_info-%s" % (self.__class__.__name__,
@@ -213,44 +213,30 @@ class FlightAwareSource (FlightDataSource):
 
         # Find the flight
         if use_cache:
-            flight_info = memcache.get(flight_cache_key)
-            if flight_info and debug_cache:
-                logging.info('FLIGHT INFO CACHE HIT')
+            flight = memcache.get(flight_cache_key)
+            if flight and debug_cache:
+                logging.info('FLIGHT CACHE HIT')
 
-        if flight_info is None:
+        if flight is None:
             if use_cache and debug_cache:
-                logging.info('FLIGHT INFO CACHE MISS')
+                logging.info('FLIGHT CACHE MISS')
 
             # Do filtered lookup without introducing 2nd layer of caching
             flights = self.lookup_flights(sanitized_f_num,
                                           find_flight_id=flight_id,
                                           no_cache=True)
             if len(flights):
-                flight_info = flights[0]
-                if use_cache and not memcache.set(flight_cache_key, flight_info,
-                    config['flightaware']['flight_info_cache_time']):
-                    logging.error("Unable to cache flight info lookup!")
+                flight = flights[0]
+                if use_cache and not memcache.set(flight_cache_key, flight,
+                    config['flightaware']['flight_cache_time']):
+                    logging.error("Unable to cache flight lookup!")
                 if use_cache and debug_cache:
-                    logging.info('FLIGHT INFO CACHE SET')
+                    logging.info('FLIGHT CACHE SET')
 
-        if not flight_info or utils.is_old_flight(flight_info):
+        if not flight or flight.is_old_flight:
             # Missing flight indicates probably tracking an old flight
             raise OldFlightException(flight_number=sanitized_f_num,
                                      flight_id=flight_id)
-
-        # Get information about the airports
-        origin = flight_info['origin']
-        destination = flight_info['destination']
-
-        if utils.is_valid_iata(origin):
-            flight_info['origin'] = self.airport_info(iata_code=origin)
-        else:
-            flight_info['origin'] = self.airport_info(icao_code=origin)
-
-        if utils.is_valid_iata(destination):
-            flight_info['destination'] = self.airport_info(iata_code=destination)
-        else:
-            flight_info['destination'] = self.airport_info(icao_code=destination)
 
         # Get detailed terminal & gate information
         airline_info = None
@@ -261,9 +247,6 @@ class FlightAwareSource (FlightDataSource):
         if airline_info is not None:
             if debug_cache:
                 logging.info('AIRLINE INFO CACHE HIT')
-
-            # Add in the airline info
-            flight_info.update(airline_info)
         else:
             if use_cache and debug_cache:
                 logging.info('AIRLINE INFO CACHE MISS')
@@ -280,26 +263,19 @@ class FlightAwareSource (FlightDataSource):
             info = result['AirlineFlightInfoResult']
             info = utils.sub_dict_strict(info, fields)
             info = utils.map_dict_keys(info, self.api_key_mapping)
+            airline_info = info
 
             if use_cache and not memcache.set(airline_cache_key, info):
                 logging.error("Unable to cache airline flight info!")
             if use_cache and debug_cache:
                 logging.info('AIRLINE INFO CACHE SET')
-            flight_info.update(info)
 
-        flight_info['status'] = utils.flight_status(flight_info)
-        flight_info['detailedStatus'] = utils.detailed_status(flight_info)
+        # Add in the airline info
+        flight.origin.terminal = airline_info['originTerminal']
+        flight.destination.terminal = airline_info['destinationTerminal']
+        flight.destination.bag_claim = airline_info['bagClaim']
 
-        # Keep only desired fields, move others
-        flight_info['flightNumber'] = sanitized_f_num
-        flight_info['origin']['city'] = flight_info['originCity']
-        flight_info['origin']['name'] = flight_info['originName']
-        flight_info['origin']['terminal'] = flight_info['originTerminal']
-        flight_info['destination']['city'] = flight_info['destinationCity']
-        flight_info['destination']['name'] = flight_info['destinationName']
-        flight_info['destination']['terminal'] = flight_info['destinationTerminal']
-        flight_info['destination']['bagClaim'] = flight_info['bagClaim']
-        return flight_info
+        return flight
 
     def lookup_flights(self, flight_number, **kwargs):
         """Concrete implementation of lookup_flights of FlightDataSource.
@@ -321,7 +297,7 @@ class FlightAwareSource (FlightDataSource):
 
         def cache_stale():
             for f in flights:
-                if utils.is_old_flight(f):
+                if f.is_old_flight:
                     return True
             return False
 
@@ -338,44 +314,72 @@ class FlightAwareSource (FlightDataSource):
             resp = self.conn.request_get('/FlightInfoEx',
                      args={'ident': sanitized_f_num,
                            'howMany': 15})
-            # Turn the JSON response into a dict
-            flights = json.loads(resp['body'])
 
-            if flights.get('error'):
+            # Turn the JSON response into a dict
+            flight_data = json.loads(resp['body'])
+
+            if flight_data.get('error'):
                 raise FlightNotFoundException(sanitized_f_num)
             else:
-                flights = flights['FlightInfoExResult']['flights']
+                flight_data = flight_data['FlightInfoExResult']['flights']
 
                 # Keep a subset of the response fields
                 fields = config['flightaware']['flight_info_fields']
-                flights = [utils.sub_dict_strict(f, fields)
-                           for f in flights]
+                flight_data = [utils.sub_dict_strict(f, fields)
+                                for f in flight_data]
 
                 # Map the response dict keys
-                flights = [utils.map_dict_keys(f, self.api_key_mapping)
-                           for f in flights]
+                flight_data = [utils.map_dict_keys(f, self.api_key_mapping)
+                                for f in flight_data]
+
+                # Convert raw flight data to instances of Flight
+                flights = []
+
+                for f in flight_data:
+                    origin = None
+                    origin_code = f['origin']
+
+                    if utils.is_valid_iata(origin_code):
+                        origin = Origin(self.airport_info(iata_code=origin_code))
+                    else:
+                        origin = Origin(self.airport_info(icao_code=origin_code))
+
+                    destination = None
+                    destination_code = f['destination']
+
+                    if utils.is_valid_iata(destination_code):
+                        destination = Destination(self.airport_info(
+                                                  iata_code=destination_code))
+                    else:
+                        destination = Destination(self.airport_info(
+                                                  icao_code=destination_code))
+
+                    flight = Flight(f)
+                    flight.flight_number = sanitized_f_num
+                    flight.origin = origin
+                    flight.destination = destination
+
+                    # Convert flight times
+                    flight_time = f['scheduledFlightTime'].split(':')
+                    secs = (int(flight_time[0]) * 3600) + (int(flight_time[1]) * 60)
+                    flight.scheduled_flight_time = secs
+
+                    flight.origin.city = f['originCity']
+                    flight.origin.name = f['originName']
+                    flight.destination.city = f['destinationCity']
+                    flight.destination.name = f['destinationName']
+                    flights.append(flight)
 
                 # If we're looking for a specific flight, filter out everything
                 # except the flight we're looking for
                 if find_flight_id:
-                    flights = [f for f in flights if f['flightID'] == find_flight_id]
+                    flights = [f for f in flights if f.flight_id == find_flight_id]
                 else:
                     # Filter out old flights
-                    flights = [f for f in flights if not utils.is_old_flight(f)]
+                    flights = [f for f in flights if not f.is_old_flight]
 
                 # Sort by departure date (earliest first)
-                flights.sort(key=lambda f: f['scheduledDepartureTime'])
-
-                # Try to convert to IATA airport codes & clean up flight time
-                for f in flights:
-                    f['flightNumber'] = sanitized_f_num
-                    f['origin'] = utils.icao_to_iata(f['origin']) or f['origin']
-                    f['destination'] = utils.icao_to_iata(f['destination']) or \
-                                        f['destination']
-                    # Convert flight times
-                    flight_time = f['scheduledFlightTime'].split(':')
-                    secs = (int(flight_time[0]) * 3600) + (int(flight_time[1]) * 60)
-                    f['scheduledFlightTime'] = secs
+                flights.sort(key=lambda f: f.scheduled_departure_time)
 
             if use_cache and not memcache.set(lookup_cache_key, flights,
                                 config['flightaware']['flight_lookup_cache_time']):
@@ -383,6 +387,7 @@ class FlightAwareSource (FlightDataSource):
 
             if use_cache and debug_cache:
                 logging.info('LOOKUP CACHE SET')
+
             return flights
 
     def process_alert(self, alert_body):

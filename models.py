@@ -10,8 +10,12 @@ __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
+from datetime import timedelta, datetime
+
 from google.appengine.ext.ndb import model
-import utils
+from utils import *
+
+from config import config
 
 # Supported push notification preference names.
 _PREFS = ['push_filed',
@@ -52,9 +56,10 @@ class Airport(model.Model):
         return dict(city=self.city,
                     icaoCode=self.key.string_id(),
                     iataCode=self.iata_code,
-                    latitude=utils.round_coord(self.location.lat),
-                    longitude=utils.round_coord(self.location.lon),
+                    latitude=round_coord(self.location.lat),
+                    longitude=round_coord(self.location.lon),
                     name=self.name)
+
 
 class TrackedFlight(model.Model):
     """ Model associated with a flight that is being tracked by Just Landed
@@ -113,3 +118,287 @@ class _User(model.Model):
 class iOSUser(_User):
     """ An iOS user/client. """
     pass
+
+
+class Origin(object):
+    """Container class for a flight origin being returned by the Just Landed API"""
+    def __init__(self, origin_info):
+        if isinstance(origin_info, dict):
+            self._data = origin_info
+        else:
+            self._data = {}
+
+    @property
+    def iata_code(self):
+        return self._data.get('iataCode')
+
+    @iata_code.setter
+    def iata_code(self, value):
+        self._data['iataCode'] = value
+
+    @property
+    def icao_code(self):
+        return self._data.get('icaoCode')
+
+    @icao_code.setter
+    def icao_code(self, value):
+        self._data['icaoCode'] = value
+
+    @property
+    def city(self):
+        return self._data.get('city')
+
+    @city.setter
+    def city(self, value):
+        self._data['city'] = value
+
+    @property
+    def name(self, value):
+        return self._data.get('name')
+
+    @name.setter
+    def name(self, value):
+        self._data['name'] = value
+
+    @property
+    def latitude(self):
+        return self._data.get('latitude')
+
+    @latitude.setter
+    def latitude(self, value):
+        self._data['latitude'] = value
+
+    @property
+    def longitude(self):
+        return self._data.get('longitude')
+
+    @longitude.setter
+    def longitude(self, value):
+        self._data['longitude'] = value
+
+    @property
+    def terminal(self):
+        return self._data.get('terminal')
+
+    @terminal.setter
+    def terminal(self, value):
+        self._data['terminal'] = value
+
+    def dict_for_client(self):
+        info = {}
+        info.update(self._data)
+        return info
+
+
+class Destination(Origin):
+    """Container class for a flight destination being returned by the Just Landed API"""
+    @property
+    def bag_claim(self):
+        return self._data.get('bagClaim')
+
+    @bag_claim.setter
+    def bag_claim(self, value):
+        self._data['bagClaim'] = value
+
+
+FLIGHT_STATES = Enum(['SCHEDULED', 'ON_TIME', 'DELAYED', 'CANCELED',
+                        'DIVERTED', 'LANDED', 'EARLY'])
+
+
+class Flight(object):
+    """Container class for a flight being returned by the Just Landed API"""
+
+    def __init__(self, flight_info):
+        if isinstance(flight_info, dict):
+            self._data = flight_info
+        else:
+            self._data = {}
+
+    @property
+    def actual_arrival_time(self):
+        return self._data.get('actualArrivalTime')
+
+    @actual_arrival_time.setter
+    def actual_arrival_time(self, value):
+        self._data['actualArrivalTime'] = value
+
+    @property
+    def actual_departure_time(self):
+        return self._data.get('actualDepartureTime')
+
+    @actual_departure_time.setter
+    def actual_departure_time(self, value):
+        self._data['actualDepartureTime'] = value
+
+    @property
+    def destination(self):
+        return self._data.get('destination')
+
+    @destination.setter
+    def destination(self, value):
+        self._data['destination'] = value
+
+    @property
+    def diverted(self):
+        return self._data.get('diverted')
+
+    @diverted.setter
+    def diverted(self, value):
+        self._data['diverted'] = value
+
+    @property
+    def estimated_arrival_time(self):
+        return self._data.get('estimatedArrivalTime')
+
+    @estimated_arrival_time.setter
+    def estimated_arrival_time(self, value):
+        self._data['estimatedArrivalTime'] = value
+
+    @property
+    def flight_id(self):
+        return self._data.get('flightID')
+
+    @flight_id.setter
+    def flight_id(self, value):
+        self._data['flightID'] = value
+
+    @property
+    def flight_number(self):
+        return self._data.get('flightNumber')
+
+    @flight_number.setter
+    def flight_number(self, value):
+        self._data['flightNumber'] = value
+
+    @property
+    def last_updated(self):
+        return self._data.get('lastUpdated')
+
+    @last_updated.setter
+    def last_updated(self, value):
+        self._data['lastUpdated'] = value
+
+    @property
+    def origin(self):
+        return self._data.get('origin')
+
+    @origin.setter
+    def origin(self, value):
+        self._data['origin'] = value
+
+    @property
+    def scheduled_departure_time(self):
+        return self._data.get('scheduledDepartureTime')
+
+    @scheduled_departure_time.setter
+    def scheduled_departure_time(self, value):
+        self._data['scheduledDepartureTime'] = value
+
+    @property
+    def scheduled_flight_time(self):
+        return self._data.get('scheduledFlightTime')
+
+    @scheduled_flight_time.setter
+    def scheduled_flight_time(self, value):
+        self._data['scheduledFlightTime'] = value
+
+    @property
+    def status(self):
+        if self.actual_departure_time == 0:
+            return FLIGHT_STATES.SCHEDULED
+        elif self.diverted:
+            return FLIGHT_STATES.DIVERTED
+        elif self.actual_departure_time == -1:
+            return FLIGHT_STATES.CANCELED
+        elif self.actual_arrival_time > 0:
+            return FLIGHT_STATES.LANDED
+        else:
+            time_diff = (self.estimated_arrival_time -
+                (self.scheduled_departure_time + self.scheduled_flight_time))
+
+            time_buff = config['on_time_buffer']
+            if abs(time_diff) < time_buff:
+                return FLIGHT_STATES.ON_TIME
+            elif time_diff < 0:
+                return FLIGHT_STATES.EARLY
+            else:
+                return FLIGHT_STATES.DELAYED
+
+    @property
+    def detailed_status(self):
+        status = self.status
+
+        if status == FLIGHT_STATES.SCHEDULED:
+            interval = self.scheduled_departure_time - timestamp(datetime.utcnow())
+            return 'Departs in %s' % pretty_time_interval(interval)
+        elif status == FLIGHT_STATES.LANDED:
+            interval = timestamp(datetime.utcnow()) - self.actual_arrival_time
+            return 'Landed %s ago' % pretty_time_interval(interval)
+        else:
+            interval = (self.estimated_arrival_time -
+                (self.scheduled_departure_time + self.scheduled_flight_time))
+            if status == FLIGHT_STATES.EARLY:
+                return '%s early' % pretty_time_interval(interval)
+            elif status == FLIGHT_STATES.DELAYED:
+                return '%s late' % pretty_time_interval(interval)
+            else:
+                return ''
+
+    @property
+    def is_old_flight(self):
+        arrival_timestamp = self.actual_arrival_time
+        arrival_time = datetime.utcfromtimestamp(arrival_timestamp)
+        est_arrival_time = datetime.utcfromtimestamp(self.estimated_arrival_time)
+        hours_ago = datetime.utcnow() - timedelta(hours=config['flight_old_hours'])
+        return ((arrival_timestamp > 0 and arrival_time < hours_ago) or
+                est_arrival_time < hours_ago)
+
+    @property
+    def is_in_flight(self):
+        return (self.actual_departure_time > 0 and
+                self.actual_arrival_time == 0)
+
+    @property
+    def has_landed(self):
+        return self.actual_arrival_time > 0
+
+    @property
+    def leave_for_airport_time(self):
+        return self._data.get('leaveForAirportTime')
+
+    @leave_for_airport_time.setter
+    def leave_for_airport_time(self, value):
+        self._data['leaveForAirportTime'] = value
+
+    @property
+    def leave_for_airport_recommendation(self):
+        return self._data.get('leaveForAirportRecommendation')
+
+    @leave_for_airport_recommendation.setter
+    def leave_for_airport_recommendation(self, value):
+        self._data['leaveForAirportRecommendation'] = value
+
+    def set_driving_time(self, driving_time):
+        now = timestamp(datetime.utcnow())
+        time_diff = self.estimated_arrival_time - (now + driving_time)
+        if time_diff > 0:
+            self.leave_for_airport_time = now + time_diff
+            self.leave_for_airport_recommendation = 'Leave for %s in %s' % (
+                    self.destination.iata_code or
+                    self.destination.icao_code,
+                    pretty_time_interval(time_diff)
+                )
+        else:
+            self.leave_for_airport_time = now + time_diff
+            self.leave_for_airport_recommendation = "Leave for %s now!" % (
+                    self.destination.iata_code or
+                    self.destination.icao_code,
+            )
+
+    def dict_for_client(self):
+        info = sub_dict_select(self._data, config['flight_fields'])
+        info['origin'] = self.origin.dict_for_client()
+        info['destination'] = self.destination.dict_for_client()
+        info['status'] = self.status
+        info['detailed_status'] = self.detailed_status
+        return info

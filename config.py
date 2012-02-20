@@ -19,8 +19,8 @@ config['on_time_buffer'] = 600
 # Hours after a flight lands when it becomes "old"
 config['flight_old_hours'] = 2
 
-# Fields to send on /track
-config['track_fields'] = [
+# Fields to send for a flight
+config['flight_fields'] = [
     'actualArrivalTime',
     'actualDepartureTime',
     'destination',
@@ -49,7 +49,7 @@ config['flightaware'] = {
 
     # Caching settings
     'flight_lookup_cache_time' : 10800,
-    'flight_info_cache_time' : 600,
+    'flight_cache_time' : 600,
 
     # Mapping of FlightAware API response keys to Just Landed API response keys
     'key_mapping' : {
