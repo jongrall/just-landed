@@ -436,9 +436,7 @@ class GoogleDistanceSource (DrivingTimeDataSource):
 
     def __init__(self):
         from lib.python_rest_client.restful_lib import Connection
-        self.conn = Connection(self.base_url,
-            username=config['flightaware']['username'],
-            password=config['flightaware']['key'])
+        self.conn = Connection(self.base_url)
 
     def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
         """Implements driving_time method of DrivingTimeDataSource. Supports

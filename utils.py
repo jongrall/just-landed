@@ -127,7 +127,7 @@ def timestamp(date=None):
   assert isinstance(date, datetime), 'Expected a datetime object'
   return int(time.mktime(date.timetuple()))
 
-def pretty_time_interval(num_secs):
+def pretty_time_interval(num_secs, round_days=False):
     num_secs = abs(num_secs)
     days = int(math.floor(num_secs / 86400.0))
     hours = int(math.floor((num_secs - days * 86400.0) / 3600.0))
@@ -139,6 +139,10 @@ def pretty_time_interval(num_secs):
             pretty.append('%d days' % days)
         else:
             pretty.append('1 day')
+
+    if days > 0 and round_days:
+        return ' '.join(pretty)
+
     if hours > 0:
         if hours > 1:
             pretty.append('%d hours' % hours)
@@ -150,10 +154,12 @@ def pretty_time_interval(num_secs):
         else:
             pretty.append('1 minute')
     if not pretty:
-        if num_secs > 1:
-            return '%d seconds' % num_secs
-        else:
-            return '1 second'
+        if num_secs > 0:
+            if num_secs > 1:
+                return '%d seconds' % num_secs
+            else:
+                return '1 second'
+        return 'now'
     else:
         return ' '.join(pretty)
 

@@ -305,7 +305,16 @@ class Flight(object):
     @property
     def status(self):
         if self.actual_departure_time == 0:
-            return FLIGHT_STATES.SCHEDULED
+            # See if it has missed its take-off time
+            if timestamp(datetime.utcnow()) > self.scheduled_departure_time:
+                time_diff = (self.estimated_arrival_time -
+                (self.scheduled_departure_time + self.scheduled_flight_time))
+                if time_diff > config['on_time_buffer']:
+                    return FLIGHT_STATES.DELAYED
+                else:
+                    return FLIGHT_STATES.SCHEDULED
+            else:
+                return FLIGHT_STATES.SCHEDULED
         elif self.diverted:
             return FLIGHT_STATES.DIVERTED
         elif self.actual_departure_time == -1:
@@ -329,8 +338,9 @@ class Flight(object):
         status = self.status
 
         if status == FLIGHT_STATES.SCHEDULED:
-            interval = self.scheduled_departure_time - timestamp(datetime.utcnow())
-            return 'Departs in %s' % pretty_time_interval(interval)
+            interval = (self.scheduled_departure_time + self.scheduled_flight_time
+                        - timestamp(datetime.utcnow()))
+            return 'Arrives in %s' % pretty_time_interval(interval)
         elif status == FLIGHT_STATES.LANDED:
             interval = timestamp(datetime.utcnow()) - self.actual_arrival_time
             return 'Landed %s ago' % pretty_time_interval(interval)
@@ -400,5 +410,5 @@ class Flight(object):
         info['origin'] = self.origin.dict_for_client()
         info['destination'] = self.destination.dict_for_client()
         info['status'] = self.status
-        info['detailed_status'] = self.detailed_status
+        info['detailedStatus'] = self.detailed_status
         return info
