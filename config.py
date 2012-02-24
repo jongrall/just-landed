@@ -7,8 +7,24 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 import os
+from google.appengine.api import app_identity
 
 config = {}
+
+
+###############################################################################
+"""App Configuration."""
+###############################################################################
+
+config['app'] = {}
+
+# Figure out if we're on local, staging or production environments
+app_id = app_identity.get_application_id()
+
+if os.environ.get('SERVER_SOFTWARE', '').startswith('Dev'):
+  config['app']['mode'] = 'local'
+else:
+  config['app']['mode'] = 'production'
 
 # The directory where templates are found
 config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
@@ -30,12 +46,20 @@ config['flight_fields'] = [
     'flightNumber',
     'lastUpdated',
     'leaveForAirportTime',
-    'leaveForAirportRecommendation',
     'origin',
     'scheduledDepartureTime',
-    'scheduledFlightTime',
+    'scheduledFlightDuration',
     'status',
 ]
+
+def on_production():
+  """Returns true if the app is running in production"""
+  return config['app']['mode'] == 'production'
+
+
+def on_local():
+  """Returns true if the app is running on the local devserver."""
+  return config['app']['mode'] == 'local'
 
 ###############################################################################
 """Flight Data API Keys & Settings"""
@@ -45,7 +69,10 @@ config['flight_fields'] = [
 config['flightaware'] = {
     # Credentials
     'username' : 'airportpickupapp',
-    'key' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
+    'keys' : {
+        'development' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
+        'production' : '390ef2061c6f5bd814ef0ef3ce68efa19f3c12b2',
+    },
 
     # Caching settings
     'flight_lookup_cache_time' : 10800,
@@ -63,7 +90,7 @@ config['flightaware'] = {
         'filed_airspeed_mach' : 'filedAirspeedMach',
         'filed_altitude' : 'filedAltitude',
         'filed_departuretime' : 'scheduledDepartureTime',
-        'filed_ete' : 'scheduledFlightTime',
+        'filed_ete' : 'scheduledFlightDuration',
         'filed_time' : 'lastUpdated',
         'ident' : 'flightNumber',
         'location' : 'city',

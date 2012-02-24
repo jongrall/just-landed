@@ -116,6 +116,12 @@ def icao_to_iata(icao_code):
         return (airport and airport.iata_code) or None
     return None
 
+def proper_airport_name(name):
+    if name.lower().find('airport') == -1:
+        return name + ' Airport'
+    else:
+        return name
+
 ###############################################################################
 """Date & Time Utilities"""
 ###############################################################################

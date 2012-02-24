@@ -106,7 +106,7 @@ class TrackHandler(BaseAPIHandler):
             # TODO(jon): Register the client's UDID for push notifications
             pass
 
-        if (latitude and longitude and flight.is_in_flight and
+        if (latitude and longitude and
             not utils.too_close_or_far(latitude,
                                         longitude,
                                         dest_latitude,

@@ -58,7 +58,7 @@ class Airport(model.Model):
                     iataCode=self.iata_code,
                     latitude=round_coord(self.location.lat),
                     longitude=round_coord(self.location.lon),
-                    name=self.name)
+                    name=proper_airport_name(self.name))
 
 
 class TrackedFlight(model.Model):
@@ -295,12 +295,12 @@ class Flight(object):
         self._data['scheduledDepartureTime'] = value
 
     @property
-    def scheduled_flight_time(self):
-        return self._data.get('scheduledFlightTime')
+    def scheduled_flight_duration(self):
+        return self._data.get('scheduledFlightDuration')
 
-    @scheduled_flight_time.setter
-    def scheduled_flight_time(self, value):
-        self._data['scheduledFlightTime'] = value
+    @scheduled_flight_duration.setter
+    def scheduled_flight_duration(self, value):
+        self._data['scheduledFlightDuration'] = value
 
     @property
     def status(self):
@@ -308,7 +308,7 @@ class Flight(object):
             # See if it has missed its take-off time
             if timestamp(datetime.utcnow()) > self.scheduled_departure_time:
                 time_diff = (self.estimated_arrival_time -
-                (self.scheduled_departure_time + self.scheduled_flight_time))
+                (self.scheduled_departure_time + self.scheduled_flight_duration))
                 if time_diff > config['on_time_buffer']:
                     return FLIGHT_STATES.DELAYED
                 else:
@@ -323,7 +323,7 @@ class Flight(object):
             return FLIGHT_STATES.LANDED
         else:
             time_diff = (self.estimated_arrival_time -
-                (self.scheduled_departure_time + self.scheduled_flight_time))
+                (self.scheduled_departure_time + self.scheduled_flight_duration))
 
             time_buff = config['on_time_buffer']
             if abs(time_diff) < time_buff:
@@ -338,7 +338,7 @@ class Flight(object):
         status = self.status
 
         if status == FLIGHT_STATES.SCHEDULED:
-            interval = (self.scheduled_departure_time + self.scheduled_flight_time
+            interval = (self.scheduled_departure_time + self.scheduled_flight_duration
                         - timestamp(datetime.utcnow()))
             return 'Arrives in %s' % pretty_time_interval(interval)
         elif status == FLIGHT_STATES.LANDED:
@@ -346,13 +346,13 @@ class Flight(object):
             return 'Landed %s ago' % pretty_time_interval(interval)
         else:
             interval = (self.estimated_arrival_time -
-                (self.scheduled_departure_time + self.scheduled_flight_time))
+                (self.scheduled_departure_time + self.scheduled_flight_duration))
             if status == FLIGHT_STATES.EARLY:
                 return '%s early' % pretty_time_interval(interval)
             elif status == FLIGHT_STATES.DELAYED:
                 return '%s late' % pretty_time_interval(interval)
             else:
-                return ''
+                return 'On time'
 
     @property
     def is_old_flight(self):
@@ -380,30 +380,8 @@ class Flight(object):
     def leave_for_airport_time(self, value):
         self._data['leaveForAirportTime'] = value
 
-    @property
-    def leave_for_airport_recommendation(self):
-        return self._data.get('leaveForAirportRecommendation')
-
-    @leave_for_airport_recommendation.setter
-    def leave_for_airport_recommendation(self, value):
-        self._data['leaveForAirportRecommendation'] = value
-
     def set_driving_time(self, driving_time):
-        now = timestamp(datetime.utcnow())
-        time_diff = self.estimated_arrival_time - (now + driving_time)
-        if time_diff > 0:
-            self.leave_for_airport_time = now + time_diff
-            self.leave_for_airport_recommendation = 'Leave for %s in %s' % (
-                    self.destination.iata_code or
-                    self.destination.icao_code,
-                    pretty_time_interval(time_diff)
-                )
-        else:
-            self.leave_for_airport_time = now + time_diff
-            self.leave_for_airport_recommendation = "Leave for %s now!" % (
-                    self.destination.iata_code or
-                    self.destination.icao_code,
-            )
+        self.leave_for_airport_time = self.estimated_arrival_time - driving_time
 
     def dict_for_client(self):
         info = sub_dict_select(self._data, config['flight_fields'])

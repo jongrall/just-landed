@@ -33,12 +33,12 @@ import json
 # performance and also reduces our bill :)
 from google.appengine.api import memcache
 
-from config import config
+from config import config, on_local
 from datasource_exceptions import *
 from models import Airport, Origin, Destination, Flight
 import utils
 
-debug_cache = True
+debug_cache = False
 
 ###############################################################################
 """Flight Data Sources"""
@@ -124,9 +124,14 @@ class FlightAwareSource (FlightDataSource):
 
     def __init__(self):
         from lib.python_rest_client.restful_lib import Connection
-        self.conn = Connection(self.base_url,
-            username=config['flightaware']['username'],
-            password=config['flightaware']['key'])
+        if on_local():
+            self.conn = Connection(self.base_url,
+                username=config['flightaware']['username'],
+                password=config['flightaware']['keys']['development'])
+        else:
+            self.conn = Connection(self.base_url,
+                username=config['flightaware']['username'],
+                password=config['flightaware']['keys']['production'])
 
     def airport_info(self, icao_code="", iata_code=""):
         """Looks up information about an airport using its ICAO or IATA code."""
@@ -171,9 +176,12 @@ class FlightAwareSource (FlightDataSource):
                         airport = utils.map_dict_keys(airport,
                                                       self.api_key_mapping)
 
-                        # Add ICAO & IATA code back in
+                        # Add ICAO code back in (we don't have IATA)
                         airport['icaoCode'] = icao_code
                         airport['iataCode'] = None
+
+                        # Make sure the name is well formed
+                        airport['name'] = utils.proper_airport_name(airport['name'])
 
                         # Round lat & long
                         airport['latitude'] = utils.round_coord(airport['latitude'])
@@ -359,15 +367,15 @@ class FlightAwareSource (FlightDataSource):
                     flight.origin = origin
                     flight.destination = destination
 
-                    # Convert flight times
-                    flight_time = f['scheduledFlightTime'].split(':')
-                    secs = (int(flight_time[0]) * 3600) + (int(flight_time[1]) * 60)
-                    flight.scheduled_flight_time = secs
+                    # Convert flight duration to integer number of seconds
+                    flight_duration = f['scheduledFlightDuration'].split(':')
+                    secs = (int(flight_duration[0]) * 3600) + (int(flight_duration[1]) * 60)
+                    flight.scheduled_flight_duration = secs
 
                     flight.origin.city = f['originCity']
-                    flight.origin.name = f['originName']
+                    flight.origin.name = utils.proper_airport_name(f['originName'])
                     flight.destination.city = f['destinationCity']
-                    flight.destination.name = f['destinationName']
+                    flight.destination.name = utils.proper_airport_name(f['destinationName'])
                     flights.append(flight)
 
                 # If we're looking for a specific flight, filter out everything
