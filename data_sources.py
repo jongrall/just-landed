@@ -372,9 +372,9 @@ class FlightAwareSource (FlightDataSource):
                     secs = (int(flight_duration[0]) * 3600) + (int(flight_duration[1]) * 60)
                     flight.scheduled_flight_duration = secs
 
-                    flight.origin.city = f['originCity']
+                    flight.origin.city = f['originCity'].split(',')[0]
                     flight.origin.name = utils.proper_airport_name(f['originName'])
-                    flight.destination.city = f['destinationCity']
+                    flight.destination.city = f['destinationCity'].split(',')[0]
                     flight.destination.name = utils.proper_airport_name(f['destinationName'])
                     flights.append(flight)
 

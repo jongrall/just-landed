@@ -340,19 +340,17 @@ class Flight(object):
         if status == FLIGHT_STATES.SCHEDULED:
             interval = (self.scheduled_departure_time + self.scheduled_flight_duration
                         - timestamp(datetime.utcnow()))
-            return 'Arrives in %s' % pretty_time_interval(interval)
+            return 'Scheduled to arrive in %s.' % pretty_time_interval(interval)
         elif status == FLIGHT_STATES.LANDED:
             interval = timestamp(datetime.utcnow()) - self.actual_arrival_time
-            return 'Landed %s ago' % pretty_time_interval(interval)
+            return 'Landed %s ago.' % pretty_time_interval(interval)
+        elif status == FLIGHT_STATES.CANCELED:
+            return 'Flight canceled.'
+        elif status == FLIGHT_STATES.DIVERTED:
+            return 'Flight diverted to another airport.'
         else:
-            interval = (self.estimated_arrival_time -
-                (self.scheduled_departure_time + self.scheduled_flight_duration))
-            if status == FLIGHT_STATES.EARLY:
-                return '%s early' % pretty_time_interval(interval)
-            elif status == FLIGHT_STATES.DELAYED:
-                return '%s late' % pretty_time_interval(interval)
-            else:
-                return 'On time'
+            interval = (self.estimated_arrival_time - timestamp(datetime.utcnow()))
+            return 'Arrives in %s.' % pretty_time_interval(interval)
 
     @property
     def is_old_flight(self):
