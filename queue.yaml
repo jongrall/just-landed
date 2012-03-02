@@ -1,0 +1,18 @@
+# Maximum amount of memory allowed to be used by all pending task payloads
+total_storage_limit: 1G
+
+# Defines queues currently used by the app
+# bucket_size: the number of tasks dequeued for execution each tick
+# rate: the number frequency of processing e.g. 10/s is 10 times per second
+queue:
+- name: alert-processing
+  bucket_size: 20
+  rate: 20/s
+
+- name: mobile-push
+  bucket_size: 100
+  rate: 100/s
+
+- name: default
+  bucket_size: 100
+  rate: 500/s

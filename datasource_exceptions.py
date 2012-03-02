@@ -39,6 +39,30 @@ class OldFlightException (Exception):
         self.code = 410 # Gone
 
 ###############################################################################
+"""Flight Alert Exceptions"""
+###############################################################################
+
+class UnableToSetAlertException (Exception):
+    def __init__(self, reason=''):
+        self.message = 'Unable to set alert: %s' % reason
+        self.code = 403 # Gone
+
+class UnableToSetEndpointException (Exception):
+    def __init__(self, endpoint=''):
+        self.message = 'Unable to set endpoint: %s' % endpoint
+        self.code = 400 # Bad request
+
+class UnableToGetAlertsException (Exception):
+    def __init__(self):
+        self.message = 'Unable to get alerts from the datasource.'
+        self.code = 400 # Bad request
+
+class UnableToDeleteAlertException (Exception):
+    def __init__(self, alert_id):
+        self.message = 'Unable to delete alert %s from the datasource.' % alert_id
+        self.code = 400 # Bad request
+
+###############################################################################
 """Driving Time Data Source Exceptions"""
 ###############################################################################
 

@@ -10,9 +10,10 @@ __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
+import binascii
 from datetime import timedelta, datetime
 
-from google.appengine.ext.ndb import model
+from google.appengine.ext.ndb import model, tasklets, context
 from utils import *
 
 from config import config
@@ -24,6 +25,7 @@ _PREFS = ['push_filed',
           'push_departed',
           'push_arrived',
           'push_delayed']
+
 
 class Airport(model.Model):
     """ Model associated with an Airport entity stored in the GAE datastore.
@@ -43,7 +45,7 @@ class Airport(model.Model):
     city = model.StringProperty()
     country = model.StringProperty()
     dst = model.StringProperty()
-    iata_code = model.StringProperty(required=True)
+    iata_code = model.StringProperty(required=True, indexed=True)
     location = model.GeoPtProperty(required=True)
     name = model.StringProperty(required=True)
     timezone_offset = model.FloatProperty()
@@ -78,46 +80,250 @@ class TrackedFlight(model.Model):
     created = model.DateTimeProperty(auto_now_add=True)
     updated = model.DateTimeProperty(auto_now=True)
 
+
 class FlightAwareTrackedFlight(TrackedFlight):
     """ Subclass of TrackedFlight specialized for the FlightAware datasource.
 
     Fields:
     - `tail_number` : The flight tail number computed from the flight_id.
-    - `alert_id` : The FlightAware alert associated with this tracked flight.
     - `is_tracking` : Whether the flight is still being tracked.
+
     """
-    tail_number = model.ComputedProperty(lambda f: f.key.string_id().split('_')[0])
-    alert_id = model.IntegerProperty()
-    is_tracking = model.BooleanProperty(default=True)
+    tail_number = model.ComputedProperty(lambda f: f.key.string_id().split('-')[0])
+    is_tracking = model.BooleanProperty(default=True, indexed=True)
+
+    @classmethod
+    @context.toplevel
+    def create_or_update_flight(cls, flight_id):
+        """Looks up a Flight by flight_id, if it exists, sets is_tracking to
+        True. If it doesn't exist, creates a new flight with that flight_id.
+
+        Returns the key of the created/updated flight.
+
+        """
+        assert isinstance(flight_id, basestring) and len(flight_id)
+
+        flight = cls.get_by_id(flight_id)
+
+        if flight and flight.is_tracking:
+            raise tasklets.Return(flight.key)
+        else:
+            @model.transactional
+            @tasklets.tasklet
+            def create_or_update_tracked_flight(flight_exists=False):
+                flight = flight_exists and cls.get_by_id(flight_id)
+                if not flight:
+                    flight = cls(id=flight_id)
+
+                flight.is_tracking = True
+                flight_key = yield flight.put_async()
+                raise tasklets.Return(flight_key)
+
+            result = create_or_update_tracked_flight(flight is not None)
+            raise tasklets.Return(result)
+
+
+class FlightAlert(model.Model):
+    """Model class associated with a push alert that has been registered with
+    a 3rd party API. Not intended to be used directly, but rather subclassed.
+
+    Fields:
+    - `created` : The date the alert was created.
+    - `updated` : The date the alert was last updated.
+    - `is_enabled` : Whether the alert is still set.
+
+    """
+    created = model.DateTimeProperty(auto_now_add=True)
+    updated = model.DateTimeProperty(auto_now=True)
+    is_enabled = model.BooleanProperty(default=True, indexed=True)
+
+
+class FlightAwareAlert(FlightAlert):
+    """Model class associated with a FlightAware push alert. Key is the
+    alert_id.
+
+    Fields:
+    - `flight_number` : The flight (tail) number of the flight associated with this alert.
+    """
+    flight_number = model.StringProperty(required=True, indexed=True)
+
+    @classmethod
+    def existing_enabled_alert(cls, flight_num):
+        assert isinstance(flight_num, basestring) and len(flight_num)
+        q = cls.query(cls.flight_number == flight_num,
+                      cls.is_enabled == True)
+        return q.get()
+
+    @classmethod
+    @context.toplevel
+    def disable_alert(cls, alert_id):
+        assert isinstance(alert_id, int) and alert_id > 0
+
+        @model.transactional
+        @tasklets.tasklet
+        def disable_alert_txn():
+            alert = cls.get_by_id(alert_id)
+
+            if alert:
+                alert.is_enabled = False
+                yield alert.put_async()
+
+            raise tasklets.Return(alert)
+
+        result = disable_alert_txn()
+        raise tasklets.Return(result)
+
+    @classmethod
+    @context.toplevel
+    def create_alert(cls, alert_id, flight_number):
+        assert isinstance(alert_id, int) and alert_id > 0
+        assert isinstance(flight_number, basestring) and valid_flight_number(flight_number)
+
+        @model.transactional
+        @tasklets.tasklet
+        def create_alert_txn():
+            alert = cls(id=alert_id,
+                        flight_number=flight_number)
+            yield alert.put_async()
+            raise tasklets.Return(alert)
+
+        result = create_alert_txn()
+        raise tasklets.Return(result)
+
+
+class PushNotificationSetting(model.Model):
+  """Model for a push notification setting (stored as key-value).
+
+  E.g. push_arrived = True
+
+  Represents a single push notification setting that will be associated with
+  a specific Device.
+
+  Fields:
+  - `name` : The name of the setting.
+  - `value` : The value of the setting (True/False)
+
+  """
+  name = model.StringProperty(required=True)
+  value = model.BooleanProperty(required=True)
+
+  @classmethod
+  def setting_tag(cls, user_key, tag):
+    """Returns a setting tag prepended with the User key."""
+    return '_'.join([user_key.urlsafe(), tag])
+
 
 class _User(model.Model):
-    """ A user/client who is tracking their flights using Just Landed. The key
-    of the user is their UUID, which is unique to each device/client. So really,
-    a single person may have multiple users in the system - one for each device
-    with Just Landed installed.
+    """A user/client who is tracking their flights using Just Landed.
 
     Not intended to be used directly, but rather subclassed.
 
     Fields:
     - `created` : When the user first tracked a flight.
     - `updated` : When the user was last updated.
-    - `tracked_flights` : The flight(s) that the user is currently tracking.
-    - `num_tracked_flights` : The number of flights this user has ever tracked.
-    - `push_enabled` : Whether or not this user accepts push notifications.
-    - `location` : The location that the user last tracked from.
     - `banned` : Whether this user has been banned.
+
     """
     created = model.DateTimeProperty(auto_now_add=True)
     updated = model.DateTimeProperty(auto_now=True)
-    tracked_flights = model.KeyProperty(repeated=True)
-    num_tracked_flights = model.IntegerProperty()
-    do_push = model.BooleanProperty(default=False)
-    location = model.GeoPtProperty()
     banned = model.BooleanProperty(default=False)
 
+
 class iOSUser(_User):
-    """ An iOS user/client. """
-    pass
+    """An iOS user/client. The key of the user is their UUID, which is unique
+    to each device/client. So really, a single person may have multiple users
+    in the system - one for each device with Just Landed installed.
+
+    Fields:
+    - `tracked_flights` : The flight(s) that the user is currently tracking.
+    - `is_tracking_flights` : Whether the user is currently tracking flights.
+    - `alerts` : The alert(s) that this user should receive.
+    - `has_alerts` : Whether this user has alerts set.
+    - `push_token` : The push token associated with this user.
+    - `push_enabled` : Whether this user accepts push notifications.
+
+    """
+    tracked_flights = model.KeyProperty(repeated=True)
+    is_tracking_flights = model.ComputedProperty(lambda u: bool(len(u.tracked_flights)),
+                                                indexed=True)
+    alerts = model.KeyProperty(repeated=True)
+    has_alerts = model.ComputedProperty(lambda u: bool(len(u.alerts)), indexed=True)
+    push_token = model.BlobProperty(indexed=True)
+    push_settings = model.StructuredProperty(PushNotificationSetting, repeated=True)
+    push_enabled = model.BooleanProperty(default=False)
+
+    @classmethod
+    def default_settings(cls):
+        """Returns a list of the default PushNotificationSettings for an iOS user."""
+        settings = []
+        # All prefs are True by default
+        for pref_name in _PREFS:
+            settings.append(PushNotificationSetting(name=pref_name, value=True))
+        return settings
+
+    @classmethod
+    @context.toplevel
+    def track_flight(cls, uuid, flight_key, push_token=None, alert_key=None):
+        assert isinstance(uuid, basestring) and len(uuid)
+        assert isinstance(flight_key, model.Key), "No valid flight_key"
+
+        push_enabled = push_token is not None
+
+        # See if the user exists
+        existing_user = cls.get_by_id(uuid)
+
+        # Return the user key if it's already up-to-date
+        if (existing_user and (flight_key in existing_user.tracked_flights) and
+            existing_user.push_enabled == push_enabled and
+            existing_user.push_token == push_token and
+            (alert_key is None or alert_key in existing_user.alerts)):
+            raise tasklets.Return(existing_user)
+        else:
+            @model.transactional
+            @tasklets.tasklet
+            def create_or_update_user(user_exists=False):
+                user = user_exists and cls.get_by_id(uuid)
+                if not user:
+                    user = cls(id=uuid,
+                               push_settings=cls.default_settings())
+
+                if flight_key not in user.tracked_flights:
+                    user.tracked_flights.append(flight_key)
+
+                if alert_key and alert_key not in user.alerts:
+                    user.alerts.append(alert_key)
+
+                # Only update the push token if we have a new one
+                user.push_token = push_token or user.push_token
+                user.push_enabled = push_enabled
+
+                yield user.put_async()
+                raise tasklets.Return(user)
+
+            user = create_or_update_user(existing_user is not None)
+            raise tasklets.Return(user)
+
+    @classmethod
+    @context.toplevel
+    def remove_alert(cls, alert_key):
+        assert isinstance(alert_key, model.Key)
+
+        @tasklets.tasklet
+        def remove_callback(usr):
+            if alert_key in usr.alerts:
+                usr.alerts.remove(alert_key)
+                yield usr.put_async()
+
+        qry = cls.query(cls.alerts == alert_key)
+        yield qry.map_async(remove_callback)
+
+    @property
+    def token_str(self):
+        return str(self.token)
+
+    @property
+    def token_unicode(self):
+        return binascii.hexlify(self.token)
 
 
 class Origin(object):

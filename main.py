@@ -27,6 +27,15 @@ routes = [
         webapp.Route('/untrack/<flight_id:[^/]+>', 'UntrackHandler'),
         ]),
     ]),
+    PathPrefixRoute('/admin/flightaware', [
+        HandlerPrefixRoute('admin_handlers.',[
+        webapp.Route('/', 'FlightAwareAdminHandler'),
+        webapp.Route('/register_endpoint', 'FlightAwareAdminAPIHandler',
+                    handler_method='register_endpoint'),
+        webapp.Route('/clear_alerts', 'FlightAwareAdminAPIHandler',
+                    handler_method='clear_alerts'),
+        ]),
+    ]),
     webapp.Route('/', 'web_handlers.StaticHandler'),
 ]
 

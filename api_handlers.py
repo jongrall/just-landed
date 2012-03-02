@@ -13,11 +13,13 @@ import logging
 import json
 
 from lib import webapp2 as webapp
+from google.appengine.ext.ndb import model
 
 from data_sources import FlightAwareSource, GoogleDistanceSource
 
 from config import config
 from datasource_exceptions import *
+from models import iOSUser, FlightAwareTrackedFlight, FlightAwareAlert
 import utils
 
 # Currently using FlightAware and Google Distance APIs
@@ -61,6 +63,7 @@ class BaseAPIHandler(webapp.RequestHandler):
             self.response.content_type = 'application/json'
             self.response.write(json.dumps(response_data))
 
+
 class TrackHandler(BaseAPIHandler):
     """Handles tracking a flight by flight number and id."""
     def get(self, flight_number, flight_id):
@@ -85,8 +88,9 @@ class TrackHandler(BaseAPIHandler):
         if not utils.valid_flight_number(flight_number):
             raise InvalidFlightNumberException(flight_number)
 
-        flight = source.flight_info(flight_id=flight_id,
-                                    flight_number=flight_number)
+        # Track the flight
+        flight_key, flight = source.flight_info(flight_id=flight_id,
+                                                flight_number=flight_number)
 
         latitude = self.request.params.get('latitude')
         latitude = utils.is_number(latitude) and float(latitude)
@@ -95,17 +99,25 @@ class TrackHandler(BaseAPIHandler):
         dest_latitude = flight.destination.latitude
         dest_longitude = flight.destination.longitude
 
-        push =  (latitude and
-                self.request.params.get('push') and
-                bool(int(self.request.params.get('push'))))
-        begin_track = (latitude and
-                        self.request.params.get('begin_track') and
-                        bool(int(self.request.params.get('begin_track'))))
+        # FIXME: Assume iOS device for now
+        uuid = self.request.headers.get('X-Just-Landed-UUID')
+        push_token = self.request.params.get('push_token')
 
-        if push and begin_track:
-            # TODO(jon): Register the client's UDID for push notifications
-            pass
+        # Save the user's tracking activity if we have a uuid
+        if uuid:
+            alert_key = None
 
+            # Set alerts as necessary
+            if push_token:
+                alert = source.set_alert(flight_id=flight_id)
+                alert_key = alert and alert.key
+
+            iOSUser.track_flight(uuid=uuid,
+                                 flight_key=flight_key,
+                                 push_token=push_token,
+                                 alert_key=alert_key)
+
+        # Get driving distance, if we have their location
         if (latitude and longitude and
             not utils.too_close_or_far(latitude,
                                         longitude,
@@ -124,6 +136,7 @@ class TrackHandler(BaseAPIHandler):
                 logging.error(e.message)
 
         self.respond(flight.dict_for_client())
+
 
 class SearchHandler(BaseAPIHandler):
     """Handles looking up a flight by flight number."""
@@ -146,6 +159,7 @@ class SearchHandler(BaseAPIHandler):
 
         self.respond(flight_data)
 
+
 class UntrackHandler(BaseAPIHandler):
     """Handles untracking a specific flight. Usually called when a user is no
     longer tracking a flight and doesn't want to receive future notifications
@@ -154,6 +168,7 @@ class UntrackHandler(BaseAPIHandler):
     """
     def get(self, flight_id):
         self.respond('Untrack %s goes here.' % flight_id)
+
 
 class AlertHandler(BaseAPIHandler):
     """Handles flight alert callbacks from a 3rd party API, potentially

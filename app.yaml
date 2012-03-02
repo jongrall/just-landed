@@ -6,6 +6,7 @@ threadsafe: false
 
 builtins:
 - remote_api: on
+- deferred: on
 
 inbound_services:
 - warmup
@@ -39,6 +40,7 @@ handlers:
 - url: /admin/.*
   script: main.py
   login: admin
+  secure: always
 
 # Everything else
 - url: /.*

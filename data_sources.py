@@ -32,10 +32,11 @@ import json
 # We use memcache service to cache results from 3rd party APIs. This improves
 # performance and also reduces our bill :)
 from google.appengine.api import memcache
+from google.appengine.ext import deferred
 
 from config import config, on_local
 from datasource_exceptions import *
-from models import Airport, Origin, Destination, Flight
+from models import *
 import utils
 
 debug_cache = False
@@ -61,7 +62,7 @@ class FlightDataSource (object):
         """
         pass
 
-    def register_alert_endpoint(self, url, **kwargs):
+    def register_alert_endpoint(self, **kwargs):
         """Registers a Just Landed endpoint with the 3rd party API. This
         endpoint will handle flight status callbacks e.g. by triggering push
         notifications to clients.
@@ -97,7 +98,11 @@ class FlightDataSource (object):
         pass
 
     def set_alert(self, **kwargs):
-        """Registers a callback with the 3rd party API for a specific flight."""
+        """Registers a callback with the 3rd party API for a specific flight.
+
+        Returns the alert key.
+
+        """
         pass
 
     def delete_alert(self, alert_id):
@@ -196,8 +201,20 @@ class FlightAwareSource (FlightDataSource):
         else:
             raise AirportNotFoundException(icao_code or iata_code)
 
-    def register_alert_endpoint(self, url, **kwargs):
-        pass
+    def register_alert_endpoint(self, **kwargs):
+        endpoint_url = config['flightaware']['alert_endpoint']
+
+        resp = self.conn.request_get('/RegisterAlertEndpoint',
+                 args={'address': endpoint_url,
+                       'format_type': 'json/post'})
+
+        result = json.loads(resp['body'])
+        error = result.get('error')
+
+        if not error and result.get('RegisterAlertEndpointResult') == 1:
+            return {'endpoint_url' : endpoint_url}
+        else:
+            raise UnableToSetEndpointException(endpoint=endpoint_url)
 
     def flight_info(self, flight_id, **kwargs):
         """Implements flight_info method of FlightDataSource and provides
@@ -278,12 +295,15 @@ class FlightAwareSource (FlightDataSource):
             if use_cache and debug_cache:
                 logging.info('AIRLINE INFO CACHE SET')
 
+        # Mark the flight as being tracked
+        flight_key = FlightAwareTrackedFlight.create_or_update_flight(flight_id)
+
         # Add in the airline info
         flight.origin.terminal = airline_info['originTerminal']
         flight.destination.terminal = airline_info['destinationTerminal']
         flight.destination.bag_claim = airline_info['bagClaim']
 
-        return flight
+        return flight_key, flight
 
     def lookup_flights(self, flight_number, **kwargs):
         """Concrete implementation of lookup_flights of FlightDataSource.
@@ -402,10 +422,77 @@ class FlightAwareSource (FlightDataSource):
         pass
 
     def set_alert(self, **kwargs):
-        pass
+        flight_id = kwargs.get('flight_id')
+        assert isinstance(flight_id, basestring) and len(flight_id)
+
+        flight_num = utils.sanitize_flight_number(flight_id.split('-')[0])
+
+        # See if the alert exists (according to our datastore) and is enabled
+        alert = FlightAwareAlert.existing_enabled_alert(flight_num)
+
+        if alert:
+            return alert
+        else:
+            # Set the alert with FlightAware and keep a record of it in our system
+            channels = "{16 e_filed e_departure e_arrival e_diverted e_cancelled}"
+            resp = self.conn.request_get('/SetAlert',
+                     args={'alert_id': 0,
+                           'ident': flight_num,
+                           'channels': channels,
+                           'max_weekly': 1000})
+
+            result = json.loads(resp['body'])
+            error = result.get('error')
+            alert_id = result.get('SetAlertResult')
+
+            if error or not alert_id:
+                raise UnableToSetAlertException(reason=error)
+            else:
+                # Store the alert_id
+                if alert_id > 0:
+                    return FlightAwareAlert.create_alert(alert_id, flight_num)
+                else:
+                    raise UnableToSetAlertException(reason='Bad Alert Id')
+
+    def get_all_alerts(self):
+        resp = self.conn.request_get('/GetAlerts', args={})
+        result = json.loads(resp['body'])
+        error = result.get('error')
+        alert_info = result.get('GetAlertsResult')
+
+        if not error and alert_info:
+            return alert_info.get('alerts')
+        else:
+            raise UnableToGetAlertsException()
 
     def delete_alert(self, alert_id):
-        pass
+        resp = self.conn.request_get('/DeleteAlert',
+                                    args={'alert_id':alert_id})
+        result = json.loads(resp['body'])
+        error = result.get('error')
+        success = result.get('DeleteAlertResult')
+
+        if not error and success == 1:
+            # Disable the alert in the datastore, remove from users
+            pass
+            alert = FlightAwareAlert.disable_alert(alert_id)
+            if alert:
+                iOSUser.remove_alert(alert.key)
+        else:
+            raise UnableToDeleteAlertException(alert_id)
+
+    def clear_all_alerts(self):
+        alerts = self.get_all_alerts()
+
+        # Get all the alert ids
+        alert_ids = [alert.get('alert_id') for alert in alerts]
+
+        # Defer removal of all alerts
+        for alert_id in alert_ids:
+            self.delete_alert(alert_id)
+
+        return {'clearing_alert_count': len(alert_ids)}
+
 
 ###############################################################################
 """Driving Time Data Sources"""

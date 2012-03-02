@@ -54,7 +54,7 @@ class BaseHandler(webapp.RequestHandler):
 
 class StaticHandler(BaseHandler):
     """Generic handler for static pages on the website."""
-    def get(self, page_name=""):
+    def get(self, page_name="", context={}):
         template_name = page_name
 
         if not page_name or page_name.count('index'):
@@ -66,7 +66,7 @@ class StaticHandler(BaseHandler):
 
             template_path = os.path.join(template_dir, template_name)
 
-        context = {'current_page' : template_name}
+        context.update({'current_page' : template_name})
 
         # Add in the version context
         context.update(template_context)

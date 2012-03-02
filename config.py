@@ -7,10 +7,8 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 import os
-from google.appengine.api import app_identity
 
 config = {}
-
 
 ###############################################################################
 """App Configuration."""
@@ -19,8 +17,6 @@ config = {}
 config['app'] = {}
 
 # Figure out if we're on local, staging or production environments
-app_id = app_identity.get_application_id()
-
 if os.environ.get('SERVER_SOFTWARE', '').startswith('Dev'):
   config['app']['mode'] = 'local'
 else:
@@ -56,14 +52,21 @@ def on_production():
   """Returns true if the app is running in production"""
   return config['app']['mode'] == 'production'
 
-
 def on_local():
   """Returns true if the app is running on the local devserver."""
   return config['app']['mode'] == 'local'
 
+if on_local():
+    config['server_url'] = 'http://c-98-207-175-25.hsd1.ca.comcast.net'
+else:
+    config['server_url'] = 'http://just-landed.appspot.com/'
+
 ###############################################################################
 """Flight Data API Keys & Settings"""
 ###############################################################################
+
+def fa_alert_url():
+    return config['server_url'] + '/api/v1/handle_alert'
 
 # FlightAware settings
 config['flightaware'] = {
@@ -77,6 +80,9 @@ config['flightaware'] = {
     # Caching settings
     'flight_lookup_cache_time' : 10800,
     'flight_cache_time' : 600,
+
+    # Alert endpoint
+    'alert_endpoint' : fa_alert_url(),
 
     # Mapping of FlightAware API response keys to Just Landed API response keys
     'key_mapping' : {

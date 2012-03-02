@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block page_title %}Flight Aware Data Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/admin.css?v={{ version }}" />
+{% endblock %}
+
+{% block page_content %}
+<h1>Just Landed - Flight Aware Admin</h1>
+
+<h3>Alert Endpoint</h3>
+  <button id="set-endpoint">Set Endpoint</button>
+  <span id="endpoint-success"></span>
+
+<h3>Flight Alerts</h3>
+
+<table>
+  <tr>
+    <td id="alert-count">{{ alert_count }}</td>
+    <td>push alerts set</td>
+    <td>&nbsp;&nbsp;<button id="clear-alerts">Clear Alerts</button></td>
+    <td id="clear-result"></td>
+  </tr>
+</table>
+
+<p class="result">{{ register_endpoint_result }}</p>
+
+<h3>Flights Being Tracked</h3>
+<table>
+  <tr>
+    <td>{{ users_tracking_count }}</td>
+    <td>users tracking flights</td>
+  </tr>
+  <tr>
+    <td>{{ flights_tracking_count }}</td>
+    <td>flights being tracked</td>
+  </tr>
+</table>
+
+{% endblock %}
+{% block extra_js %}
+<script type="text/javascript" src="/static/javascript/admin.js"></script
+{% endblock %}
