@@ -1,2 +1,0 @@
-#!/bin/bash
-appcfg.py upload_data --config_file=airport_loader.yaml --filename=airports.csv --kind=Airport --application=dev~just-landed --url=http://localhost:8082/_ah/remote_api
