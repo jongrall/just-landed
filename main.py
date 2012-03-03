@@ -20,7 +20,7 @@ def handle_500(request, response, exception):
 # Configuration of supported routes
 routes = [
     PathPrefixRoute('/api/v1', [
-        HandlerPrefixRoute('api_handlers.',[
+        HandlerPrefixRoute('api.v1.api_handlers.',[
         webapp.Route('/track/<flight_number>/<flight_id:[^/]+>', 'TrackHandler'),
         webapp.Route('/search/<flight_number:[^/]+>', 'SearchHandler'),
         webapp.Route('/handle_alert', 'AlertHandler'),
@@ -28,7 +28,7 @@ routes = [
         ]),
     ]),
     PathPrefixRoute('/admin/flightaware', [
-        HandlerPrefixRoute('admin_handlers.',[
+        HandlerPrefixRoute('admin.admin_handlers.',[
         webapp.Route('/', 'FlightAwareAdminHandler'),
         webapp.Route('/register_endpoint', 'FlightAwareAdminAPIHandler',
                     handler_method='register_endpoint'),

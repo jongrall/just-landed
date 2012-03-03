@@ -18,6 +18,10 @@ from config import config
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
 
+###############################################################################
+"""Common Utilities"""
+###############################################################################
+
 def text_to_html(text):
     def reindent(line):
         stripped_line = line.lstrip()
