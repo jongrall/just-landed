@@ -40,6 +40,7 @@ from models import *
 import utils
 
 debug_cache = False
+debug_alerts = False
 
 ###############################################################################
 """Flight Data Sources"""
@@ -108,6 +109,13 @@ class FlightDataSource (object):
     def delete_alert(self, alert_id):
         """Deletes a callback from the 3rd party API e.g. when a flight is no
         longer being tracked by the user.
+
+        """
+        pass
+
+    def stop_tracking_flight(self, flight_id, **kwargs):
+        """Stops tracking a flight. If there are alerts set and no users tracking
+        the flight any longer, we delete & disable the alerts.
 
         """
         pass
@@ -225,56 +233,61 @@ class FlightAwareSource (FlightDataSource):
         """
         use_cache = not kwargs.get('no_cache')
         flight_number = kwargs.get('flight_number')
+
+        if not utils.valid_flight_number(flight_number):
+            raise InvalidFlightNumberException(flight_number)
+
+        if not flight_id:
+            raise FlightNotFoundException(flight_number)
+
         flight = None
         flight_cache_key = '%s-flight_info-%s' % (self.__class__.__name__,
                                                   flight_id)
         airline_cache_key = "%s-airline_info-%s" % (self.__class__.__name__,
                                                    flight_id)
 
-        if not flight_id or not flight_number:
-            raise FlightNotFoundException(flight_number)
-
-        sanitized_f_num = utils.sanitize_flight_number(flight_number)
-
-        # Find the flight
+        # Find the flight, try cache first
         if use_cache:
             flight = memcache.get(flight_cache_key)
             if flight and debug_cache:
                 logging.info('FLIGHT CACHE HIT')
 
+        # Cache miss
         if flight is None:
             if use_cache and debug_cache:
                 logging.info('FLIGHT CACHE MISS')
 
             # Do filtered lookup without introducing 2nd layer of caching
-            flights = self.lookup_flights(sanitized_f_num,
+            flights = self.lookup_flights(flight_number,
                                           find_flight_id=flight_id,
                                           no_cache=True)
             if len(flights):
+                # Take first match
                 flight = flights[0]
                 if use_cache and not memcache.set(flight_cache_key, flight,
                     config['flightaware']['flight_cache_time']):
                     logging.error("Unable to cache flight lookup!")
-                if use_cache and debug_cache:
+                elif use_cache and debug_cache:
                     logging.info('FLIGHT CACHE SET')
 
+        # Missing flight indicates probably tracking an old flight
         if not flight or flight.is_old_flight:
-            # Missing flight indicates probably tracking an old flight
-            raise OldFlightException(flight_number=sanitized_f_num,
+            raise OldFlightException(flight_number=flight_number,
                                      flight_id=flight_id)
 
         # Get detailed terminal & gate information
         airline_info = None
 
+        # Check cache
         if use_cache:
             airline_info = memcache.get(airline_cache_key)
-
-        if airline_info is not None:
-            if debug_cache:
+            if (airline_info is not None) and debug_cache:
                 logging.info('AIRLINE INFO CACHE HIT')
-        else:
+
+        if not airline_info:
             if use_cache and debug_cache:
                 logging.info('AIRLINE INFO CACHE MISS')
+
             resp = self.conn.request_get('/AirlineFlightInfo',
                                          args={'faFlightID': flight_id})
             # Turn the JSON response into a dict
@@ -285,20 +298,20 @@ class FlightAwareSource (FlightDataSource):
 
             # Filter & map the result
             fields = config['flightaware']['airline_flight_info_fields']
-            info = result['AirlineFlightInfoResult']
-            info = utils.sub_dict_strict(info, fields)
-            info = utils.map_dict_keys(info, self.api_key_mapping)
-            airline_info = info
+            airline_info = result['AirlineFlightInfoResult']
+            airline_info = utils.sub_dict_strict(airline_info, fields)
+            airline_info = utils.map_dict_keys(airline_info, self.api_key_mapping)
 
-            if use_cache and not memcache.set(airline_cache_key, info):
+            if use_cache and not memcache.set(airline_cache_key, airline_info):
                 logging.error("Unable to cache airline flight info!")
-            if use_cache and debug_cache:
+            elif use_cache and debug_cache:
                 logging.info('AIRLINE INFO CACHE SET')
 
         # Mark the flight as being tracked
         flight_key = FlightAwareTrackedFlight.create_or_update_flight(flight_id)
 
-        # Add in the airline info
+        # Add in the airline info and user-entered flight number
+        flight.flight_number = utils.sanitize_flight_number(flight_number)
         flight.origin.terminal = airline_info['originTerminal']
         flight.destination.terminal = airline_info['destinationTerminal']
         flight.destination.bag_claim = airline_info['bagClaim']
@@ -336,8 +349,6 @@ class FlightAwareSource (FlightDataSource):
         else:
             if use_cache and debug_cache:
                 logging.info('LOOKUP CACHE MISS')
-            elif not use_cache and debug_cache:
-                logging.info('LOOKUP IGNORING CACHE')
 
             resp = self.conn.request_get('/FlightInfoEx',
                      args={'ident': sanitized_f_num,
@@ -398,23 +409,19 @@ class FlightAwareSource (FlightDataSource):
                     flight.destination.name = utils.proper_airport_name(f['destinationName'])
                     flights.append(flight)
 
-                # If we're looking for a specific flight, filter out everything
-                # except the flight we're looking for
-                if find_flight_id:
-                    flights = [f for f in flights if f.flight_id == find_flight_id]
-                else:
-                    # Filter out old flights
-                    flights = [f for f in flights if not f.is_old_flight]
-
-                # Sort by departure date (earliest first)
+                # Filter out old flights & sort by departure date (earliest first)
+                flights = [f for f in flights if not f.is_old_flight]
                 flights.sort(key=lambda f: f.scheduled_departure_time)
 
             if use_cache and not memcache.set(lookup_cache_key, flights,
                                 config['flightaware']['flight_lookup_cache_time']):
                 logging.error("Unable to cache lookup response!")
-
-            if use_cache and debug_cache:
+            elif use_cache and debug_cache:
                 logging.info('LOOKUP CACHE SET')
+
+            # If we're looking for a specific flight, filter the flights
+            if find_flight_id:
+                flights = [f for f in flights if f.flight_id == find_flight_id]
 
             return flights
 
@@ -425,12 +432,15 @@ class FlightAwareSource (FlightDataSource):
         flight_id = kwargs.get('flight_id')
         assert isinstance(flight_id, basestring) and len(flight_id)
 
+        # Derive flight num from flight_id so we can use common flight_num for alerts
         flight_num = utils.sanitize_flight_number(flight_id.split('-')[0])
 
         # See if the alert exists (according to our datastore) and is enabled
         alert = FlightAwareAlert.existing_enabled_alert(flight_num)
 
         if alert:
+            if debug_alerts:
+                logging.info('EXISTING ALERT FOR %s' % flight_num)
             return alert
         else:
             # Set the alert with FlightAware and keep a record of it in our system
@@ -448,8 +458,10 @@ class FlightAwareSource (FlightDataSource):
             if error or not alert_id:
                 raise UnableToSetAlertException(reason=error)
             else:
-                # Store the alert_id
+                if debug_alerts:
+                    logging.info('REGISTERED NEW ALERT')
                 if alert_id > 0:
+                    # Store the alert so we don't recreate it
                     return FlightAwareAlert.create_alert(alert_id, flight_num)
                 else:
                     raise UnableToSetAlertException(reason='Bad Alert Id')
@@ -461,7 +473,10 @@ class FlightAwareSource (FlightDataSource):
         alert_info = result.get('GetAlertsResult')
 
         if not error and alert_info:
-            return alert_info.get('alerts')
+            alerts = alert_info.get('alerts')
+            if debug_alerts:
+                logging.info('%d ALERTS ARE SET' % len(alerts))
+            return alerts
         else:
             raise UnableToGetAlertsException()
 
@@ -473,8 +488,10 @@ class FlightAwareSource (FlightDataSource):
         success = result.get('DeleteAlertResult')
 
         if not error and success == 1:
+            if debug_alerts:
+                logging.info('DELETED ALERT %d' % alert_id)
+
             # Disable the alert in the datastore, remove from users
-            pass
             alert = FlightAwareAlert.disable_alert(alert_id)
             if alert:
                 iOSUser.remove_alert(alert.key)
@@ -487,11 +504,37 @@ class FlightAwareSource (FlightDataSource):
         # Get all the alert ids
         alert_ids = [alert.get('alert_id') for alert in alerts]
 
+        if debug_alerts:
+            logging.info('CLEARING %d ALERTS' % len(alert_ids))
+
         # Defer removal of all alerts
         for alert_id in alert_ids:
             self.delete_alert(alert_id)
 
         return {'clearing_alert_count': len(alert_ids)}
+
+    def stop_tracking_flight(self, flight_id, **kwargs):
+        uuid = kwargs.get('uuid')
+        flight_num = flight_id.split('-')[0]
+        flight_key = model.Key('FlightAwareTrackedFlight', flight_id)
+
+        # Lookup the alert by flight number
+        alert = FlightAwareAlert.existing_enabled_alert(flight_num)
+        alert_key = alert.key
+
+        # Mark the user as no longer tracking the flight or the alert
+        if uuid:
+            iOSUser.untrack_flight(uuid, flight_key, alert_key=alert_key)
+
+        # If there are no more users tracking the alert, delete it
+        if alert_key:
+            alert_unused = not iOSUser.alert_in_use(alert_key)
+            if alert_unused:
+                self.delete_alert(alert_key.integer_id())
+
+        # See if any users are still tracking the flight
+        if not iOSUser.flight_still_tracked(flight_key):
+            FlightAwareTrackedFlight.stop_tracking(flight_key)
 
 
 ###############################################################################

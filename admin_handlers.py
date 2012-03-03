@@ -8,8 +8,6 @@ __email__ = "grall@alum.mit.edu"
 
 import logging
 
-from google.appengine.ext.ndb import model, tasklets, context
-
 from web_handlers import StaticHandler
 from api_handlers import BaseAPIHandler
 from data_sources import FlightAwareSource
@@ -21,18 +19,14 @@ source = FlightAwareSource()
 
 class FlightAwareAdminHandler(StaticHandler):
 
-    @context.toplevel
     def get(self):
+        # Compute some basic stats
         alert_count = len(source.get_all_alerts())
-
-        q = FlightAwareTrackedFlight.query(FlightAwareTrackedFlight.is_tracking == True)
-        flights_tracking_count = yield q.count_async(keys_only=True)
-
-        q = iOSUser.query(iOSUser.is_tracking_flights == True)
-        users_tracking_count = yield q.count_async(keys_only=True)
+        tracking_count = FlightAwareTrackedFlight.count_tracked_flights()
+        users_tracking_count = iOSUser.count_users_tracking()
 
         context = dict(alert_count=alert_count,
-                       flights_tracking_count=flights_tracking_count,
+                       flights_tracking_count=tracking_count,
                        users_tracking_count=users_tracking_count)
         super(FlightAwareAdminHandler, self).get(page_name="fa_admin.html",
                                                  context=context)

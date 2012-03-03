@@ -13,7 +13,6 @@ import logging
 import json
 
 from lib import webapp2 as webapp
-from google.appengine.ext.ndb import model
 
 from data_sources import FlightAwareSource, GoogleDistanceSource
 
@@ -64,6 +63,28 @@ class BaseAPIHandler(webapp.RequestHandler):
             self.response.write(json.dumps(response_data))
 
 
+class SearchHandler(BaseAPIHandler):
+    """Handles looking up a flight by flight number."""
+    def get(self, flight_number):
+        """Returns top-level information about flights matching a specific
+        flight number. The flights returned will be flights that have landed
+        no more than an hour ago or are en-route or scheduled for the future.
+
+        This handler responds to the client using JSON.
+
+        """
+        if not utils.valid_flight_number(flight_number):
+            raise InvalidFlightNumberException(flight_number)
+
+        flights = source.lookup_flights(flight_number)
+        flight_data = []
+
+        for f in flights:
+            flight_data.append(f.dict_for_client())
+
+        self.respond(flight_data)
+
+
 class TrackHandler(BaseAPIHandler):
     """Handles tracking a flight by flight number and id."""
     def get(self, flight_number, flight_id):
@@ -85,9 +106,6 @@ class TrackHandler(BaseAPIHandler):
         reading in the browser.
 
         """
-        if not utils.valid_flight_number(flight_number):
-            raise InvalidFlightNumberException(flight_number)
-
         # Track the flight
         flight_key, flight = source.flight_info(flight_id=flight_id,
                                                 flight_number=flight_number)
@@ -138,28 +156,6 @@ class TrackHandler(BaseAPIHandler):
         self.respond(flight.dict_for_client())
 
 
-class SearchHandler(BaseAPIHandler):
-    """Handles looking up a flight by flight number."""
-    def get(self, flight_number):
-        """Returns top-level information about flights matching a specific
-        flight number. The flights returned will be flights that have landed
-        no more than an hour ago or are en-route or scheduled for the future.
-
-        This handler responds to the client using JSON.
-
-        """
-        if not utils.valid_flight_number(flight_number):
-            raise InvalidFlightNumberException(flight_number)
-
-        flights = source.lookup_flights(flight_number)
-        flight_data = []
-
-        for f in flights:
-            flight_data.append(f.dict_for_client())
-
-        self.respond(flight_data)
-
-
 class UntrackHandler(BaseAPIHandler):
     """Handles untracking a specific flight. Usually called when a user is no
     longer tracking a flight and doesn't want to receive future notifications
@@ -167,7 +163,14 @@ class UntrackHandler(BaseAPIHandler):
 
     """
     def get(self, flight_id):
-        self.respond('Untrack %s goes here.' % flight_id)
+        if not flight_id or not isinstance(flight_id, basestring):
+            raise FlightNotFoundException(flight_id)
+
+        # FIXME: Assume iOS device for now
+        uuid = self.request.headers.get('X-Just-Landed-UUID')
+        source.stop_tracking_flight(flight_id, uuid=uuid)
+
+        self.respond({'untracked' : flight_id})
 
 
 class AlertHandler(BaseAPIHandler):
@@ -177,4 +180,6 @@ class AlertHandler(BaseAPIHandler):
 
     """
     def post(self):
+        post_body = json.loads(self.request.body)
+        logging.info(post_body)
         self.respond('Alert handler goes here.')

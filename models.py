@@ -10,6 +10,7 @@ __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
+import logging
 import binascii
 from datetime import timedelta, datetime
 
@@ -17,6 +18,8 @@ from google.appengine.ext.ndb import model, tasklets, context
 from utils import *
 
 from config import config
+
+debug_datastore = False
 
 # Supported push notification preference names.
 _PREFS = ['push_filed',
@@ -106,6 +109,8 @@ class FlightAwareTrackedFlight(TrackedFlight):
         flight = cls.get_by_id(flight_id)
 
         if flight and flight.is_tracking:
+            if debug_datastore:
+                logging.info('EXISTING TRACKED FLIGHT: %s' % flight)
             raise tasklets.Return(flight.key)
         else:
             @model.transactional
@@ -114,6 +119,10 @@ class FlightAwareTrackedFlight(TrackedFlight):
                 flight = flight_exists and cls.get_by_id(flight_id)
                 if not flight:
                     flight = cls(id=flight_id)
+                    if debug_datastore:
+                        logging.info('FLIGHT CREATED')
+                elif debug_datastore:
+                    logging.info('FLIGHT UPDATED')
 
                 flight.is_tracking = True
                 flight_key = yield flight.put_async()
@@ -121,6 +130,25 @@ class FlightAwareTrackedFlight(TrackedFlight):
 
             result = create_or_update_tracked_flight(flight is not None)
             raise tasklets.Return(result)
+
+    @classmethod
+    @context.toplevel
+    def count_tracked_flights(cls):
+        q = cls.query(cls.is_tracking == True)
+        count = yield q.count_async(keys_only=True)
+        raise tasklets.Return(count)
+
+    @classmethod
+    @context.toplevel
+    def stop_tracking(cls, flight_key):
+        @model.transactional
+        @tasklets.tasklet
+        def stop_txn():
+            flight = yield flight_key.get_async()
+            flight.is_tracking = False
+            yield flight.put_async()
+
+        stop_txn()
 
 
 class FlightAlert(model.Model):
@@ -157,13 +185,12 @@ class FlightAwareAlert(FlightAlert):
     @classmethod
     @context.toplevel
     def disable_alert(cls, alert_id):
-        assert isinstance(alert_id, int) and alert_id > 0
+        assert isinstance(alert_id, (int, long)) and alert_id > 0
 
         @model.transactional
         @tasklets.tasklet
         def disable_alert_txn():
             alert = cls.get_by_id(alert_id)
-
             if alert:
                 alert.is_enabled = False
                 yield alert.put_async()
@@ -171,12 +198,14 @@ class FlightAwareAlert(FlightAlert):
             raise tasklets.Return(alert)
 
         result = disable_alert_txn()
+        if debug_datastore:
+            logging.info('DISABLED ALERT %s' % result)
         raise tasklets.Return(result)
 
     @classmethod
     @context.toplevel
     def create_alert(cls, alert_id, flight_number):
-        assert isinstance(alert_id, int) and alert_id > 0
+        assert isinstance(alert_id, (int, long)) and alert_id > 0
         assert isinstance(flight_number, basestring) and valid_flight_number(flight_number)
 
         @model.transactional
@@ -188,6 +217,8 @@ class FlightAwareAlert(FlightAlert):
             raise tasklets.Return(alert)
 
         result = create_alert_txn()
+        if debug_datastore:
+            logging.info('CREATED ALERT %s' % result)
         raise tasklets.Return(result)
 
 
@@ -277,6 +308,8 @@ class iOSUser(_User):
             existing_user.push_enabled == push_enabled and
             existing_user.push_token == push_token and
             (alert_key is None or alert_key in existing_user.alerts)):
+            if debug_datastore:
+                logging.info('USER ALREADY TRACKING %s' % existing_user)
             raise tasklets.Return(existing_user)
         else:
             @model.transactional
@@ -286,14 +319,25 @@ class iOSUser(_User):
                 if not user:
                     user = cls(id=uuid,
                                push_settings=cls.default_settings())
+                    if debug_datastore:
+                        logging.info('CREATED NEW USER %s' % user)
+                elif debug_datastore:
+                    logging.info('UPDATING EXISTING USER %s' % user)
 
                 if flight_key not in user.tracked_flights:
                     user.tracked_flights.append(flight_key)
+                    if debug_datastore:
+                        logging.info('USER STARTED TRACKING FLIGHT %s' % flight_key)
 
                 if alert_key and alert_key not in user.alerts:
                     user.alerts.append(alert_key)
+                    if debug_datastore:
+                        logging.info('USER SUBSCRIBED TO ALERT %s' % alert_key)
 
                 # Only update the push token if we have a new one
+                if debug_datastore and push_token != user.push_token:
+                    logging.info('USER PUSH TOKEN UPDATED')
+
                 user.push_token = push_token or user.push_token
                 user.push_enabled = push_enabled
 
@@ -312,10 +356,49 @@ class iOSUser(_User):
         def remove_callback(usr):
             if alert_key in usr.alerts:
                 usr.alerts.remove(alert_key)
+                if debug_datastore:
+                    logging.info('USER UNSUBSCRIBED FROM ALERT %s' % alert_key)
                 yield usr.put_async()
 
         qry = cls.query(cls.alerts == alert_key)
         yield qry.map_async(remove_callback)
+
+    @classmethod
+    @context.toplevel
+    def untrack_flight(cls, uuid, flight_key, alert_key=None):
+        @model.transactional
+        @tasklets.tasklet
+        def untrack_txn():
+            user = cls.get_by_id(uuid)
+            if user:
+                if flight_key in user.tracked_flights:
+                    user.tracked_flights.remove(flight_key)
+                if alert_key and alert_key in user.alerts:
+                    user.alerts.remove(alert_key)
+                yield user.put_async()
+
+        untrack_txn()
+
+    @classmethod
+    @context.toplevel
+    def alert_in_use(cls, alert_key):
+        q = cls.query(cls.alerts == alert_key)
+        count = yield q.count_async(limit=1)
+        raise tasklets.Return(count > 0)
+
+    @classmethod
+    @context.toplevel
+    def flight_still_tracked(cls, flight_key):
+        q = cls.query(cls.tracked_flights == flight_key)
+        count = yield q.count_async(limit=1)
+        raise tasklets.Return(count > 0)
+
+    @classmethod
+    @context.toplevel
+    def count_users_tracking(cls):
+        q = cls.query(cls.is_tracking_flights == True)
+        count = yield q.count_async(keys_only=True)
+        raise tasklets.Return(count)
 
     @property
     def token_str(self):

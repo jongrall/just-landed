@@ -29,7 +29,7 @@ config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 config['on_time_buffer'] = 600
 
 # Hours after a flight lands when it becomes "old"
-config['flight_old_hours'] = 2
+config['flight_old_hours'] = 3
 
 # Fields to send for a flight
 config['flight_fields'] = [
