@@ -179,7 +179,14 @@ class AlertHandler(BaseAPIHandler):
     alert.
 
     """
+    def get(self):
+        #post_body = json.loads(self.request.body)
+        #logging.info(post_body)
+        logging.info(self.request.body)
+        self.respond('Alert handler goes here.')
+
     def post(self):
-        post_body = json.loads(self.request.body)
-        logging.info(post_body)
+        #post_body = json.loads(self.request.body)
+        #logging.info(post_body)
+        logging.info(self.request.body)
         self.respond('Alert handler goes here.')
