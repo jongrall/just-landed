@@ -186,7 +186,7 @@ class AlertHandler(BaseAPIHandler):
         self.respond('Alert handler goes here.')
 
     def post(self):
-        #post_body = json.loads(self.request.body)
-        #logging.info(post_body)
-        logging.info(self.request.body)
+        logging.info('ALERT CALLBACK!')
+        post_body = json.loads(self.request.body)
+        logging.info(post_body)
         self.respond('Alert handler goes here.')
