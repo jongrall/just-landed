@@ -37,7 +37,7 @@ routes = [
         ]),
     ]),
     PathPrefixRoute('/_ah', [
-      Route('/queue/mobile-push', handler='notifications.PushWorker'),
+        webapp.Route('/queue/mobile-push', handler='notifications.PushWorker'),
     ]),
     webapp.Route('/', 'web_handlers.StaticHandler'),
 ]
