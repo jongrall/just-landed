@@ -37,8 +37,10 @@ from google.appengine.ext import deferred
 from config import config, on_local
 from datasource_exceptions import *
 from models import *
+from notifications import *
 import utils
 
+FLIGHT_STATES = config['flight_states']
 debug_cache = False
 debug_alerts = False
 
@@ -113,12 +115,27 @@ class FlightDataSource (object):
         """
         pass
 
+    def start_tracking_flight(self, flight_id, flight_num, **kwargs):
+        """Marks a flight as tracked. If there is a uuid supplied, we also mark
+        the user as tracking the flight. If there is a push_token, we set an
+        alert and make sure the user is notified of incoming alerts for that
+        flight.
+
+        """
+        pass
+
     def stop_tracking_flight(self, flight_id, **kwargs):
         """Stops tracking a flight. If there are alerts set and no users tracking
         the flight any longer, we delete & disable the alerts.
 
         """
         pass
+
+    def authenticate_remote_request(self, request):
+        """Returns True if the incoming request is in fact from the trusted
+        3rd party datasource, False otherwise."""
+        pass
+
 
 class FlightAwareSource (FlightDataSource):
     """Concrete subclass of FlightDataSource that pulls its data from the
@@ -145,6 +162,49 @@ class FlightAwareSource (FlightDataSource):
             self.conn = Connection(self.base_url,
                 username=config['flightaware']['username'],
                 password=config['flightaware']['keys']['production'])
+
+    def raw_flight_data_to_flight(self, data, sanitized_flight_num):
+        if data and utils.valid_flight_number(sanitized_flight_num):
+            # Keep a subset of the response fields
+            fields = config['flightaware']['flight_info_fields']
+            data = utils.sub_dict_strict(data, fields);
+
+            # Map the response dict keys
+            data = utils.map_dict_keys(data, self.api_key_mapping)
+
+            origin = None
+            origin_code = data['origin']
+
+            if utils.is_valid_iata(origin_code):
+                origin = Origin(self.airport_info(iata_code=origin_code))
+            else:
+                origin = Origin(self.airport_info(icao_code=origin_code))
+
+            destination = None
+            destination_code = data['destination']
+
+            if utils.is_valid_iata(destination_code):
+                destination = Destination(self.airport_info(
+                                          iata_code=destination_code))
+            else:
+                destination = Destination(self.airport_info(
+                                          icao_code=destination_code))
+
+            flight = Flight(data)
+            flight.flight_number = sanitized_flight_num
+            flight.origin = origin
+            flight.destination = destination
+
+            # Convert flight duration to integer number of seconds
+            flight_duration = data['scheduledFlightDuration'].split(':')
+            secs = (int(flight_duration[0]) * 3600) + (int(flight_duration[1]) * 60)
+            flight.scheduled_flight_duration = secs
+
+            flight.origin.city = data['originCity'].split(',')[0]
+            flight.origin.name = utils.proper_airport_name(data['originName'])
+            flight.destination.city = data['destinationCity'].split(',')[0]
+            flight.destination.name = utils.proper_airport_name(data['destinationName'])
+            return flight
 
     def airport_info(self, icao_code="", iata_code=""):
         """Looks up information about an airport using its ICAO or IATA code."""
@@ -307,16 +367,13 @@ class FlightAwareSource (FlightDataSource):
             elif use_cache and debug_cache:
                 logging.info('AIRLINE INFO CACHE SET')
 
-        # Mark the flight as being tracked
-        flight_key = FlightAwareTrackedFlight.create_or_update_flight(flight_id)
-
         # Add in the airline info and user-entered flight number
         flight.flight_number = utils.sanitize_flight_number(flight_number)
         flight.origin.terminal = airline_info['originTerminal']
         flight.destination.terminal = airline_info['destinationTerminal']
         flight.destination.bag_claim = airline_info['bagClaim']
 
-        return flight_key, flight
+        return flight
 
     def lookup_flights(self, flight_number, **kwargs):
         """Concrete implementation of lookup_flights of FlightDataSource.
@@ -362,51 +419,11 @@ class FlightAwareSource (FlightDataSource):
             else:
                 flight_data = flight_data['FlightInfoExResult']['flights']
 
-                # Keep a subset of the response fields
-                fields = config['flightaware']['flight_info_fields']
-                flight_data = [utils.sub_dict_strict(f, fields)
-                                for f in flight_data]
-
-                # Map the response dict keys
-                flight_data = [utils.map_dict_keys(f, self.api_key_mapping)
-                                for f in flight_data]
-
                 # Convert raw flight data to instances of Flight
                 flights = []
 
-                for f in flight_data:
-                    origin = None
-                    origin_code = f['origin']
-
-                    if utils.is_valid_iata(origin_code):
-                        origin = Origin(self.airport_info(iata_code=origin_code))
-                    else:
-                        origin = Origin(self.airport_info(icao_code=origin_code))
-
-                    destination = None
-                    destination_code = f['destination']
-
-                    if utils.is_valid_iata(destination_code):
-                        destination = Destination(self.airport_info(
-                                                  iata_code=destination_code))
-                    else:
-                        destination = Destination(self.airport_info(
-                                                  icao_code=destination_code))
-
-                    flight = Flight(f)
-                    flight.flight_number = sanitized_f_num
-                    flight.origin = origin
-                    flight.destination = destination
-
-                    # Convert flight duration to integer number of seconds
-                    flight_duration = f['scheduledFlightDuration'].split(':')
-                    secs = (int(flight_duration[0]) * 3600) + (int(flight_duration[1]) * 60)
-                    flight.scheduled_flight_duration = secs
-
-                    flight.origin.city = f['originCity'].split(',')[0]
-                    flight.origin.name = utils.proper_airport_name(f['originName'])
-                    flight.destination.city = f['destinationCity'].split(',')[0]
-                    flight.destination.name = utils.proper_airport_name(f['destinationName'])
+                for data in flight_data:
+                    flight = self.raw_flight_data_to_flight(data, sanitized_f_num)
                     flights.append(flight)
 
                 # Filter out old flights & sort by departure date (earliest first)
@@ -426,14 +443,75 @@ class FlightAwareSource (FlightDataSource):
             return flights
 
     def process_alert(self, alert_body):
-        pass
+        assert isinstance(alert_body, dict)
+
+        alert_id = alert_body.get('alert_id')
+        event_code = alert_body.get('eventcode')
+        flight_data = alert_body.get('flight')
+        flight_id = flight_data.get('faFlightID')
+        origin = flight_data.get('origin')
+        destination = flight_data.get('destination')
+
+        if alert_id and event_code and flight_id and origin and destination:
+            # Clear memcache
+            flight_cache_key = '%s-flight_info-%s' % (self.__class__.__name__,
+                                                      flight_id)
+            airline_cache_key = "%s-airline_info-%s" % (self.__class__.__name__,
+                                                       flight_id)
+            memcache.delete_multi([flight_cache_key, airline_cache_key])
+
+            # Send out push notifications
+            alert_key = model.Key('FlightAwareAlert', alert_id)
+            flight_key = model.Key('FlightAwareTrackedFlight', flight_id)
+            push_types = config['push_types']
+            flight_num = utils.flight_num_from_fa_flight_id(flight_id)
+
+            # Extract current flight information from the alert
+            alerted_flight = self.raw_flight_data_to_flight(flight_data, flight_num)
+
+            # FIXME: Assume iOS user
+            for u in iOSUser.users_to_notify(alert_key, flight_key):
+                user_flight_num = u.flight_num_for_flight_id(flight_id) or flight_num
+                device_token = u.push_token
+
+                # Send notifications to each user, only if they want that notification type
+                # Filed
+                if event_code == 'filed' and u.wants_notification_type(push_types.FILED):
+                    FlightFiledAlert(device_token, alerted_flight, user_flight_num).push()
+
+                # Early / delayed / on time
+                elif event_code == 'change' and u.wants_notification_type(push_types.CHANGED):
+                    FlightPlanChangeAlert(device_token, alerted_flight, user_flight_num).push()
+
+                # Take off
+                elif event_code == 'departure' and u.wants_notification_type(push_types.DEPARTED):
+                    FlightDepartedAlert(device_token, alerted_flight, user_flight_num).push()
+
+                # Arrival
+                elif event_code == 'arrival' and u.wants_notification_type(push_types.ARRIVED):
+                    # Get the landing terminal by getting all the flight info
+                    flight = self.flight_info(flight_id=flight_id,
+                                              flight_number=flight_num)
+                    FlightArrivedAlert(device_token, flight, user_flight_num).push()
+
+                # Diverted
+                elif event_code == 'diverted' and u.wants_notification_type(push_types.DIVERTED):
+                    FlightDivertedAlert(device_token, alerted_flight, user_flight_num).push()
+
+                # Canceled
+                elif event_code == 'cancelled' and u.wants_notification_type(push_types.CANCELED):
+                    FlightCanceledAlert(device_token, alerted_flight, user_flight_num).push()
+
+                else:
+                    logging.error('Unknown eventcode.')
 
     def set_alert(self, **kwargs):
         flight_id = kwargs.get('flight_id')
         assert isinstance(flight_id, basestring) and len(flight_id)
 
         # Derive flight num from flight_id so we can use common flight_num for alerts
-        flight_num = utils.sanitize_flight_number(flight_id.split('-')[0])
+        flight_num = utils.sanitize_flight_number(
+                        utils.flight_num_from_fa_flight_id(flight_id))
 
         # See if the alert exists (according to our datastore) and is enabled
         alert = FlightAwareAlert.existing_enabled_alert(flight_num)
@@ -513,9 +591,42 @@ class FlightAwareSource (FlightDataSource):
 
         return {'clearing_alert_count': len(alert_ids)}
 
+    def start_tracking_flight(self, flight_id, flight_num, **kwargs):
+        assert isinstance(flight_id, basestring) and len(flight_id)
+        assert utils.valid_flight_number(flight_num)
+
+        uuid = kwargs.get('uuid')
+        push_token = kwargs.get('push_token')
+
+        # Mark the flight as being tracked
+        flight_key = FlightAwareTrackedFlight.create_or_update_flight(flight_id)
+
+        # Save the user's tracking activity if we have a uuid
+        if uuid:
+            alert_key = None
+            old_push_token = None
+
+            if push_token:
+                alert = self.set_alert(flight_id=flight_id)
+                alert_key = alert and alert.key
+                existing_user = iOSUser.get_by_id(uuid)
+                old_push_token = existing_user and existing_user.push_token
+
+            user = iOSUser.track_flight(uuid=uuid,
+                                        flight_key=flight_key,
+                                        flight_num=flight_num,
+                                        push_token=push_token,
+                                        alert_key=alert_key)
+
+            # Tell UrbanAirship about push tokens
+            if push_token:
+                register_token(push_token)
+            if old_push_token and push_token != old_push_token:
+                deregister_token(old_push_token)
+
     def stop_tracking_flight(self, flight_id, **kwargs):
         uuid = kwargs.get('uuid')
-        flight_num = flight_id.split('-')[0]
+        flight_num = utils.flight_num_from_fa_flight_id(flight_id)
         flight_key = model.Key('FlightAwareTrackedFlight', flight_id)
 
         # Lookup the alert by flight number
@@ -535,6 +646,15 @@ class FlightAwareSource (FlightDataSource):
         # See if any users are still tracking the flight
         if not iOSUser.flight_still_tracked(flight_key):
             FlightAwareTrackedFlight.stop_tracking(flight_key)
+
+    def authenticate_remote_request(self, request):
+        """Returns True if the incoming request is in fact from the trusted
+        3rd party datasource, False otherwise."""
+        # FIXME: Maybe don't check user agent
+        user_agent = self.request.environ.get('HTTP_USER_AGENT')
+        remote_addr = self.request.remote_addr
+        return (user_agent == config['flightaware']['remote_user_agent'] and
+                utils.is_trusted_flightaware_host(remote_addr))
 
 
 ###############################################################################

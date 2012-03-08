@@ -14,6 +14,7 @@ import math
 
 import models
 from config import config
+from lib import ipaddr
 
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
@@ -57,18 +58,6 @@ def distance(p1lat, p1lon, p2lat, p2lon):
   p2lat, p2lon = math.radians(p2lat), math.radians(p2lon)
   return EARTH_RADIUS * math.acos(math.sin(p1lat) * math.sin(p2lat) +
       math.cos(p1lat) * math.cos(p2lat) * math.cos(p2lon - p1lon))
-
-class Enum(set):
-  """Solution for Enums
-
-  Usage:
-  Animals = Enum(["DOG", "CAT", "Horse"])
-  print Animals.DOG
-  """
-  def __getattr__(self, name):
-    if name in self:
-      return name
-    raise AttributeError
 
 def is_number(s):
     try:
@@ -125,6 +114,18 @@ def proper_airport_name(name):
         return name + ' Airport'
     else:
         return name
+
+def flight_num_from_fa_flight_id(flight_id):
+    if flight_id:
+        return flight_id.split('-')[0]
+
+def is_trusted_flightaware_host(host_ip):
+    host = ipaddr.ip_address(host_ip)
+    for network in config['flightaware']['trusted_remote_hosts']:
+        trusted_net = ipaddr.ip_network(network)
+        if host in trusted_net:
+            return True
+    return False
 
 ###############################################################################
 """Date & Time Utilities"""

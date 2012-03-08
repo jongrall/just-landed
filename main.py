@@ -36,6 +36,9 @@ routes = [
                     handler_method='clear_alerts'),
         ]),
     ]),
+    PathPrefixRoute('/_ah', [
+      Route('/queue/mobile-push', handler='notifications.PushWorker'),
+    ]),
     webapp.Route('/', 'web_handlers.StaticHandler'),
 ]
 

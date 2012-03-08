@@ -11,24 +11,15 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 import logging
-import binascii
 from datetime import timedelta, datetime
 
 from google.appengine.ext.ndb import model, tasklets, context
 from utils import *
 
-from config import config
+from config import config, Enum
 
+FLIGHT_STATES = config['flight_states']
 debug_datastore = False
-
-# Supported push notification preference names.
-_PREFS = ['push_filed',
-          'push_diverted',
-          'push_canceled',
-          'push_departed',
-          'push_arrived',
-          'push_delayed']
-
 
 class Airport(model.Model):
     """ Model associated with an Airport entity stored in the GAE datastore.
@@ -92,7 +83,7 @@ class FlightAwareTrackedFlight(TrackedFlight):
     - `is_tracking` : Whether the flight is still being tracked.
 
     """
-    tail_number = model.ComputedProperty(lambda f: f.key.string_id().split('-')[0])
+    tail_number = model.ComputedProperty(lambda f: flight_num_from_fa_flight_id(f.key.string_id()))
     is_tracking = model.BooleanProperty(default=True, indexed=True)
 
     @classmethod
@@ -238,10 +229,18 @@ class PushNotificationSetting(model.Model):
   name = model.StringProperty(required=True)
   value = model.BooleanProperty(required=True)
 
-  @classmethod
-  def setting_tag(cls, user_key, tag):
-    """Returns a setting tag prepended with the User key."""
-    return '_'.join([user_key.urlsafe(), tag])
+
+class UserSuppliedFlightNumberMapping(model.Model):
+    """Model representing a mapping of flight IDs to flight numbers (tail
+    numbers) that the user entered. This mapping enables us to recover what
+    the user entered when searching for a flight so that notifications to
+    that user can be returned using the flight number that they are familiar
+    with and yet multiple users can share the same alert under a standardized
+    and sanitized flight_num.
+
+    """
+    flight_id = model.StringProperty(required=True)
+    user_flight_num = model.StringProperty(required=True)
 
 
 class _User(model.Model):
@@ -279,22 +278,23 @@ class iOSUser(_User):
                                                 indexed=True)
     alerts = model.KeyProperty(repeated=True)
     has_alerts = model.ComputedProperty(lambda u: bool(len(u.alerts)), indexed=True)
-    push_token = model.BlobProperty(indexed=True)
+    push_token = model.StringProperty(indexed=True)
     push_settings = model.StructuredProperty(PushNotificationSetting, repeated=True)
-    push_enabled = model.BooleanProperty(default=False)
+    flight_num_mappings = model.StructuredProperty(UserSuppliedFlightNumberMapping, repeated=True)
+    push_enabled = model.BooleanProperty(default=False, indexed=True)
 
     @classmethod
     def default_settings(cls):
         """Returns a list of the default PushNotificationSettings for an iOS user."""
         settings = []
         # All prefs are True by default
-        for pref_name in _PREFS:
-            settings.append(PushNotificationSetting(name=pref_name, value=True))
+        for push in config['push_types']:
+            settings.append(PushNotificationSetting(name=push, value=True))
         return settings
 
     @classmethod
     @context.toplevel
-    def track_flight(cls, uuid, flight_key, push_token=None, alert_key=None):
+    def track_flight(cls, uuid, flight_key, flight_num, push_token=None, alert_key=None):
         assert isinstance(uuid, basestring) and len(uuid)
         assert isinstance(flight_key, model.Key), "No valid flight_key"
 
@@ -326,6 +326,9 @@ class iOSUser(_User):
 
                 if flight_key not in user.tracked_flights:
                     user.tracked_flights.append(flight_key)
+                    mapping = UserSuppliedFlightNumberMapping(flight_id=flight_key.id(),
+                                                              user_flight_num=flight_num)
+                    user.flight_num_mappings.append(mapping)
                     if debug_datastore:
                         logging.info('USER STARTED TRACKING FLIGHT %s' % flight_key)
 
@@ -371,10 +374,18 @@ class iOSUser(_User):
         def untrack_txn():
             user = cls.get_by_id(uuid)
             if user:
+                # Remove the tracked flight
                 if flight_key in user.tracked_flights:
                     user.tracked_flights.remove(flight_key)
+
+                # Remove alert
                 if alert_key and alert_key in user.alerts:
                     user.alerts.remove(alert_key)
+
+                # Remove the flight_id to flight_num mapping
+                for mapping in user.flight_num_mappings:
+                    if mapping.flight_id == flight_key.id():
+                        user.flight_num_mappings.remove(mapping)
                 yield user.put_async()
 
         untrack_txn()
@@ -393,6 +404,16 @@ class iOSUser(_User):
         count = yield q.count_async(limit=1)
         raise tasklets.Return(count > 0)
 
+
+    @classmethod
+    @context.toplevel
+    def users_to_notify(cls, alert_key, flight_key):
+        q = cls.query(cls.tracked_flights == flight_key,
+                      cls.alerts == alert_key,
+                      cls.push_enabled == True)
+        # Returns an iterator
+        raise tasklets.Return(q.iter_async(batch_size=50))
+
     @classmethod
     @context.toplevel
     def count_users_tracking(cls):
@@ -400,13 +421,18 @@ class iOSUser(_User):
         count = yield q.count_async(keys_only=True)
         raise tasklets.Return(count)
 
-    @property
-    def token_str(self):
-        return str(self.token)
+    def wants_notification_type(self, push_type):
+        assert push_type
+        for setting in self.push_settings:
+            if setting.name == push_type and setting.value == True:
+                return True
+        return False
 
-    @property
-    def token_unicode(self):
-        return binascii.hexlify(self.token)
+    def flight_num_for_flight_id(self, flight_id):
+        assert isinstance(flight_id, basestring) and len(flight_id)
+        for mapping in self.flight_num_mappings:
+            if mapping.flight_id == flight_id:
+                return mapping.user_flight_num
 
 
 class Origin(object):
@@ -467,7 +493,12 @@ class Origin(object):
 
     @property
     def terminal(self):
-        return self._data.get('terminal')
+        return self._data.get('terminal').upper().strip()
+
+    @property
+    def best_name(self):
+        """Returns city, then name, falling back to iata_code, falling back to icao_code"""
+        return self.name or self.iata_code or self.icao_code
 
     @terminal.setter
     def terminal(self, value):
@@ -488,10 +519,6 @@ class Destination(Origin):
     @bag_claim.setter
     def bag_claim(self, value):
         self._data['bagClaim'] = value
-
-
-FLIGHT_STATES = Enum(['SCHEDULED', 'ON_TIME', 'DELAYED', 'CANCELED',
-                        'DIVERTED', 'LANDED', 'EARLY'])
 
 
 class Flight(object):
@@ -592,6 +619,11 @@ class Flight(object):
         self._data['scheduledFlightDuration'] = value
 
     @property
+    def est_arrival_diff_from_schedule(self):
+        return (self.estimated_arrival_time -
+            (self.scheduled_departure_time + self.scheduled_flight_duration))
+
+    @property
     def status(self):
         if self.actual_departure_time == 0:
             # See if it has missed its take-off time
@@ -611,9 +643,7 @@ class Flight(object):
         elif self.actual_arrival_time > 0:
             return FLIGHT_STATES.LANDED
         else:
-            time_diff = (self.estimated_arrival_time -
-                (self.scheduled_departure_time + self.scheduled_flight_duration))
-
+            time_diff = self.est_arrival_diff_from_schedule
             time_buff = config['on_time_buffer']
             if abs(time_diff) < time_buff:
                 return FLIGHT_STATES.ON_TIME
@@ -639,7 +669,11 @@ class Flight(object):
             return 'Flight diverted to another airport.'
         else:
             interval = (self.estimated_arrival_time - timestamp(datetime.utcnow()))
-            return 'Arrives in %s.' % pretty_time_interval(interval)
+            if interval > 0:
+                return 'Arrives in %s.' % pretty_time_interval(interval)
+            else:
+                # Estimated arrival time is before now, arrival is imminent
+                return 'Arriving shortly'
 
     @property
     def is_old_flight(self):

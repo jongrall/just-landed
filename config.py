@@ -10,6 +10,18 @@ import os
 
 config = {}
 
+class Enum(set):
+  """Solution for Enums
+
+  Usage:
+  Animals = Enum(["DOG", "CAT", "Horse"])
+  print Animals.DOG
+  """
+  def __getattr__(self, name):
+    if name in self:
+      return name
+    raise AttributeError
+
 ###############################################################################
 """App Configuration."""
 ###############################################################################
@@ -48,6 +60,26 @@ config['flight_fields'] = [
     'status',
 ]
 
+# Supported push notification preference names.
+config['push_types'] = Enum([
+    'FILED',
+    'DIVERTED',
+    'CANCELED',
+    'DEPARTED',
+    'ARRIVED',
+    'CHANGED',
+])
+
+config['flight_states'] = Enum([
+    'SCHEDULED',
+    'ON_TIME',
+    'DELAYED',
+    'CANCELED',
+    'DIVERTED',
+    'LANDED',
+    'EARLY'
+])
+
 def on_production():
   """Returns true if the app is running in production"""
   return config['app']['mode'] == 'production'
@@ -76,6 +108,14 @@ config['flightaware'] = {
         'development' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
         'production' : '390ef2061c6f5bd814ef0ef3ce68efa19f3c12b2',
     },
+
+    'remote_user_agent': 'FlightXML/2.0 (mc_chan_flightxml)',
+    'trusted_remote_hosts' : [
+        '216.52.171.64/26',
+        '70.42.6.128/25',
+        '72.251.200.64/26',
+        '89.151.84.224/28',
+    ],
 
     # Caching settings
     'flight_lookup_cache_time' : 10800,

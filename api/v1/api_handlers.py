@@ -16,9 +16,7 @@ from lib import webapp2 as webapp
 
 from data_sources import FlightAwareSource, GoogleDistanceSource
 
-from config import config
 from datasource_exceptions import *
-from models import iOSUser, FlightAwareTrackedFlight, FlightAwareAlert
 import utils
 
 # Currently using FlightAware and Google Distance APIs
@@ -106,10 +104,22 @@ class TrackHandler(BaseAPIHandler):
         reading in the browser.
 
         """
-        # Track the flight
-        flight_key, flight = source.flight_info(flight_id=flight_id,
-                                                flight_number=flight_number)
+        # Get the current flight information
+        flight = source.flight_info(flight_id=flight_id,
+                                    flight_number=flight_number)
 
+        # FIXME: Assume iOS device for now
+        uuid = self.request.headers.get('X-Just-Landed-UUID')
+        push_token = self.request.params.get('push_token')
+
+        # Track the flight
+        # TODO: DEFER THIS
+        source.start_tracking_flight(flight_id,
+                                     flight_number,
+                                     uuid=uuid,
+                                     push_token=push_token)
+
+        # Get driving distance, if we have their location
         latitude = self.request.params.get('latitude')
         latitude = utils.is_number(latitude) and float(latitude)
         longitude = self.request.params.get('longitude')
@@ -117,25 +127,6 @@ class TrackHandler(BaseAPIHandler):
         dest_latitude = flight.destination.latitude
         dest_longitude = flight.destination.longitude
 
-        # FIXME: Assume iOS device for now
-        uuid = self.request.headers.get('X-Just-Landed-UUID')
-        push_token = self.request.params.get('push_token')
-
-        # Save the user's tracking activity if we have a uuid
-        if uuid:
-            alert_key = None
-
-            # Set alerts as necessary
-            if push_token:
-                alert = source.set_alert(flight_id=flight_id)
-                alert_key = alert and alert.key
-
-            iOSUser.track_flight(uuid=uuid,
-                                 flight_key=flight_key,
-                                 push_token=push_token,
-                                 alert_key=alert_key)
-
-        # Get driving distance, if we have their location
         if (latitude and longitude and
             not utils.too_close_or_far(latitude,
                                         longitude,
@@ -168,6 +159,8 @@ class UntrackHandler(BaseAPIHandler):
 
         # FIXME: Assume iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
+
+        # TODO: DEFER THIS
         source.stop_tracking_flight(flight_id, uuid=uuid)
 
         self.respond({'untracked' : flight_id})
@@ -179,14 +172,14 @@ class AlertHandler(BaseAPIHandler):
     alert.
 
     """
-    def get(self):
-        #post_body = json.loads(self.request.body)
-        #logging.info(post_body)
-        logging.info(self.request.body)
-        self.respond('Alert handler goes here.')
-
     def post(self):
         logging.info('ALERT CALLBACK!')
-        post_body = json.loads(self.request.body)
-        logging.info(post_body)
-        self.respond('Alert handler goes here.')
+        # Make sure the POST came from the trusted datasource
+        if (source.authenticate_remote_request(self.request)):
+            alert_body = json.loads(self.request.body)
+            # TODO: DEFER THIS
+            source.process_alert(alert_body)
+        else:
+            logging.error('Unknown user-agent or host posting alert: (%s, %s)' %
+                            (self.request.environ.get('HTTP_USER_AGENT'),
+                            self.request.remote_addr))
