@@ -412,7 +412,7 @@ class iOSUser(_User):
                       cls.alerts == alert_key,
                       cls.push_enabled == True)
         # Returns an iterator
-        raise tasklets.Return(q.iter_async(batch_size=50))
+        raise tasklets.Return(q.iter(batch_size=50))
 
     @classmethod
     @context.toplevel
@@ -468,7 +468,7 @@ class Origin(object):
         self._data['city'] = value
 
     @property
-    def name(self, value):
+    def name(self):
         return self._data.get('name')
 
     @name.setter

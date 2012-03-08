@@ -460,50 +460,49 @@ class FlightAwareSource (FlightDataSource):
                                                        flight_id)
             memcache.delete_multi([flight_cache_key, airline_cache_key])
 
-            # Send out push notifications
-            alert_key = model.Key('FlightAwareAlert', alert_id)
-            flight_key = model.Key('FlightAwareTrackedFlight', flight_id)
-            push_types = config['push_types']
+            # Get current flight information for the flight mentioned by the alert
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
-
-            # Extract current flight information from the alert
-            alerted_flight = self.raw_flight_data_to_flight(flight_data, flight_num)
-
-            # FIXME: Assume iOS user
-            for u in iOSUser.users_to_notify(alert_key, flight_key):
-                user_flight_num = u.flight_num_for_flight_id(flight_id) or flight_num
-                device_token = u.push_token
-
-                # Send notifications to each user, only if they want that notification type
-                # Filed
-                if event_code == 'filed' and u.wants_notification_type(push_types.FILED):
-                    FlightFiledAlert(device_token, alerted_flight, user_flight_num).push()
-
-                # Early / delayed / on time
-                elif event_code == 'change' and u.wants_notification_type(push_types.CHANGED):
-                    FlightPlanChangeAlert(device_token, alerted_flight, user_flight_num).push()
-
-                # Take off
-                elif event_code == 'departure' and u.wants_notification_type(push_types.DEPARTED):
-                    FlightDepartedAlert(device_token, alerted_flight, user_flight_num).push()
-
-                # Arrival
-                elif event_code == 'arrival' and u.wants_notification_type(push_types.ARRIVED):
-                    # Get the landing terminal by getting all the flight info
-                    flight = self.flight_info(flight_id=flight_id,
+            alerted_flight = self.flight_info(flight_id=flight_id,
                                               flight_number=flight_num)
-                    FlightArrivedAlert(device_token, flight, user_flight_num).push()
 
-                # Diverted
-                elif event_code == 'diverted' and u.wants_notification_type(push_types.DIVERTED):
-                    FlightDivertedAlert(device_token, alerted_flight, user_flight_num).push()
+            if alerted_flight:
+                # Send out push notifications
+                alert_key = model.Key('FlightAwareAlert', alert_id)
+                flight_key = model.Key('FlightAwareTrackedFlight', flight_id)
+                push_types = config['push_types']
 
-                # Canceled
-                elif event_code == 'cancelled' and u.wants_notification_type(push_types.CANCELED):
-                    FlightCanceledAlert(device_token, alerted_flight, user_flight_num).push()
+                # FIXME: Assume iOS user
+                for u in iOSUser.users_to_notify(alert_key, flight_key):
+                    user_flight_num = u.flight_num_for_flight_id(flight_id) or flight_num
+                    device_token = u.push_token
 
-                else:
-                    logging.error('Unknown eventcode.')
+                    # Send notifications to each user, only if they want that notification type
+                    # Filed
+                    if event_code == 'filed' and u.wants_notification_type(push_types.FILED):
+                        FlightFiledAlert(device_token, alerted_flight, user_flight_num).push()
+
+                    # Early / delayed / on time
+                    elif event_code == 'change' and u.wants_notification_type(push_types.CHANGED):
+                        FlightPlanChangeAlert(device_token, alerted_flight, user_flight_num).push()
+
+                    # Take off
+                    elif event_code == 'departure' and u.wants_notification_type(push_types.DEPARTED):
+                        FlightDepartedAlert(device_token, alerted_flight, user_flight_num).push()
+
+                    # Arrival
+                    elif event_code == 'arrival' and u.wants_notification_type(push_types.ARRIVED):
+                        FlightArrivedAlert(device_token, alerted_flight, user_flight_num).push()
+
+                    # Diverted
+                    elif event_code == 'diverted' and u.wants_notification_type(push_types.DIVERTED):
+                        FlightDivertedAlert(device_token, alerted_flight, user_flight_num).push()
+
+                    # Canceled
+                    elif event_code == 'cancelled' and u.wants_notification_type(push_types.CANCELED):
+                        FlightCanceledAlert(device_token, alerted_flight, user_flight_num).push()
+
+                    else:
+                        logging.error('Unknown eventcode.')
 
     def set_alert(self, **kwargs):
         flight_id = kwargs.get('flight_id')
@@ -619,7 +618,7 @@ class FlightAwareSource (FlightDataSource):
                                         alert_key=alert_key)
 
             # Tell UrbanAirship about push tokens
-            if push_token:
+            if push_token and (not old_push_token or (old_push_token != push_token)):
                 register_token(push_token)
             if old_push_token and push_token != old_push_token:
                 deregister_token(old_push_token)
@@ -631,7 +630,7 @@ class FlightAwareSource (FlightDataSource):
 
         # Lookup the alert by flight number
         alert = FlightAwareAlert.existing_enabled_alert(flight_num)
-        alert_key = alert.key
+        alert_key = alert and alert.key
 
         # Mark the user as no longer tracking the flight or the alert
         if uuid:
@@ -651,8 +650,8 @@ class FlightAwareSource (FlightDataSource):
         """Returns True if the incoming request is in fact from the trusted
         3rd party datasource, False otherwise."""
         # FIXME: Maybe don't check user agent
-        user_agent = self.request.environ.get('HTTP_USER_AGENT')
-        remote_addr = self.request.remote_addr
+        user_agent = request.environ.get('HTTP_USER_AGENT')
+        remote_addr = request.remote_addr
         return (user_agent == config['flightaware']['remote_user_agent'] and
                 utils.is_trusted_flightaware_host(remote_addr))
 

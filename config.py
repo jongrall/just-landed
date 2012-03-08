@@ -198,11 +198,11 @@ config['far_from_airport'] = 200.0
 config['urbanairship'] = {
   'development': {
     'key': '9HBQrA0ISk2WzkJkWAst1g',
-    'secret': 'v3FyOzaAS22xZJqHiPyYgw',
+    'secret': 'Ok15UGaPRJqWfTUdmcn7sA',
   },
 
   'production': {
     'key': 'WZR0ix1mRCeTBmIaLUIi8g',
-    'secret': 'dPA6KgPSTzOVTe1NCzHQRw',
+    'secret': 'Z6c6j5gCRpOseuOjcIpeGQ',
   },
 }
