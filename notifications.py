@@ -11,9 +11,9 @@ import pickle
 import logging
 
 from google.appengine.api import taskqueue
+from google.appengine.ext import webapp
 
 from lib import urbanairship
-from lib import webapp2 as webapp
 
 from config import config, on_local
 import utils

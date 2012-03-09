@@ -453,7 +453,7 @@ class FlightAwareSource (FlightDataSource):
         destination = flight_data.get('destination')
 
         if alert_id and event_code and flight_id and origin and destination:
-            # Clear memcache
+            # Clear memcache keys for flight & airline info
             flight_cache_key = '%s-flight_info-%s' % (self.__class__.__name__,
                                                       flight_id)
             airline_cache_key = "%s-airline_info-%s" % (self.__class__.__name__,
@@ -470,10 +470,12 @@ class FlightAwareSource (FlightDataSource):
                 alert_key = model.Key('FlightAwareAlert', alert_id)
                 flight_key = model.Key('FlightAwareTrackedFlight', flight_id)
                 push_types = config['push_types']
+                flight_numbers = set()
 
                 # FIXME: Assume iOS user
                 for u in iOSUser.users_to_notify(alert_key, flight_key):
                     user_flight_num = u.flight_num_for_flight_id(flight_id) or flight_num
+                    flight_numbers.add(user_flight_num)
                     device_token = u.push_token
 
                     # Send notifications to each user, only if they want that notification type
@@ -503,6 +505,14 @@ class FlightAwareSource (FlightDataSource):
 
                     else:
                         logging.error('Unknown eventcode.')
+
+                # Clear memcache keys for lookup
+                cache_keys = []
+                for f_num in flight_numbers:
+                    cache_keys.add('%s-lookup_flights-%s' % (
+                                   self.__class__.__name__, f_num))
+                if keys_to_delete:
+                    memcache.delete_multi(cache_keys)
 
     def set_alert(self, **kwargs):
         flight_id = kwargs.get('flight_id')

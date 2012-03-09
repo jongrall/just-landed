@@ -7,9 +7,10 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 import logging
+from config import on_local
 
 # Avoid using the webapp2 version hosted by Google - it changes often.
-from lib import webapp2 as webapp
+from google.appengine.ext import webapp
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
 def handle_500(request, response, exception):
@@ -42,8 +43,8 @@ routes = [
     webapp.Route('/', 'web_handlers.StaticHandler'),
 ]
 
-# Instantiate the app. IMPORTANT: set debug to False in production.
-app = webapp.WSGIApplication(routes, debug=True)
+# Instantiate the app.
+app = webapp.WSGIApplication(routes, debug=on_local())
 
 # Register custom error handlers.
 app.error_handlers[404] = 'web_handlers.handle_404'

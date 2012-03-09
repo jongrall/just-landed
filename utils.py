@@ -11,9 +11,10 @@ import logging
 from datetime import datetime
 import re
 import math
+import hashlib, hmac
 
 import models
-from config import config
+from config import config, api_secret
 from lib import ipaddr
 
 EARTH_RADIUS = 6378135
@@ -45,6 +46,26 @@ def map_dict_keys(somedict, mapping):
     mapped.update(unmapped)
     return mapped
 
+def sorted_dict_values(somedict):
+    keys = somedict.keys()
+    keys.sort()
+    return [somedict[k] for k in keys]
+
+def sorted_dict_keys(somedict):
+    keys = somedict.keys()
+    keys.sort()
+    return keys
+
+def sorted_request_params(somedict):
+    keys = sorted_dict_keys(somedict)
+    values = sorted_dict_values(somedict)
+
+    parts = []
+    for k, v in zip(keys, values):
+        parts.append('%s=%s' % (k, v))
+
+    return '&'.join(parts)
+
 def round_coord(lat_or_long, sf=6):
     return round(lat_or_long, sf)
 
@@ -67,6 +88,35 @@ def is_number(s):
         return False
     except TypeError:
         return False
+
+###############################################################################
+"""Security Utilities"""
+###############################################################################
+
+def api_query_signature(query_string, client='iOS'):
+    assert isinstance(query_string, basestring)
+    secret = api_secret(client=client)
+    return hmac.new(secret, query_string, hashlib.sha1).hexdigest()
+
+def authenticate_api_request(request, client='iOS'):
+    assert request
+    request_sig = request.headers.get('X-Just-Landed-Signature')
+
+    if not request_sig:
+        return False
+    # Build string to sign
+    path = request.path
+    params = sorted_request_params(request.params)
+    to_sign = path + '?' + params
+    return api_query_signature(to_sign) == request_sig
+
+def is_trusted_flightaware_host(host_ip):
+    host = ipaddr.ip_address(host_ip)
+    for network in config['flightaware']['trusted_remote_hosts']:
+        trusted_net = ipaddr.ip_network(network)
+        if host in trusted_net:
+            return True
+    return False
 
 ###############################################################################
 """Flight Utilities"""
@@ -118,14 +168,6 @@ def proper_airport_name(name):
 def flight_num_from_fa_flight_id(flight_id):
     if flight_id:
         return flight_id.split('-')[0]
-
-def is_trusted_flightaware_host(host_ip):
-    host = ipaddr.ip_address(host_ip)
-    for network in config['flightaware']['trusted_remote_hosts']:
-        trusted_net = ipaddr.ip_network(network)
-        if host in trusted_net:
-            return True
-    return False
 
 ###############################################################################
 """Date & Time Utilities"""

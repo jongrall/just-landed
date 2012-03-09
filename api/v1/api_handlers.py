@@ -12,7 +12,7 @@ __email__ = "grall@alum.mit.edu"
 import logging
 import json
 
-from lib import webapp2 as webapp
+from google.appengine.ext import webapp
 
 from data_sources import FlightAwareSource, GoogleDistanceSource
 
@@ -61,7 +61,18 @@ class BaseAPIHandler(webapp.RequestHandler):
             self.response.write(json.dumps(response_data))
 
 
-class SearchHandler(BaseAPIHandler):
+class AuthenticatedAPIHandler(BaseAPIHandler):
+    """An API handler that also authenticates incoming API requests."""
+    def dispatch(self):
+        if utils.authenticate_api_request(self.request):
+            # Parent class will call the method to be dispatched
+            # -- get() or post() or etc.
+            super(AuthenticatedAPIHandler, self).dispatch()
+        else:
+            self.abort(403)
+
+
+class SearchHandler(AuthenticatedAPIHandler):
     """Handles looking up a flight by flight number."""
     def get(self, flight_number):
         """Returns top-level information about flights matching a specific
@@ -83,7 +94,7 @@ class SearchHandler(BaseAPIHandler):
         self.respond(flight_data)
 
 
-class TrackHandler(BaseAPIHandler):
+class TrackHandler(AuthenticatedAPIHandler):
     """Handles tracking a flight by flight number and id."""
     def get(self, flight_number, flight_id):
         """Returns detailed information for tracking a flight given a flight
@@ -147,7 +158,7 @@ class TrackHandler(BaseAPIHandler):
         self.respond(flight.dict_for_client())
 
 
-class UntrackHandler(BaseAPIHandler):
+class UntrackHandler(AuthenticatedAPIHandler):
     """Handles untracking a specific flight. Usually called when a user is no
     longer tracking a flight and doesn't want to receive future notifications
     for that flight.

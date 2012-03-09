@@ -90,8 +90,24 @@ def on_local():
 
 if on_local():
     config['server_url'] = 'http://c-98-207-175-25.hsd1.ca.comcast.net'
+    config['api_credentials'] = {
+        'iOS' : {
+            'username' : 'iOS-Development',
+            'secret' : 'd90816f7e6ea93001a2aa62cd8dd8f0e830a93d1',
+        },
+    }
 else:
     config['server_url'] = 'http://just-landed.appspot.com/'
+    config['api_credentials'] = {
+        'iOS' : {
+            'username' : 'iOS-Production',
+            'secret' : '4399d9ce77acf522799543f13c926c0a41e2ea3f',
+        },
+    }
+
+def api_secret(client='iOS'):
+    """Returns the api secret for a given Just Landed client."""
+    return config['api_credentials'][client]['secret']
 
 ###############################################################################
 """Flight Data API Keys & Settings"""

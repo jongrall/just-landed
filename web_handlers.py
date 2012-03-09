@@ -13,9 +13,8 @@ import os
 import logging
 from zlib import adler32
 
+from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
-
-from lib import webapp2 as webapp
 
 from config import config
 template_dir = config['template_dir']

@@ -281,7 +281,7 @@ class iOSUser(_User):
     push_token = model.StringProperty(indexed=True)
     push_settings = model.StructuredProperty(PushNotificationSetting, repeated=True)
     flight_num_mappings = model.StructuredProperty(UserSuppliedFlightNumberMapping, repeated=True)
-    push_enabled = model.BooleanProperty(default=False, indexed=True)
+    push_enabled = model.ComputedProperty(lambda u: bool(len(u.push_token)), indexed=True)
 
     @classmethod
     def default_settings(cls):
@@ -298,14 +298,11 @@ class iOSUser(_User):
         assert isinstance(uuid, basestring) and len(uuid)
         assert isinstance(flight_key, model.Key), "No valid flight_key"
 
-        push_enabled = push_token is not None
-
         # See if the user exists
         existing_user = cls.get_by_id(uuid)
 
         # Return the user key if it's already up-to-date
         if (existing_user and (flight_key in existing_user.tracked_flights) and
-            existing_user.push_enabled == push_enabled and
             existing_user.push_token == push_token and
             (alert_key is None or alert_key in existing_user.alerts)):
             if debug_datastore:
@@ -342,7 +339,6 @@ class iOSUser(_User):
                     logging.info('USER PUSH TOKEN UPDATED')
 
                 user.push_token = push_token or user.push_token
-                user.push_enabled = push_enabled
 
                 yield user.put_async()
                 raise tasklets.Return(user)
