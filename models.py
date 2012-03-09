@@ -13,7 +13,7 @@ __email__ = "grall@alum.mit.edu"
 import logging
 from datetime import timedelta, datetime
 
-from google.appengine.ext.ndb import model, tasklets, context
+from google.appengine.ext.ndb import model, tasklets
 from utils import *
 
 from config import config, Enum
@@ -87,7 +87,7 @@ class FlightAwareTrackedFlight(TrackedFlight):
     is_tracking = model.BooleanProperty(default=True, indexed=True)
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def create_or_update_flight(cls, flight_id):
         """Looks up a Flight by flight_id, if it exists, sets is_tracking to
         True. If it doesn't exist, creates a new flight with that flight_id.
@@ -123,14 +123,14 @@ class FlightAwareTrackedFlight(TrackedFlight):
             raise tasklets.Return(result)
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def count_tracked_flights(cls):
         q = cls.query(cls.is_tracking == True)
         count = yield q.count_async(keys_only=True)
         raise tasklets.Return(count)
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def stop_tracking(cls, flight_key):
         @model.transactional
         @tasklets.tasklet
@@ -174,7 +174,7 @@ class FlightAwareAlert(FlightAlert):
         return q.get()
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def disable_alert(cls, alert_id):
         assert isinstance(alert_id, (int, long)) and alert_id > 0
 
@@ -194,7 +194,7 @@ class FlightAwareAlert(FlightAlert):
         raise tasklets.Return(result)
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def create_alert(cls, alert_id, flight_number):
         assert isinstance(alert_id, (int, long)) and alert_id > 0
         assert isinstance(flight_number, basestring) and valid_flight_number(flight_number)
@@ -293,7 +293,7 @@ class iOSUser(_User):
         return settings
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def track_flight(cls, uuid, flight_key, flight_num, push_token=None, alert_key=None):
         assert isinstance(uuid, basestring) and len(uuid)
         assert isinstance(flight_key, model.Key), "No valid flight_key"
@@ -351,7 +351,7 @@ class iOSUser(_User):
             raise tasklets.Return(user)
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def remove_alert(cls, alert_key):
         assert isinstance(alert_key, model.Key)
 
@@ -367,7 +367,7 @@ class iOSUser(_User):
         yield qry.map_async(remove_callback)
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def untrack_flight(cls, uuid, flight_key, alert_key=None):
         @model.transactional
         @tasklets.tasklet
@@ -391,14 +391,14 @@ class iOSUser(_User):
         untrack_txn()
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def alert_in_use(cls, alert_key):
         q = cls.query(cls.alerts == alert_key)
         count = yield q.count_async(limit=1)
         raise tasklets.Return(count > 0)
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def flight_still_tracked(cls, flight_key):
         q = cls.query(cls.tracked_flights == flight_key)
         count = yield q.count_async(limit=1)
@@ -406,7 +406,7 @@ class iOSUser(_User):
 
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def users_to_notify(cls, alert_key, flight_key):
         q = cls.query(cls.tracked_flights == flight_key,
                       cls.alerts == alert_key,
@@ -415,7 +415,7 @@ class iOSUser(_User):
         raise tasklets.Return(q.iter(batch_size=50))
 
     @classmethod
-    @context.toplevel
+    @tasklets.toplevel
     def count_users_tracking(cls):
         q = cls.query(cls.is_tracking_flights == True)
         count = yield q.count_async(keys_only=True)

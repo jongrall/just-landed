@@ -156,12 +156,12 @@ class FlightAwareSource (FlightDataSource):
         from lib.python_rest_client.restful_lib import Connection
         if on_local():
             self.conn = Connection(self.base_url,
-                username=config['flightaware']['username'],
-                password=config['flightaware']['keys']['development'])
+                username=config['flightaware']['development']['username'],
+                password=config['flightaware']['development']['key'])
         else:
             self.conn = Connection(self.base_url,
-                username=config['flightaware']['username'],
-                password=config['flightaware']['keys']['production'])
+                username=config['flightaware']['production']['username'],
+                password=config['flightaware']['production']['key'])
 
     def raw_flight_data_to_flight(self, data, sanitized_flight_num):
         if data and utils.valid_flight_number(sanitized_flight_num):

@@ -103,10 +103,14 @@ def fa_alert_url():
 # FlightAware settings
 config['flightaware'] = {
     # Credentials
-    'username' : 'airportpickupapp',
-    'keys' : {
-        'development' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
-        'production' : '390ef2061c6f5bd814ef0ef3ce68efa19f3c12b2',
+    'development' : {
+        'username' : 'airportpickupapp',
+        'key' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
+    },
+
+    'production' : {
+        'username' : 'justlanded',
+        'key' : '45f9a85894cf77112df78289ba594013393108d8',
     },
 
     'remote_user_agent': 'FlightXML/2.0 (mc_chan_flightxml)',
