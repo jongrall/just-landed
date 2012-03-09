@@ -173,7 +173,6 @@ class AlertHandler(BaseAPIHandler):
 
     """
     def post(self):
-        logging.info('ALERT CALLBACK!')
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
             alert_body = json.loads(self.request.body)
