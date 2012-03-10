@@ -521,7 +521,7 @@ class FlightAwareSource (FlightDataSource):
                 for f_num in flight_numbers:
                     cache_keys.append('%s-lookup_flights-%s' % (
                                       self.__class__.__name__, f_num))
-                if keys_to_delete:
+                if cache_keys:
                     memcache.delete_multi(cache_keys)
 
     def set_alert(self, **kwargs):
