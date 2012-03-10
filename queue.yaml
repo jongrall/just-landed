@@ -5,13 +5,25 @@ total_storage_limit: 1G
 # bucket_size: the number of tasks dequeued for execution each tick
 # rate: the number frequency of processing e.g. 10/s is 10 times per second
 queue:
-- name: alert-processing
+- name: process-alert
   bucket_size: 20
   rate: 20/s
 
 - name: mobile-push
   bucket_size: 100
   rate: 100/s
+
+- name: track
+  bucket_size: 100
+  rate: 500/s
+
+- name: untrack
+  bucket_size: 50
+  rate: 250/s
+
+- name: admin
+  bucket_size: 20
+  rate: 20/s
 
 - name: default
   bucket_size: 100

@@ -13,6 +13,7 @@ import logging
 import json
 
 from google.appengine.ext import webapp
+from google.appengine.ext import deferred
 
 from data_sources import FlightAwareSource, GoogleDistanceSource
 
@@ -22,6 +23,10 @@ import utils
 # Currently using FlightAware and Google Distance APIs
 source = FlightAwareSource()
 distance_source = GoogleDistanceSource()
+
+###############################################################################
+"""Base Handlers"""
+###############################################################################
 
 class BaseAPIHandler(webapp.RequestHandler):
     """Base API handler that other handlers inherit from. This base class
@@ -71,6 +76,9 @@ class AuthenticatedAPIHandler(BaseAPIHandler):
         else:
             self.abort(403)
 
+###############################################################################
+"""Search / Lookup"""
+###############################################################################
 
 class SearchHandler(AuthenticatedAPIHandler):
     """Handles looking up a flight by flight number."""
@@ -93,6 +101,16 @@ class SearchHandler(AuthenticatedAPIHandler):
 
         self.respond(flight_data)
 
+###############################################################################
+"""Tracking Flights"""
+###############################################################################
+
+def track_flight(flight_id, flight_number, uuid=None, push_token=None):
+    """Deferred flight track queued work."""
+    source.start_tracking_flight(flight_id,
+                                 flight_number,
+                                 uuid=uuid,
+                                 push_token=push_token)
 
 class TrackHandler(AuthenticatedAPIHandler):
     """Handles tracking a flight by flight number and id."""
@@ -123,13 +141,6 @@ class TrackHandler(AuthenticatedAPIHandler):
         uuid = self.request.headers.get('X-Just-Landed-UUID')
         push_token = self.request.params.get('push_token')
 
-        # Track the flight
-        # TODO: DEFER THIS
-        source.start_tracking_flight(flight_id,
-                                     flight_number,
-                                     uuid=uuid,
-                                     push_token=push_token)
-
         # Get driving distance, if we have their location
         latitude = self.request.params.get('latitude')
         latitude = utils.is_number(latitude) and float(latitude)
@@ -157,6 +168,19 @@ class TrackHandler(AuthenticatedAPIHandler):
 
         self.respond(flight.dict_for_client())
 
+        # Track the flight (deferred)
+        deferred.defer(track_flight,
+                       flight_id,
+                       flight_number,
+                       uuid=uuid,
+                       push_token=push_token,
+                       _queue='track')
+
+
+def untrack_flight(flight_id, uuid=None):
+   """Deferred flight untrack queued work."""
+   source.stop_tracking_flight(flight_id, uuid=uuid)
+
 
 class UntrackHandler(AuthenticatedAPIHandler):
     """Handles untracking a specific flight. Usually called when a user is no
@@ -171,10 +195,21 @@ class UntrackHandler(AuthenticatedAPIHandler):
         # FIXME: Assume iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
 
-        # TODO: DEFER THIS
-        source.stop_tracking_flight(flight_id, uuid=uuid)
-
         self.respond({'untracked' : flight_id})
+
+        # Untrack the flight (deferred)
+        deferred.defer(untrack_flight,
+                       flight_id,
+                       uuid=uuid,
+                       _queue='untrack')
+
+###############################################################################
+"""Processing Alerts"""
+###############################################################################
+
+def process_alert(alert_body):
+    """Deferred alert processing work."""
+    source.process_alert(alert_body)
 
 
 class AlertHandler(BaseAPIHandler):
@@ -187,8 +222,11 @@ class AlertHandler(BaseAPIHandler):
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
             alert_body = json.loads(self.request.body)
-            # TODO: DEFER THIS
-            source.process_alert(alert_body)
+
+            # Process the alert (deferred)
+            deferred.defer(process_alert,
+                           alert_body,
+                           _queue='process-alert')
         else:
             logging.error('Unknown user-agent or host posting alert: (%s, %s)' %
                             (self.request.environ.get('HTTP_USER_AGENT'),

@@ -137,6 +137,16 @@ class FlightDataSource (object):
         pass
 
 
+###############################################################################
+"""FlightAware"""
+###############################################################################
+
+def fa_delete_alerts(alert_ids):
+    source = FlightAwareSource()
+    for alert_id in alert_ids:
+        source.delete_alert(alert_id)
+
+
 class FlightAwareSource (FlightDataSource):
     """Concrete subclass of FlightDataSource that pulls its data from the
     commercial FlightAware FlightXML2 API:
@@ -214,7 +224,7 @@ class FlightAwareSource (FlightDataSource):
             airport = qry.get()
             return (airport and airport.dict_for_client()) or None
         elif utils.is_valid_icao(icao_code):
-            # Check the DB first
+            # Check the DB first (automatically cached)
             airport = Airport.get_by_id(icao_code)
             if airport:
                 return airport.dict_for_client()
@@ -595,8 +605,9 @@ class FlightAwareSource (FlightDataSource):
             logging.info('CLEARING %d ALERTS' % len(alert_ids))
 
         # Defer removal of all alerts
-        for alert_id in alert_ids:
-            self.delete_alert(alert_id)
+        deferred.defer(fa_delete_alerts,
+                       alert_ids,
+                       _queue='admin')
 
         return {'clearing_alert_count': len(alert_ids)}
 
