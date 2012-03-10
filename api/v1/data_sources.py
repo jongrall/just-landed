@@ -519,8 +519,8 @@ class FlightAwareSource (FlightDataSource):
                 # Clear memcache keys for lookup
                 cache_keys = []
                 for f_num in flight_numbers:
-                    cache_keys.add('%s-lookup_flights-%s' % (
-                                   self.__class__.__name__, f_num))
+                    cache_keys.append('%s-lookup_flights-%s' % (
+                                      self.__class__.__name__, f_num))
                 if keys_to_delete:
                     memcache.delete_multi(cache_keys)
 
