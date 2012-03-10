@@ -13,6 +13,8 @@ from config import on_local
 from google.appengine.ext import webapp
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
+Route = webapp.Route
+
 def handle_500(request, response, exception):
     """Custom 500 error handler that overrides the WSGI app default."""
     logging.exception(exception)
@@ -22,25 +24,26 @@ def handle_500(request, response, exception):
 routes = [
     PathPrefixRoute('/api/v1', [
         HandlerPrefixRoute('api.v1.api_handlers.',[
-        webapp.Route('/track/<flight_number>/<flight_id:[^/]+>', 'TrackHandler'),
-        webapp.Route('/search/<flight_number:[^/]+>', 'SearchHandler'),
-        webapp.Route('/handle_alert', 'AlertHandler'),
-        webapp.Route('/untrack/<flight_id:[^/]+>', 'UntrackHandler'),
+        Route('/track/<flight_number>/<flight_id:[^/]+>', 'TrackHandler'),
+        Route('/search/<flight_number:[^/]+>', 'SearchHandler'),
+        Route('/handle_alert', 'AlertHandler'),
+        Route('/untrack/<flight_id:[^/]+>', 'UntrackHandler'),
         ]),
     ]),
     PathPrefixRoute('/admin/flightaware', [
         HandlerPrefixRoute('admin.admin_handlers.',[
-        webapp.Route('/', 'FlightAwareAdminHandler'),
-        webapp.Route('/register_endpoint', 'FlightAwareAdminAPIHandler',
-                    handler_method='register_endpoint'),
-        webapp.Route('/clear_alerts', 'FlightAwareAdminAPIHandler',
-                    handler_method='clear_alerts'),
+        Route('/', 'FlightAwareAdminHandler'),
+        Route('/register_endpoint', 'FlightAwareAdminAPIHandler',
+                handler_method='register_endpoint'),
+        Route('/clear_alerts', 'FlightAwareAdminAPIHandler',
+                handler_method='clear_alerts'),
         ]),
     ]),
     PathPrefixRoute('/_ah', [
-        webapp.Route('/queue/mobile-push', handler='notifications.PushWorker'),
+        Route('/queue/mobile-push', handler='notifications.PushWorker'),
+        Route('/warmup', handler='warmup.WarmupWorker'),
     ]),
-    webapp.Route('/', 'web_handlers.StaticHandler'),
+    Route('/', 'web_handlers.StaticHandler'),
 ]
 
 # Instantiate the app.

@@ -2,7 +2,7 @@ application: just-landed
 version: 1-0
 runtime: python27
 api_version: 1
-threadsafe: false
+threadsafe: true
 
 builtins:
 - remote_api: on
@@ -33,15 +33,15 @@ handlers:
 
 # Additional admin functionality
 - url: /gae-admin/.*
-  script: $PYTHON_LIB/google/appengine/ext/admin
+  script: $PYTHON_LIB.google.appengine.ext.admin.application
   login: admin
 
 # Admin methods that require admin credentials
 - url: /admin/.*
-  script: main.py
+  script: main.app
   login: admin
   secure: always
 
 # Everything else
 - url: /.*
-  script: main.py
+  script: main.app
