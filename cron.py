@@ -11,10 +11,11 @@ import logging
 from google.appengine.ext import webapp
 from google.appengine.api import urlfetch
 
-import utils
 from config import on_production
-from models import FlightAwareTrackedFlight, iOSUser
+from models import *
 from api.v1.data_sources import FlightAwareSource
+from api.v1.datasource_exceptions import *
+import utils
 
 source = FlightAwareSource()
 
@@ -30,19 +31,35 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
 
             # Find out if the flight is old
-            flight = source.flight_info(flight_id=flight_id,
-                                        flight_number=flight_num)
+            try:
+                flight = source.flight_info(flight_id=flight_id,
+                                            flight_number=flight_num)
+            except Exception as e:
+                if isinstance(e, OldFlightException):
+                    # We should untrack this flight for each user who was tracking it
+                    user_keys_tracking = iOSUser.users_tracking_flight(f_key)
 
-            if flight.is_old_flight:
-                # We should untrack this flight for each user who was tracking it
-                user_keys_tracking = iOSUser.users_tracking_flight(f_key)
-                url_scheme = (on_production() and 'https') or 'http'
-                untrack_url = self.uri_for('untrack',
-                                            flight_id=flight_id,
-                                            _full=True,
-                                            _scheme=url_scheme)
+                    # Generate the URL and API signature
+                    url_scheme = (on_production() and 'https') or 'http'
+                    to_sign = self.uri_for('untrack', flight_id=flight_id)
+                    sig = utils.api_query_signature(to_sign, client='Server')
+                    untrack_url = self.uri_for('untrack',
+                                                flight_id=flight_id,
+                                                _full=True,
+                                                _scheme=url_scheme)
 
-                for u_key in user_keys_tracking:
-                    urlfetch.fetch(untrack_url,
-                                   headers={'X-Just-Landed-UUID' : u_key.string_id()},
-                                   validate_certificate=on_production())
+                    for u_key in user_keys_tracking:
+                        headers = {'X-Just-Landed-UUID' : u_key.string_id(),
+                                   'X-Just-Landed-Signature' : sig}
+
+                        if on_production():
+                            # Async fetch
+                            rpc = urlfetch.create_rpc(deadline=120)
+                            urlfetch.make_fetch_call(rpc,
+                                                    untrack_url,
+                                                    headers=headers)
+                        else:
+                            # Dev server doesn't do async requests
+                            urlfetch.fetch(untrack_url,
+                                           headers=headers,
+                                           deadline=60)

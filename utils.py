@@ -13,7 +13,7 @@ import re
 import math
 import hashlib, hmac
 
-import models
+from models import *
 from config import config, api_secret
 from lib import ipaddr
 
@@ -98,17 +98,25 @@ def api_query_signature(query_string, client='iOS'):
     secret = api_secret(client=client)
     return hmac.new(secret, query_string, hashlib.sha1).hexdigest()
 
+def api_request_signature(request, client='iOS'):
+    assert request
+    # Build string to sign
+    path = request.path
+    params = sorted_request_params(request.params)
+    to_sign = ''
+    if params:
+        to_sign = path + '?' + params
+    else:
+        to_sign = path
+    return api_query_signature(to_sign, client)
+
 def authenticate_api_request(request, client='iOS'):
     assert request
     request_sig = request.headers.get('X-Just-Landed-Signature')
 
     if not request_sig:
         return False
-    # Build string to sign
-    path = request.path
-    params = sorted_request_params(request.params)
-    to_sign = path + '?' + params
-    return api_query_signature(to_sign) == request_sig
+    return api_request_signature(request, client=client) == request_sig
 
 def is_trusted_flightaware_host(host_ip):
     host = ipaddr.ip_address(host_ip)
@@ -155,7 +163,7 @@ def is_valid_iata(iata_code):
 
 def icao_to_iata(icao_code):
     if is_valid_icao(icao_code):
-        airport = models.Airport.get_by_id(icao_code.upper())
+        airport = Airport.get_by_id(icao_code.upper())
         return (airport and airport.iata_code) or None
     return None
 

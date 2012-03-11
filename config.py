@@ -95,6 +95,10 @@ if on_local():
             'username' : 'iOS-Development',
             'secret' : 'd90816f7e6ea93001a2aa62cd8dd8f0e830a93d1',
         },
+        'Server' : {
+            'username' : 'JustLanded-Development',
+            'secret' : '8f131377dba9f8c0fe7a9ae9a865842acd153fb0',
+        },
     }
 else:
     config['server_url'] = 'https://just-landed.appspot.com/'
@@ -102,6 +106,10 @@ else:
         'iOS' : {
             'username' : 'iOS-Production',
             'secret' : '4399d9ce77acf522799543f13c926c0a41e2ea3f',
+        },
+        'Server' : {
+            'username' : 'JustLanded-Production',
+            'secret' : '270a0d95cc6c6a6d48b6e69117e053226fe7f5b5',
         },
     }
 

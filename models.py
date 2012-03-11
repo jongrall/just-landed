@@ -14,7 +14,7 @@ import logging
 from datetime import timedelta, datetime
 
 from google.appengine.ext.ndb import model, tasklets
-from utils import *
+import utils
 
 from config import config, Enum
 
@@ -52,9 +52,9 @@ class Airport(model.Model):
         return dict(city=self.city,
                     icaoCode=self.key.string_id(),
                     iataCode=self.iata_code,
-                    latitude=round_coord(self.location.lat),
-                    longitude=round_coord(self.location.lon),
-                    name=proper_airport_name(self.name))
+                    latitude=utils.round_coord(self.location.lat),
+                    longitude=utils.round_coord(self.location.lon),
+                    name=utils.proper_airport_name(self.name))
 
 
 class TrackedFlight(model.Model):
@@ -83,7 +83,7 @@ class FlightAwareTrackedFlight(TrackedFlight):
     - `is_tracking` : Whether the flight is still being tracked.
 
     """
-    tail_number = model.ComputedProperty(lambda f: flight_num_from_fa_flight_id(f.key.string_id()))
+    tail_number = model.ComputedProperty(lambda f: utils.flight_num_from_fa_flight_id(f.key.string_id()))
     is_tracking = model.BooleanProperty(default=True, indexed=True)
 
     @classmethod
@@ -203,7 +203,7 @@ class FlightAwareAlert(FlightAlert):
     @tasklets.toplevel
     def create_alert(cls, alert_id, flight_number):
         assert isinstance(alert_id, (int, long)) and alert_id > 0
-        assert isinstance(flight_number, basestring) and valid_flight_number(flight_number)
+        assert isinstance(flight_number, basestring) and utils.valid_flight_number(flight_number)
 
         @model.transactional
         @tasklets.tasklet
@@ -634,7 +634,7 @@ class Flight(object):
     def status(self):
         if self.actual_departure_time == 0:
             # See if it has missed its take-off time
-            if timestamp(datetime.utcnow()) > self.scheduled_departure_time:
+            if utils.timestamp(datetime.utcnow()) > self.scheduled_departure_time:
                 time_diff = (self.estimated_arrival_time -
                 (self.scheduled_departure_time + self.scheduled_flight_duration))
                 if time_diff > config['on_time_buffer']:
@@ -665,19 +665,19 @@ class Flight(object):
 
         if status == FLIGHT_STATES.SCHEDULED:
             interval = (self.scheduled_departure_time + self.scheduled_flight_duration
-                        - timestamp(datetime.utcnow()))
-            return 'Scheduled to arrive in %s.' % pretty_time_interval(interval)
+                        - utils.timestamp(datetime.utcnow()))
+            return 'Scheduled to arrive in %s.' % utils.pretty_time_interval(interval)
         elif status == FLIGHT_STATES.LANDED:
-            interval = timestamp(datetime.utcnow()) - self.actual_arrival_time
-            return 'Landed %s ago.' % pretty_time_interval(interval)
+            interval = utils.timestamp(datetime.utcnow()) - self.actual_arrival_time
+            return 'Landed %s ago.' % utils.pretty_time_interval(interval)
         elif status == FLIGHT_STATES.CANCELED:
             return 'Flight canceled.'
         elif status == FLIGHT_STATES.DIVERTED:
             return 'Flight diverted to another airport.'
         else:
-            interval = (self.estimated_arrival_time - timestamp(datetime.utcnow()))
+            interval = (self.estimated_arrival_time - utils.timestamp(datetime.utcnow()))
             if interval > 0:
-                return 'Arrives in %s.' % pretty_time_interval(interval)
+                return 'Arrives in %s.' % utils.pretty_time_interval(interval)
             else:
                 # Estimated arrival time is before now, arrival is imminent
                 return 'Arriving shortly'
@@ -712,7 +712,7 @@ class Flight(object):
         self.leave_for_airport_time = self.estimated_arrival_time - driving_time
 
     def dict_for_client(self):
-        info = sub_dict_select(self._data, config['flight_fields'])
+        info = utils.sub_dict_select(self._data, config['flight_fields'])
         info['origin'] = self.origin.dict_for_client()
         info['destination'] = self.destination.dict_for_client()
         info['status'] = self.status
