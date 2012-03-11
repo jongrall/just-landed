@@ -46,6 +46,7 @@ routes = [
     ]),
     PathPrefixRoute('/_ah', [
         Route('/queue/mobile-push', handler='notifications.PushWorker'),
+        Route('/warmup', handler='warmup.WarmupWorker'),
     ]),
     Route('/', 'web_handlers.StaticHandler'),
 ]
