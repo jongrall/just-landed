@@ -86,8 +86,6 @@ class PushWorker(webapp.RequestHandler):
             # Call the function with the supplied arguments
             func(*args, **kwds)
 
-        #self.response.write('')
-
 ###############################################################################
 """Convenience Functions for sending push notifications to a user about
 specific types of events."""
@@ -198,17 +196,20 @@ class FlightArrivedAlert(_FlightAlert):
         terminal = self._flight.destination.terminal
         if terminal:
             if terminal == 'I':
-                return 'Flight %s just landed at %s international terminal.' % (
+                return 'Flight %s from %s just landed at %s international terminal.' % (
                         self._user_flight_num,
+                        self._origin_city_or_airport,
                         self._flight.destination.best_name)
             else:
-                return 'Flight %s just landed at %s terminal %s.' % (
+                return 'Flight %s from %s just landed at %s terminal %s.' % (
                     self._user_flight_num,
+                    self._origin_city_or_airport,
                     self._flight.destination.best_name,
                     terminal)
         else:
-            return 'Flight %s just landed at %s.' % (
+            return 'Flight %s from %s just landed at %s.' % (
                 self._user_flight_num,
+                self._origin_city_or_airport,
                 self._flight.destination.best_name)
 
     @property

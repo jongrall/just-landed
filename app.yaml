@@ -42,6 +42,12 @@ handlers:
   login: admin
   secure: always
 
+# Cron jobs
+- url: /cron/.*
+  script: main.app
+  login: admin
+  secure: always
+
 # Everything else
 - url: /.*
   script: main.app

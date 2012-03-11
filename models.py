@@ -124,6 +124,12 @@ class FlightAwareTrackedFlight(TrackedFlight):
 
     @classmethod
     @tasklets.toplevel
+    def tracked_flights(cls):
+        q = cls.query(cls.is_tracking == True)
+        raise tasklets.Return(q.iter(keys_only=True))
+
+    @classmethod
+    @tasklets.toplevel
     def count_tracked_flights(cls):
         q = cls.query(cls.is_tracking == True)
         count = yield q.count_async(keys_only=True)
@@ -400,6 +406,11 @@ class iOSUser(_User):
         count = yield q.count_async(limit=1)
         raise tasklets.Return(count > 0)
 
+    @classmethod
+    @tasklets.toplevel
+    def users_tracking_flight(cls, flight_key):
+        q = cls.query(cls.tracked_flights == flight_key)
+        raise tasklets.Return(q.iter(keys_only=True))
 
     @classmethod
     @tasklets.toplevel

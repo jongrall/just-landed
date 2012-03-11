@@ -1,0 +1,5 @@
+# Just Landed cron jobs
+cron:
+  - description: stop tracking old flights
+    url: /cron/untrack_old_flights
+    schedule: every 1 hours

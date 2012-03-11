@@ -454,7 +454,6 @@ class FlightAwareSource (FlightDataSource):
 
     def process_alert(self, alert_body):
         assert isinstance(alert_body, dict)
-
         alert_id = alert_body.get('alert_id')
         event_code = alert_body.get('eventcode')
         flight_data = alert_body.get('flight')

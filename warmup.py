@@ -21,3 +21,4 @@ class WarmupWorker(webapp.RequestHandler):
         import notifications
         import utils
         import web_handlers
+        import cron

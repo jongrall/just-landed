@@ -23,20 +23,25 @@ def handle_500(request, response, exception):
 # Configuration of supported routes
 routes = [
     PathPrefixRoute('/api/v1', [
-        HandlerPrefixRoute('api.v1.api_handlers.',[
-        Route('/track/<flight_number>/<flight_id:[^/]+>', 'TrackHandler'),
-        Route('/search/<flight_number:[^/]+>', 'SearchHandler'),
+        HandlerPrefixRoute('api.v1.api_handlers.', [
+        Route('/track/<flight_number>/<flight_id:[^/]+>', 'TrackHandler', name='track'),
+        Route('/search/<flight_number:[^/]+>', 'SearchHandler', name='search'),
         Route('/handle_alert', 'AlertHandler'),
-        Route('/untrack/<flight_id:[^/]+>', 'UntrackHandler'),
+        Route('/untrack/<flight_id:[^/]+>', 'UntrackHandler', name='untrack'),
         ]),
     ]),
     PathPrefixRoute('/admin/flightaware', [
-        HandlerPrefixRoute('admin.admin_handlers.',[
+        HandlerPrefixRoute('admin.admin_handlers.', [
         Route('/', 'FlightAwareAdminHandler'),
         Route('/register_endpoint', 'FlightAwareAdminAPIHandler',
                 handler_method='register_endpoint'),
         Route('/clear_alerts', 'FlightAwareAdminAPIHandler',
                 handler_method='clear_alerts'),
+        ]),
+    ]),
+    PathPrefixRoute('/cron',[
+        HandlerPrefixRoute('cron.', [
+        Route('/untrack_old_flights', 'UntrackOldFlightsWorker'),
         ]),
     ]),
     PathPrefixRoute('/_ah', [

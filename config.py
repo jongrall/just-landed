@@ -97,7 +97,7 @@ if on_local():
         },
     }
 else:
-    config['server_url'] = 'http://just-landed.appspot.com/'
+    config['server_url'] = 'https://just-landed.appspot.com/'
     config['api_credentials'] = {
         'iOS' : {
             'username' : 'iOS-Production',
