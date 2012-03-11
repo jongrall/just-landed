@@ -39,6 +39,7 @@ from datasource_exceptions import *
 from models import *
 from notifications import *
 import utils
+import aircraft_types
 
 FLIGHT_STATES = config['flight_states']
 debug_cache = False
@@ -209,6 +210,9 @@ class FlightAwareSource (FlightDataSource):
             flight_duration = data['scheduledFlightDuration'].split(':')
             secs = (int(flight_duration[0]) * 3600) + (int(flight_duration[1]) * 60)
             flight.scheduled_flight_duration = secs
+
+            # Convert aircraft type
+            flight.aircraft_type = aircraft_types.type_to_major_type(data.get('aircraftType'))
 
             flight.origin.city = data['originCity'].split(',')[0]
             flight.origin.name = utils.proper_airport_name(data['originName'])

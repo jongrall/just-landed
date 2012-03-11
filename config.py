@@ -47,6 +47,7 @@ config['flight_old_hours'] = 3
 config['flight_fields'] = [
     'actualArrivalTime',
     'actualDepartureTime',
+    'aircraftType',
     'destination',
     'detailedStatus',
     'estimatedArrivalTime',
@@ -192,6 +193,7 @@ config['flightaware'] = {
     'flight_info_fields' : [
         'actualarrivaltime',
         'actualdeparturetime',
+        'aircrafttype',
         'destination',
         'destinationCity',
         'destinationName',

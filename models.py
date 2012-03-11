@@ -538,6 +538,14 @@ class Flight(object):
             self._data = {}
 
     @property
+    def aircraft_type(self):
+        return self._data.get('aircraftType')
+
+    @aircraft_type.setter
+    def aircraft_type(self, value):
+        self._data['aircraftType'] = value
+
+    @property
     def actual_arrival_time(self):
         return self._data.get('actualArrivalTime')
 
