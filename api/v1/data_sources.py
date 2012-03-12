@@ -721,8 +721,8 @@ class GoogleDistanceSource (DrivingTimeDataSource):
         # calculations for locations close to each other
         return '%s-driving_time-%f,%f,%f,%f' % (
                 cls.__name__,
-                utils.round_coord(origin_lat, sf=2),
-                utils.round_coord(origin_lon, sf=2),
+                utils.round_coord(orig_lat, sf=2),
+                utils.round_coord(orig_lon, sf=2),
                 utils.round_coord(dest_lat, sf=2),
                 utils.round_coord(dest_lon, sf=2),
         )
