@@ -12,7 +12,7 @@ from google.appengine.ext import webapp
 from google.appengine.api import urlfetch
 
 from config import on_production
-from models import *
+from models import FlightAwareTrackedFlight, iOSUser
 from api.v1.data_sources import FlightAwareSource
 from api.v1.datasource_exceptions import *
 import utils

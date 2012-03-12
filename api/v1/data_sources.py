@@ -35,13 +35,15 @@ from google.appengine.api import memcache
 from google.appengine.ext import deferred
 
 from config import config, on_local
+from models import (Airport, FlightAwareTrackedFlight, FlightAwareAlert, iOSUser,
+    Origin, Destination, Flight)
 from datasource_exceptions import *
-from models import *
 from notifications import *
 import utils
 import aircraft_types
 
 FLIGHT_STATES = config['flight_states']
+DATA_SOURCES = config['data_sources']
 debug_cache = False
 debug_alerts = False
 
@@ -155,6 +157,27 @@ class FlightAwareSource (FlightDataSource):
     http://flightaware.com/commercial/flightxml/documentation2.rvt
 
     """
+    @classmethod
+    def airport_info_cache_key(cls, airport_code):
+        assert utils.is_valid_icao(airport_code) or utils.is_valid_iata(airport_code)
+        return "%s-airport_info-%s" % (cls.__name__, airport_code)
+
+    @classmethod
+    def flight_info_cache_key(cls, flight_id):
+        assert isinstance(flight_id, basestring) and len(flight_id)
+        return "%s-flight_info-%s" % (cls.__name__, flight_id)
+
+    @classmethod
+    def airline_info_cache_key(cls, flight_id):
+        assert isinstance(flight_id, basestring) and len(flight_id)
+        return "%s-airline_info-%s" % (cls.__name__, flight_id)
+
+    @classmethod
+    def lookup_flights_cache_key(cls, flight_num):
+        assert utils.valid_flight_number(flight_num)
+        return "%s-lookup_flights-%s" % (cls.__name__,
+                                        utils.sanitize_flight_number(flight_num))
+
     @property
     def base_url(self):
         return "http://flightxml.flightaware.com/json/FlightXML2/"
@@ -183,23 +206,10 @@ class FlightAwareSource (FlightDataSource):
             # Map the response dict keys
             data = utils.map_dict_keys(data, self.api_key_mapping)
 
-            origin = None
             origin_code = data['origin']
-
-            if utils.is_valid_iata(origin_code):
-                origin = Origin(self.airport_info(iata_code=origin_code))
-            else:
-                origin = Origin(self.airport_info(icao_code=origin_code))
-
-            destination = None
+            origin = Origin(self.airport_info(origin_code))
             destination_code = data['destination']
-
-            if utils.is_valid_iata(destination_code):
-                destination = Destination(self.airport_info(
-                                          iata_code=destination_code))
-            else:
-                destination = Destination(self.airport_info(
-                                          icao_code=destination_code))
+            destination = Destination(self.airport_info(destination_code))
 
             flight = Flight(data)
             flight.flight_number = sanitized_flight_num
@@ -220,68 +230,66 @@ class FlightAwareSource (FlightDataSource):
             flight.destination.name = utils.proper_airport_name(data['destinationName'])
             return flight
 
-    def airport_info(self, icao_code="", iata_code=""):
+    def airport_info(self, airport_code):
         """Looks up information about an airport using its ICAO or IATA code."""
-        if utils.is_valid_iata(iata_code):
-            # Check the DB
-            qry = Airport.query(Airport.iata_code == iata_code)
-            airport = qry.get()
-            return (airport and airport.dict_for_client()) or None
-        elif utils.is_valid_icao(icao_code):
-            # Check the DB first (automatically cached)
-            airport = Airport.get_by_id(icao_code)
-            if airport:
-                return airport.dict_for_client()
+        airport = None
+        assert utils.is_valid_icao(airport_code) or utils.is_valid_iata(airport_code)
+
+        # Check the DB first
+        airport = Airport.get_by_icao_code(airport_code) or Airport.get_by_iata_code(airport_code)
+
+        if airport:
+            return airport.dict_for_client()
+        elif utils.is_valid_icao(airport_code):
+            # Check FlightAware for the AiportInfo
+            memcache_key = FlightAwareSource.airport_info_cache_key(airport_code)
+
+            airport = memcache.get(memcache_key)
+            if airport is not None:
+                if debug_cache:
+                    logging.info('AIRPORT INFO CACHE HIT')
+
+                return airport
             else:
-                # Check FlightAware for the AiportInfo
-                memcache_key = "%s-airport_info-%s" % (self.__class__.__name__,
-                                                       icao_code)
-                airport = memcache.get(memcache_key)
-                if airport is not None:
+                if debug_cache:
+                    logging.info('AIRPORT INFO CACHE MISS')
+                resp = self.conn.request_get('/AirportInfo',
+                                             args={'airportCode':airport_code})
+                # Turn the JSON response into a dict
+                result = json.loads(resp['body'])
+
+                if result.get('error'):
+                    raise AirportNotFoundException(airport_code)
+                else:
+                    airport = result['AirportInfoResult']
+
+                    # Filter out fields we don't want
+                    fields = config['flightaware']['airport_info_fields']
+                    airport = utils.sub_dict_strict(airport, fields)
+
+                    # Map field names
+                    airport = utils.map_dict_keys(airport,
+                                                  self.api_key_mapping)
+
+                    # Add ICAO code back in (we don't have IATA)
+                    airport['icaoCode'] = airport_code
+                    airport['iataCode'] = None
+
+                    # Make sure the name is well formed
+                    airport['name'] = utils.proper_airport_name(airport['name'])
+
+                    # Round lat & long
+                    airport['latitude'] = utils.round_coord(airport['latitude'])
+                    airport['longitude'] = utils.round_coord(airport['longitude'])
+
+                    if not memcache.set(memcache_key, airport):
+                        logging.error("Unable to cache airport info!")
                     if debug_cache:
-                        logging.info('AIRPORT INFO CACHE HIT')
+                        logging.info('AIRPORT INFO CACHE SET')
 
                     return airport
-                else:
-                    if debug_cache:
-                        logging.info('AIRPORT INFO CACHE MISS')
-                    resp = self.conn.request_get('/AirportInfo',
-                                                 args={'airportCode':icao_code})
-                    # Turn the JSON response into a dict
-                    result = json.loads(resp['body'])
-
-                    if result.get('error'):
-                        raise AirportNotFoundException(iata_code)
-                    else:
-                        airport = result['AirportInfoResult']
-
-                        # Filter out fields we don't want
-                        fields = config['flightaware']['airport_info_fields']
-                        airport = utils.sub_dict_strict(airport, fields)
-
-                        # Map field names
-                        airport = utils.map_dict_keys(airport,
-                                                      self.api_key_mapping)
-
-                        # Add ICAO code back in (we don't have IATA)
-                        airport['icaoCode'] = icao_code
-                        airport['iataCode'] = None
-
-                        # Make sure the name is well formed
-                        airport['name'] = utils.proper_airport_name(airport['name'])
-
-                        # Round lat & long
-                        airport['latitude'] = utils.round_coord(airport['latitude'])
-                        airport['longitude'] = utils.round_coord(airport['longitude'])
-
-                        if not memcache.set(memcache_key, airport):
-                            logging.error("Unable to cache airport info!")
-                        if debug_cache:
-                            logging.info('AIRPORT INFO CACHE SET')
-
-                        return airport
         else:
-            raise AirportNotFoundException(icao_code or iata_code)
+            raise AirportNotFoundException(airport_code)
 
     def register_alert_endpoint(self, **kwargs):
         endpoint_url = config['flightaware']['alert_endpoint']
@@ -315,10 +323,8 @@ class FlightAwareSource (FlightDataSource):
             raise FlightNotFoundException(flight_number)
 
         flight = None
-        flight_cache_key = '%s-flight_info-%s' % (self.__class__.__name__,
-                                                  flight_id)
-        airline_cache_key = "%s-airline_info-%s" % (self.__class__.__name__,
-                                                   flight_id)
+        flight_cache_key = FlightAwareSource.flight_info_cache_key(flight_id)
+        airline_cache_key = FlightAwareSource.airline_info_cache_key(flight_id)
 
         # Find the flight, try cache first
         if use_cache:
@@ -401,8 +407,7 @@ class FlightAwareSource (FlightDataSource):
         use_cache = not kwargs.get('no_cache') # Cache by default
         sanitized_f_num = utils.sanitize_flight_number(flight_number)
         flights = None
-        lookup_cache_key = '%s-lookup_flights-%s' % (self.__class__.__name__,
-                                                    sanitized_f_num)
+        lookup_cache_key = FlightAwareSource.lookup_flights_cache_key(sanitized_f_num)
 
         if use_cache:
             flights = memcache.get(lookup_cache_key)
@@ -467,11 +472,12 @@ class FlightAwareSource (FlightDataSource):
 
         if alert_id and event_code and flight_id and origin and destination:
             # Clear memcache keys for flight & airline info
-            flight_cache_key = '%s-flight_info-%s' % (self.__class__.__name__,
-                                                      flight_id)
-            airline_cache_key = "%s-airline_info-%s" % (self.__class__.__name__,
-                                                       flight_id)
-            memcache.delete_multi([flight_cache_key, airline_cache_key])
+            flight_cache_key = FlightAwareSource.flight_info_cache_key(flight_id)
+            airline_cache_key = FlightAwareSource.airline_info_cache_key(flight_id)
+            res = memcache.delete_multi([flight_cache_key, airline_cache_key])
+            if res:
+                logging.info('DELETED FLIGHT INFO CACHE KEYS %s' %
+                        [flight_cache_key, airline_cache_key])
 
             # Get current flight information for the flight mentioned by the alert
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
@@ -480,15 +486,13 @@ class FlightAwareSource (FlightDataSource):
 
             if alerted_flight:
                 # Send out push notifications
-                alert_key = model.Key('FlightAwareAlert', alert_id)
-                flight_key = model.Key('FlightAwareTrackedFlight', flight_id)
                 push_types = config['push_types']
                 flight_numbers = set()
 
                 # FIXME: Assume iOS user
-                for u in iOSUser.users_to_notify(alert_key, flight_key):
+                for u in iOSUser.users_to_notify(alert_id, flight_id, source=DATA_SOURCES.FlightAware):
                     user_flight_num = u.flight_num_for_flight_id(flight_id) or flight_num
-                    flight_numbers.add(user_flight_num)
+                    flight_numbers.add(utils.sanitize_flight_number(user_flight_num))
                     device_token = u.push_token
 
                     # Send notifications to each user, only if they want that notification type
@@ -522,26 +526,28 @@ class FlightAwareSource (FlightDataSource):
                 # Clear memcache keys for lookup
                 cache_keys = []
                 for f_num in flight_numbers:
-                    cache_keys.append('%s-lookup_flights-%s' % (
-                                      self.__class__.__name__, f_num))
+                    cache_keys.append(FlightAwareSource.lookup_flights_cache_key(f_num))
                 if cache_keys:
-                    memcache.delete_multi(cache_keys)
+                    res = memcache.delete_multi(cache_keys)
+                    if res:
+                        logging.info('DELETED LOOKUP CACHE KEYS %s' % cache_keys)
 
     def set_alert(self, **kwargs):
         flight_id = kwargs.get('flight_id')
         assert isinstance(flight_id, basestring) and len(flight_id)
+        alert_id = None
 
         # Derive flight num from flight_id so we can use common flight_num for alerts
         flight_num = utils.sanitize_flight_number(
                         utils.flight_num_from_fa_flight_id(flight_id))
 
         # See if the alert exists (according to our datastore) and is enabled
-        alert = FlightAwareAlert.existing_enabled_alert(flight_num)
+        alert_id = FlightAwareAlert.existing_enabled_alert(flight_num)
 
-        if alert:
+        if isinstance(alert_id, (int, long)) and alert_id > 0:
             if debug_alerts:
                 logging.info('EXISTING ALERT FOR %s' % flight_num)
-            return alert
+            return alert_id
         else:
             # Set the alert with FlightAware and keep a record of it in our system
             channels = "{16 e_filed e_departure e_arrival e_diverted e_cancelled}"
@@ -560,9 +566,9 @@ class FlightAwareSource (FlightDataSource):
             else:
                 if debug_alerts:
                     logging.info('REGISTERED NEW ALERT')
-                if alert_id > 0:
-                    # Store the alert so we don't recreate it
-                    return FlightAwareAlert.create_alert(alert_id, flight_num)
+                # Store the alert so we don't recreate it
+                if FlightAwareAlert.create_alert(alert_id, flight_num):
+                    return alert_id
                 else:
                     raise UnableToSetAlertException(reason='Bad Alert Id')
 
@@ -592,11 +598,10 @@ class FlightAwareSource (FlightDataSource):
                 logging.info('DELETED ALERT %d' % alert_id)
 
             # Disable the alert in the datastore, remove from users
-            alert = FlightAwareAlert.disable_alert(alert_id)
-            if alert:
-                iOSUser.remove_alert(alert.key)
-        else:
-            raise UnableToDeleteAlertException(alert_id)
+            if FlightAwareAlert.disable_alert(alert_id):
+                iOSUser.remove_alert(alert_id, source=DATA_SOURCES.FlightAware)
+                return True
+        raise UnableToDeleteAlertException(alert_id)
 
     def clear_all_alerts(self):
         alerts = self.get_all_alerts()
@@ -622,24 +627,24 @@ class FlightAwareSource (FlightDataSource):
         push_token = kwargs.get('push_token')
 
         # Mark the flight as being tracked
-        flight_key = FlightAwareTrackedFlight.create_or_update_flight(flight_id)
+        success = FlightAwareTrackedFlight.create_or_update_flight(flight_id)
 
         # Save the user's tracking activity if we have a uuid
-        if uuid:
-            alert_key = None
+        if uuid and success:
+            alert_id = None
             old_push_token = None
 
             if push_token:
-                alert = self.set_alert(flight_id=flight_id)
-                alert_key = alert and alert.key
-                existing_user = iOSUser.get_by_id(uuid)
+                alert_id = self.set_alert(flight_id=flight_id)
+                existing_user = iOSUser.get_by_uuid(uuid)
                 old_push_token = existing_user and existing_user.push_token
 
             user = iOSUser.track_flight(uuid=uuid,
-                                        flight_key=flight_key,
+                                        flight_id=flight_id,
                                         flight_num=flight_num,
                                         push_token=push_token,
-                                        alert_key=alert_key)
+                                        alert_id=alert_id,
+                                        source=DATA_SOURCES.FlightAware)
 
             # Tell UrbanAirship about push tokens
             if push_token and (not old_push_token or (old_push_token != push_token)):
@@ -650,25 +655,24 @@ class FlightAwareSource (FlightDataSource):
     def stop_tracking_flight(self, flight_id, **kwargs):
         uuid = kwargs.get('uuid')
         flight_num = utils.flight_num_from_fa_flight_id(flight_id)
-        flight_key = model.Key('FlightAwareTrackedFlight', flight_id)
 
         # Lookup the alert by flight number
-        alert = FlightAwareAlert.existing_enabled_alert(flight_num)
-        alert_key = alert and alert.key
+        alert_id = FlightAwareAlert.existing_enabled_alert(flight_num)
 
         # Mark the user as no longer tracking the flight or the alert
         if uuid:
-            iOSUser.untrack_flight(uuid, flight_key, alert_key=alert_key)
+            iOSUser.untrack_flight(uuid,
+                                  flight_id,
+                                  alert_id=alert_id,
+                                  source=DATA_SOURCES.FlightAware)
 
         # If there are no more users tracking the alert, delete it
-        if alert_key:
-            alert_unused = not iOSUser.alert_in_use(alert_key)
-            if alert_unused:
-                self.delete_alert(alert_key.integer_id())
+        if alert_id and not iOSUser.alert_in_use(alert_id, source=DATA_SOURCES.FlightAware):
+            self.delete_alert(alert_id)
 
         # See if any users are still tracking the flight
-        if not iOSUser.flight_still_tracked(flight_key):
-            FlightAwareTrackedFlight.stop_tracking(flight_key)
+        if not iOSUser.flight_still_tracked(flight_id, source=DATA_SOURCES.FlightAware):
+            FlightAwareTrackedFlight.stop_tracking(flight_id)
 
     def authenticate_remote_request(self, request):
         """Returns True if the incoming request is in fact from the trusted
@@ -711,6 +715,18 @@ class GoogleDistanceSource (DrivingTimeDataSource):
     http://code.google.com/apis/maps/documentation/distancematrix/
 
     """
+    @classmethod
+    def driving_cache_key(cls, orig_lat, orig_lon, dest_lat, dest_lon):
+        # Rounding the coordinates has the effect of re-using driving distance
+        # calculations for locations close to each other
+        return '%s-driving_time-%f,%f,%f,%f' % (
+                cls.__name__,
+                utils.round_coord(origin_lat, sf=2),
+                utils.round_coord(origin_lon, sf=2),
+                utils.round_coord(dest_lat, sf=2),
+                utils.round_coord(dest_lon, sf=2),
+        )
+
     @property
     def base_url(self):
         return 'http://maps.googleapis.com/maps/api/distancematrix'
@@ -728,14 +744,10 @@ class GoogleDistanceSource (DrivingTimeDataSource):
         """
         use_cache = not kwargs.get('no_cache')
         time = None
-        driving_cache_key = '%s-driving_time-%f,%f,%f,%f' % (
-            self.__class__.__name__,
-            utils.round_coord(origin_lat, sf=2),
-            utils.round_coord(origin_lon, sf=2),
-            utils.round_coord(dest_lat, sf=2),
-            utils.round_coord(dest_lon, sf=2),
-        )
-
+        driving_cache_key = GoogleDistanceSource.driving_cache_key(origin_lat,
+                                                                   origin_lon,
+                                                                   dest_lat,
+                                                                   dest_lon)
         if use_cache:
             time = memcache.get(driving_cache_key)
 

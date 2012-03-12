@@ -13,7 +13,6 @@ import re
 import math
 import hashlib, hmac
 
-from models import *
 from config import config, api_secret
 from lib import ipaddr
 
@@ -160,12 +159,6 @@ def is_valid_icao(icao_code):
 
 def is_valid_iata(iata_code):
     return isinstance(iata_code, basestring) and len(iata_code) == 3
-
-def icao_to_iata(icao_code):
-    if is_valid_icao(icao_code):
-        airport = Airport.get_by_id(icao_code.upper())
-        return (airport and airport.iata_code) or None
-    return None
 
 def proper_airport_name(name):
     if name.lower().find('airport') == -1:

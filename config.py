@@ -43,6 +43,11 @@ config['on_time_buffer'] = 600
 # Hours after a flight lands when it becomes "old"
 config['flight_old_hours'] = 3
 
+# Flight datasources
+config['data_sources'] = Enum([
+    'FlightAware',
+])
+
 # Fields to send for a flight
 config['flight_fields'] = [
     'actualArrivalTime',

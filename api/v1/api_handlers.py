@@ -18,6 +18,7 @@ from google.appengine.ext import deferred
 from data_sources import FlightAwareSource, GoogleDistanceSource
 
 from datasource_exceptions import *
+from config import on_local
 import utils
 
 # Currently using FlightAware and Google Distance APIs
@@ -71,7 +72,7 @@ class AuthenticatedAPIHandler(BaseAPIHandler):
     def dispatch(self):
         is_server = self.request.headers.get('User-Agent').startswith('AppEngine')
         client = (is_server and 'Server') or 'iOS'
-        if utils.authenticate_api_request(self.request, client=client):
+        if on_local() or utils.authenticate_api_request(self.request, client=client):
             # Parent class will call the method to be dispatched
             # -- get() or post() or etc.
             super(AuthenticatedAPIHandler, self).dispatch()
