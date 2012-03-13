@@ -42,7 +42,7 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                     user_keys_tracking = yield iOSUser.users_tracking_flight(f_key)
 
                     # Generate the URL and API signature
-                    url_scheme = (on_production() and 'https') or 'http'
+                    url_scheme = 'http' # FlightAware currently doesn't support HTTPS
                     to_sign = self.uri_for('untrack', flight_id=flight_id)
                     sig = utils.api_query_signature(to_sign, client='Server')
                     untrack_url = self.uri_for('untrack',
