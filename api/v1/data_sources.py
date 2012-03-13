@@ -474,7 +474,7 @@ class FlightAwareSource (FlightDataSource):
 
             raise tasklets.Return(flights)
 
-    @ndb.tasklet
+    @ndb.toplevel
     def process_alert(self, alert_body):
         assert isinstance(alert_body, dict)
         alert_id = alert_body.get('alert_id')
