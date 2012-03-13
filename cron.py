@@ -37,8 +37,6 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
             try:
                 flight = source.flight_info(flight_id=flight_id,
                                             flight_number=flight_num)
-                logging.info(flight)
-                raise OldFlightException()
             except Exception as e:
                 if isinstance(e, OldFlightException): # Only care about old flights
                     # We should untrack this flight for each user who was tracking it
