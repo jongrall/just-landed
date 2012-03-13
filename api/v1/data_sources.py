@@ -495,8 +495,8 @@ class FlightAwareSource (FlightDataSource):
 
             # Get current flight information for the flight mentioned by the alert
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
-            alerted_flight = self.flight_info(flight_id=flight_id,
-                                              flight_number=flight_num)
+            alerted_flight = yield self.flight_info(flight_id=flight_id,
+                                                    flight_number=flight_num)
 
             if alerted_flight:
                 # Send out push notifications

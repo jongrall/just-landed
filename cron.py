@@ -35,8 +35,8 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
 
             # Find out if the flight is old
             try:
-                flight = source.flight_info(flight_id=flight_id,
-                                            flight_number=flight_num)
+                flight = yield source.flight_info(flight_id=flight_id,
+                                                flight_number=flight_num)
             except Exception as e:
                 if isinstance(e, OldFlightException): # Only care about old flights
                     # We should untrack this flight for each user who was tracking it
