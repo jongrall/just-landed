@@ -556,27 +556,36 @@ class FlightAwareSource (FlightDataSource):
                         utils.flight_num_from_fa_flight_id(flight_id))
 
         # Set the alert with FlightAware and keep a record of it in our system
-        channels = "{16 e_filed e_departure e_arrival e_diverted e_cancelled}"
-        result = yield self.conn.get_json('/SetAlert',
-                            args={'alert_id': 0,
-                                'ident': flight_num,
-                                'channels': channels,
-                                'max_weekly': 1000})
+        # Only set if the alert wasn't already there
+        alert_id = yield self.alert_already_set(flight_num)
+        if not alert_id:
+            channels = "{16 e_filed e_departure e_arrival e_diverted e_cancelled}"
+            result = yield self.conn.get_json('/SetAlert',
+                                args={'alert_id': 0,
+                                    'ident': flight_num,
+                                    'channels': channels,
+                                    'max_weekly': 1000})
 
-        error = result.get('error')
-        alert_id = result.get('SetAlertResult')
+            error = result.get('error')
+            alert_id = result.get('SetAlertResult')
+            if error or not alert_id:
+                raise UnableToSetAlertException(reason=error)
 
-        if error or not alert_id:
-            raise UnableToSetAlertException(reason=error)
+        if debug_alerts:
+            logging.info('REGISTERED NEW ALERT')
+        # Store the alert so we don't recreate it
+        created = yield FlightAwareAlert.create_alert(alert_id, flight_num)
+        if created:
+            raise tasklets.Return(alert_id)
         else:
-            if debug_alerts:
-                logging.info('REGISTERED NEW ALERT')
-            # Store the alert so we don't recreate it
-            created = yield FlightAwareAlert.create_alert(alert_id, flight_num)
-            if created:
-                raise tasklets.Return(alert_id)
-            else:
-                raise UnableToSetAlertException(reason='Bad Alert Id')
+            raise UnableToSetAlertException(reason='Bad Alert Id')
+
+    @ndb.tasklet
+    def alert_already_set(self, flight_num):
+        alerts = yield self.get_all_alerts()
+        for alert in alerts:
+            if alert.get('ident') == flight_num:
+                raise tasklets.Return(alert.get('alert_id'))
 
     @ndb.tasklet
     def get_all_alerts(self):
@@ -644,11 +653,13 @@ class FlightAwareSource (FlightDataSource):
 
         @ndb.tasklet
         def track_txn(flight_id, flight_num, uuid, push_token, alert_id):
+            valid_alert_id = isinstance(alert_id, (int, long)) and alert_id > 0
+
             # Check the alert is still good and enabled
-            if isinstance(alert_id, (int, long)) and alert_id > 0:
+            if valid_alert_id:
                 alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
                 if not alert or not alert.is_enabled:
-                    alert_id = None # Trigger new alert creation
+                    valid_alert_id = False # Trigger new alert creation
 
             # Mark the flight as being tracked
             yield FlightAwareTrackedFlight.get_or_insert_async(flight_id)
@@ -658,9 +669,9 @@ class FlightAwareSource (FlightDataSource):
                 old_push_token = None
 
                 if push_token:
-                    if not isinstance(alert_id, (int, long)) or alert_id <= 0:
+                    if not valid_alert_id:
                         # Only set an alert_id if we don't have one
-                        alert_id = self.set_alert(flight_id=flight_id)
+                        alert_id = yield self.set_alert(flight_id=flight_id)
                     existing_user = yield iOSUser.get_by_uuid(uuid)
                     old_push_token = existing_user and existing_user.push_token
 
