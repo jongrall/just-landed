@@ -50,18 +50,17 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                                                 _full=True,
                                                 _scheme=url_scheme)
 
+                    requests =[]
+
                     for u_key in user_keys_tracking:
                         headers = {'X-Just-Landed-UUID' : u_key.string_id(),
                                    'X-Just-Landed-Signature' : sig}
 
-                        if on_production():
-                            # Async fetch
-                            rpc = urlfetch.create_rpc(deadline=120)
-                            urlfetch.make_fetch_call(rpc,
-                                                    untrack_url,
-                                                    headers=headers)
-                        else:
-                            # Dev server doesn't do async requests
-                            urlfetch.fetch(untrack_url,
-                                           headers=headers,
-                                           deadline=60)
+                        ctx = ndb.get_context()
+                        req_fut = ctx.url_fetch(untrack_url,
+                                                headers=headers,
+                                                deadline=120,
+                                                validate_certificate=on_production())
+                        requests.append(req_fut)
+
+                    yield requests # Parallel yield of all requests
