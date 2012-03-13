@@ -128,7 +128,8 @@ def api_secret(client='iOS'):
 ###############################################################################
 
 def fa_alert_url():
-    return config['server_url'] + '/api/v1/handle_alert'
+    no_ssl_url = config['server_url'].replace('https', 'http') # SSL not yet supported
+    return no_ssl_url + '/api/v1/handle_alert'
 
 # FlightAware settings
 config['flightaware'] = {
