@@ -28,7 +28,8 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
         # Get all flights that are currently tracking
         flight_keys = yield FlightAwareTrackedFlight.tracked_flights()
 
-        for f_key in flight_keys:
+        while (yield flight_keys.has_next_async()):
+            f_key = flight_keys.next()
             flight_id = f_key.string_id()
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
 
@@ -36,10 +37,12 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
             try:
                 flight = source.flight_info(flight_id=flight_id,
                                             flight_number=flight_num)
+                logging.info(flight)
+                raise OldFlightException()
             except Exception as e:
-                if isinstance(e, OldFlightException):
+                if isinstance(e, OldFlightException): # Only care about old flights
                     # We should untrack this flight for each user who was tracking it
-                    user_keys_tracking = yield iOSUser.users_tracking_flight(f_key)
+                    user_keys_tracking = yield iOSUser.users_tracking_flight(flight_id)
 
                     # Generate the URL and API signature
                     url_scheme = (on_production() and 'https') or 'http'
@@ -49,15 +52,15 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                                                 flight_id=flight_id,
                                                 _full=True,
                                                 _scheme=url_scheme)
-
                     requests =[]
 
-                    for u_key in user_keys_tracking:
+                    while (yield user_keys_tracking.has_next_async()):
+                        u_key = user_keys_tracking.next()
                         headers = {'X-Just-Landed-UUID' : u_key.string_id(),
                                    'X-Just-Landed-Signature' : sig}
 
                         ctx = ndb.get_context()
-                        req_fut = ctx.url_fetch(untrack_url,
+                        req_fut = ctx.urlfetch(untrack_url,
                                                 headers=headers,
                                                 deadline=120,
                                                 validate_certificate=on_production())

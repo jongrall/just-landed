@@ -505,7 +505,8 @@ class FlightAwareSource (FlightDataSource):
 
                 # FIXME: Assume iOS user
                 users_to_notify = yield iOSUser.users_to_notify(alert_id, flight_id, source=DATA_SOURCES.FlightAware)
-                for u in users_to_notify:
+                while (yield users_to_notify.has_next_async()):
+                    u = users_to_notify.next()
                     user_flight_num = u.flight_num_for_flight_id(flight_id) or flight_num
                     flight_numbers.add(utils.sanitize_flight_number(user_flight_num))
                     device_token = u.push_token
