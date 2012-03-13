@@ -148,8 +148,22 @@ class FlightDataSource (object):
 
 def fa_delete_alerts(alert_ids):
     source = FlightAwareSource()
-    for alert_id in alert_ids:
-        source.delete_alert(alert_id)
+    source_futs = []
+    @ndb.toplevel
+    @ndb.transactional
+    def del_txn():
+        # Delete the alerts from FlightAware
+        for alert_id in alert_ids:
+            source_futs.append(source.delete_alert(alert_id))
+        yield source_futs
+
+    # Delete all alerts from users
+    @ndb.toplevel
+    def clear_alerts_from_users():
+        yield iOSUser.clear_alerts()
+
+    del_txn()
+    clear_alerts_from_users()
 
 
 class FlightAwareSource (FlightDataSource):
@@ -537,42 +551,32 @@ class FlightAwareSource (FlightDataSource):
     def set_alert(self, **kwargs):
         flight_id = kwargs.get('flight_id')
         assert isinstance(flight_id, basestring) and len(flight_id)
-        alert_id = None
-
         # Derive flight num from flight_id so we can use common flight_num for alerts
         flight_num = utils.sanitize_flight_number(
                         utils.flight_num_from_fa_flight_id(flight_id))
 
-        # See if the alert exists (according to our datastore) and is enabled
-        alert_id = yield FlightAwareAlert.existing_enabled_alert(flight_num)
+        # Set the alert with FlightAware and keep a record of it in our system
+        channels = "{16 e_filed e_departure e_arrival e_diverted e_cancelled}"
+        result = yield self.conn.get_json('/SetAlert',
+                            args={'alert_id': 0,
+                                'ident': flight_num,
+                                'channels': channels,
+                                'max_weekly': 1000})
 
-        if isinstance(alert_id, (int, long)) and alert_id > 0:
-            if debug_alerts:
-                logging.info('EXISTING ALERT FOR %s' % flight_num)
-            raise tasklets.Return(alert_id)
+        error = result.get('error')
+        alert_id = result.get('SetAlertResult')
+
+        if error or not alert_id:
+            raise UnableToSetAlertException(reason=error)
         else:
-            # Set the alert with FlightAware and keep a record of it in our system
-            channels = "{16 e_filed e_departure e_arrival e_diverted e_cancelled}"
-            result = yield self.conn.get_json('/SetAlert',
-                                args={'alert_id': 0,
-                                    'ident': flight_num,
-                                    'channels': channels,
-                                    'max_weekly': 1000})
-
-            error = result.get('error')
-            alert_id = result.get('SetAlertResult')
-
-            if error or not alert_id:
-                raise UnableToSetAlertException(reason=error)
+            if debug_alerts:
+                logging.info('REGISTERED NEW ALERT')
+            # Store the alert so we don't recreate it
+            created = yield FlightAwareAlert.create_alert(alert_id, flight_num)
+            if created:
+                raise tasklets.Return(alert_id)
             else:
-                if debug_alerts:
-                    logging.info('REGISTERED NEW ALERT')
-                # Store the alert so we don't recreate it
-                created = yield FlightAwareAlert.create_alert(alert_id, flight_num)
-                if created:
-                    raise tasklets.Return(alert_id)
-                else:
-                    raise UnableToSetAlertException(reason='Bad Alert Id')
+                raise UnableToSetAlertException(reason='Bad Alert Id')
 
     @ndb.tasklet
     def get_all_alerts(self):
@@ -600,10 +604,8 @@ class FlightAwareSource (FlightDataSource):
                 logging.info('DELETED ALERT %d' % alert_id)
 
             # Disable the alert in the datastore, remove from users
-            disabled = yield FlightAwareAlert.disable_alert(alert_id)
-            if disabled:
-                iOSUser.remove_alert(alert_id, source=DATA_SOURCES.FlightAware)
-                raise tasklets.Return(True)
+            yield FlightAwareAlert.disable_alert(alert_id)
+            raise tasklets.Return(True)
         raise UnableToDeleteAlertException(alert_id)
 
     @ndb.tasklet
@@ -620,62 +622,87 @@ class FlightAwareSource (FlightDataSource):
                        _queue='admin')
         raise tasklets.Return({'clearing_alert_count': len(alert_ids)})
 
-    @ndb.tasklet
+    @ndb.toplevel
     def start_tracking_flight(self, flight_id, flight_num, **kwargs):
         assert isinstance(flight_id, basestring) and len(flight_id)
         assert utils.valid_flight_number(flight_num)
 
         uuid = kwargs.get('uuid')
         push_token = kwargs.get('push_token')
+        alert_id = None
 
-        # Mark the flight as being tracked
-        FlightAwareTrackedFlight.create_or_update_flight(flight_id)
+        if push_token:
+            # Derive flight num from flight_id so we can use common flight_num for alerts
+            der_flight_num = utils.sanitize_flight_number(
+                                utils.flight_num_from_fa_flight_id(flight_id))
 
-        # Save the user's tracking activity if we have a uuid
-        if uuid:
-            alert_id = None
-            old_push_token = None
+            # See if the alert exists (according to our datastore) and is enabled
+            alert_id = yield FlightAwareAlert.existing_enabled_alert(der_flight_num)
+            if isinstance(alert_id, (int, long)) and alert_id > 0:
+                if debug_alerts:
+                    logging.info('EXISTING ALERT FOR %s' % der_flight_num)
 
-            if push_token:
-                alert_id = self.set_alert(flight_id=flight_id)
-                existing_user = yield iOSUser.get_by_uuid(uuid)
-                old_push_token = existing_user and existing_user.push_token
+        @ndb.tasklet
+        def track_txn(flight_id, flight_num, uuid, push_token, alert_id):
+            # Check the alert is still good and enabled
+            if isinstance(alert_id, (int, long)) and alert_id > 0:
+                alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
+                if not alert or not alert.is_enabled:
+                    alert_id = None # Trigger new alert creation
 
-            iOSUser.track_flight(uuid=uuid,
-                                 flight_id=flight_id,
-                                 flight_num=flight_num,
-                                 push_token=push_token,
-                                 alert_id=alert_id,
-                                 source=DATA_SOURCES.FlightAware)
+            # Mark the flight as being tracked
+            yield FlightAwareTrackedFlight.get_or_insert_async(flight_id)
 
-            # Tell UrbanAirship about push tokens
-            if push_token and (not old_push_token or (old_push_token != push_token)):
-                register_token(push_token)
-            if old_push_token and push_token != old_push_token:
-                deregister_token(old_push_token)
+            # Save the user's tracking activity if we have a uuid
+            if uuid:
+                old_push_token = None
 
-    @ndb.tasklet
+                if push_token:
+                    if not isinstance(alert_id, (int, long)) or alert_id <= 0:
+                        # Only set an alert_id if we don't have one
+                        alert_id = self.set_alert(flight_id=flight_id)
+                    existing_user = yield iOSUser.get_by_uuid(uuid)
+                    old_push_token = existing_user and existing_user.push_token
+
+                yield iOSUser.track_flight(uuid=uuid,
+                                        flight_id=flight_id,
+                                        flight_num=flight_num,
+                                        push_token=push_token,
+                                        alert_id=alert_id,
+                                        source=DATA_SOURCES.FlightAware)
+
+                # Tell UrbanAirship about push tokens
+                if push_token and (not old_push_token or (old_push_token != push_token)):
+                    register_token(push_token)
+                if old_push_token and push_token != old_push_token:
+                    deregister_token(old_push_token)
+        # TRANSACTIONAL TRACKING!
+        yield ndb.transaction_async(lambda: track_txn(flight_id, flight_num, uuid, push_token, alert_id), xg=True)
+
+    @ndb.toplevel
     def stop_tracking_flight(self, flight_id, **kwargs):
         uuid = kwargs.get('uuid')
         flight_num = utils.flight_num_from_fa_flight_id(flight_id)
 
-        # Lookup the alert by flight number
+        # Lookup any existing alert by flight number
         alert_id = yield FlightAwareAlert.existing_enabled_alert(flight_num)
 
-        # Mark the user as no longer tracking the flight or the alert
-        if uuid:
-            iOSUser.untrack_flight(uuid,
-                                  flight_id,
-                                  alert_id=alert_id,
-                                  source=DATA_SOURCES.FlightAware)
+        @ndb.tasklet
+        def untrack_txn(flight_id, flight_num, uuid, alert_id):
+            # Mark the user as no longer tracking the flight or the alert
+            if uuid:
+                yield iOSUser.untrack_flight(uuid,
+                                            flight_id,
+                                            alert_id=alert_id,
+                                            source=DATA_SOURCES.FlightAware)
 
-        # If there are no more users tracking the alert, delete it
-        if alert_id and not (yield iOSUser.alert_in_use(alert_id, source=DATA_SOURCES.FlightAware)):
-            self.delete_alert(alert_id)
+            # If there are no more users tracking the alert, delete it
+            if alert_id:
+                alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
+                if alert.num_users_with_alert == 0:
+                    yield self.delete_alert(alert_id)
 
-        # See if any users are still tracking the flight
-        if not (yield iOSUser.flight_still_tracked(flight_id, source=DATA_SOURCES.FlightAware)):
-            FlightAwareTrackedFlight.stop_tracking(flight_id)
+        yield ndb.transaction_async(lambda: untrack_txn(flight_id, flight_num, uuid, alert_id), xg=True)
 
     def authenticate_remote_request(self, request):
         """Returns True if the incoming request is in fact from the trusted

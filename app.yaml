@@ -34,7 +34,7 @@ handlers:
 
 # Additional admin functionality
 - url: /gae-admin/.*
-  script: $PYTHON_LIB.google.appengine.ext.admin.application
+  script: google.appengine.ext.admin.application
   login: admin
 
 # Admin methods that require admin credentials

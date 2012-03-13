@@ -29,34 +29,34 @@ transformers:
       external_name: key
       import_transform: uploadutil.make_key
 
-    - property: iata_code
+    - property: iata
       external_name: iata_code
       import_transform: transform.none_if_empty(unicode)
 
     - property: name
       external_name: name
-      import_transform: transform.none_if_empty(unicode)
+      import_transform: db.Text
 
     - property: city
       external_name: city
-      import_transform: transform.none_if_empty(unicode)
+      import_transform: db.Text
 
     - property: country
       external_name: country
-      import_transform: transform.none_if_empty(unicode)
+      import_transform: db.Text
 
-    - property: location
+    - property: loc
       import_template: "%(latitude)s %(longitude)s"
       import_transform: uploadutil.geo_converter
 
-    - property: altitude
+    - property: alt
       external_name: altitude
       import_transform: transform.none_if_empty(int)
 
-    - property: timezone_offset
+    - property: tz_off
       external_name: timezone_offset
       import_transform: transform.none_if_empty(float)
 
     - property: dst
       external_name: dst
-      import_transform: transform.none_if_empty(unicode)
+      import_transform: db.Text

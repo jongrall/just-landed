@@ -114,9 +114,9 @@ class SearchHandler(AuthenticatedAPIHandler):
 def track_flight(flight_id, flight_number, uuid=None, push_token=None):
     """Deferred flight track queued work."""
     source.start_tracking_flight(flight_id,
-                                flight_number,
-                                uuid=uuid,
-                                push_token=push_token)
+                                 flight_number,
+                                 uuid=uuid,
+                                 push_token=push_token)
 
 class TrackHandler(AuthenticatedAPIHandler):
     """Handles tracking a flight by flight number and id."""

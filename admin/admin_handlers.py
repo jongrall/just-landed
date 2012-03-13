@@ -24,7 +24,8 @@ class FlightAwareAdminHandler(StaticHandler):
     @ndb.toplevel
     def get(self):
         # Compute some basic stats
-        alert_count = len(source.get_all_alerts())
+        alerts = yield source.get_all_alerts()
+        alert_count = len(alerts)
         tracking_count = yield FlightAwareTrackedFlight.count_tracked_flights()
         users_tracking_count = yield iOSUser.count_users_tracking()
 
@@ -41,10 +42,12 @@ class FlightAwareAdminAPIHandler(BaseAPIHandler):
     are already logged in. Currently callable over HTTP.
 
     """
+    @ndb.toplevel
     def register_endpoint(self):
-        result = source.register_alert_endpoint()
+        result = yield source.register_alert_endpoint()
         self.respond(result)
 
+    @ndb.toplevel
     def clear_alerts(self):
-        result = source.clear_all_alerts()
+        result = yield source.clear_all_alerts()
         self.respond(result)
