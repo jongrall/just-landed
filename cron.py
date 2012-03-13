@@ -8,6 +8,7 @@ __email__ = "grall@alum.mit.edu"
 
 import logging
 
+from google.appengine.ext import ndb
 from google.appengine.ext import webapp
 from google.appengine.api import urlfetch
 
@@ -22,9 +23,10 @@ source = FlightAwareSource()
 
 class UntrackOldFlightsWorker(webapp.RequestHandler):
     """Cron worker for untracking old flights."""
+    @ndb.toplevel
     def get(self):
         # Get all flights that are currently tracking
-        flight_keys = FlightAwareTrackedFlight.tracked_flights()
+        flight_keys = yield FlightAwareTrackedFlight.tracked_flights()
 
         for f_key in flight_keys:
             flight_id = f_key.string_id()
@@ -37,7 +39,7 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
             except Exception as e:
                 if isinstance(e, OldFlightException):
                     # We should untrack this flight for each user who was tracking it
-                    user_keys_tracking = iOSUser.users_tracking_flight(f_key)
+                    user_keys_tracking = yield iOSUser.users_tracking_flight(f_key)
 
                     # Generate the URL and API signature
                     url_scheme = (on_production() and 'https') or 'http'

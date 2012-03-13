@@ -14,6 +14,7 @@ import json
 
 from google.appengine.ext import webapp
 from google.appengine.ext import deferred
+from google.appengine.ext import ndb
 
 from data_sources import FlightAwareSource, GoogleDistanceSource
 
@@ -85,6 +86,7 @@ class AuthenticatedAPIHandler(BaseAPIHandler):
 
 class SearchHandler(AuthenticatedAPIHandler):
     """Handles looking up a flight by flight number."""
+    @ndb.toplevel
     def get(self, flight_number):
         """Returns top-level information about flights matching a specific
         flight number. The flights returned will be flights that have landed
@@ -96,7 +98,7 @@ class SearchHandler(AuthenticatedAPIHandler):
         if not utils.valid_flight_number(flight_number):
             raise InvalidFlightNumberException(flight_number)
 
-        flights = source.lookup_flights(flight_number)
+        flights = yield source.lookup_flights(flight_number)
         flight_data = []
 
         for f in flights:
@@ -108,15 +110,17 @@ class SearchHandler(AuthenticatedAPIHandler):
 """Tracking Flights"""
 ###############################################################################
 
+
 def track_flight(flight_id, flight_number, uuid=None, push_token=None):
     """Deferred flight track queued work."""
     source.start_tracking_flight(flight_id,
-                                 flight_number,
-                                 uuid=uuid,
-                                 push_token=push_token)
+                                flight_number,
+                                uuid=uuid,
+                                push_token=push_token)
 
 class TrackHandler(AuthenticatedAPIHandler):
     """Handles tracking a flight by flight number and id."""
+    @ndb.toplevel
     def get(self, flight_number, flight_id):
         """Returns detailed information for tracking a flight given a flight
         number and flight id (this uniquely identifies a single flight). This
@@ -137,8 +141,8 @@ class TrackHandler(AuthenticatedAPIHandler):
 
         """
         # Get the current flight information
-        flight = source.flight_info(flight_id=flight_id,
-                                    flight_number=flight_number)
+        flight = yield source.flight_info(flight_id=flight_id,
+                                          flight_number=flight_number)
 
         # FIXME: Assume iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
@@ -159,10 +163,10 @@ class TrackHandler(AuthenticatedAPIHandler):
                                         dest_longitude)):
             # Fail gracefully if we can't get driving distance
             try:
-                driving_time = distance_source.driving_time(latitude,
-                                                            longitude,
-                                                            dest_latitude,
-                                                            dest_longitude)
+                driving_time = yield distance_source.driving_time(latitude,
+                                                                  longitude,
+                                                                  dest_latitude,
+                                                                  dest_longitude)
 
                 flight.set_driving_time(driving_time)
             except (UnknownDrivingTimeException, DrivingDistanceDeniedException,
@@ -178,7 +182,6 @@ class TrackHandler(AuthenticatedAPIHandler):
                        uuid=uuid,
                        push_token=push_token,
                        _queue='track')
-
 
 def untrack_flight(flight_id, uuid=None):
    """Deferred flight untrack queued work."""

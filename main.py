@@ -11,6 +11,7 @@ from config import on_local
 
 # Avoid using the webapp2 version hosted by Google - it changes often.
 from google.appengine.ext import webapp
+from google.appengine.ext.webapp.util import run_wsgi_app
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
 Route = webapp.Route
@@ -59,7 +60,7 @@ app.error_handlers[404] = 'web_handlers.handle_404'
 app.error_handlers[500] = handle_500
 
 def main():
-    app.run()
+    run_wsgi_app(app)
 
 if __name__ == "__main__":
     main()
