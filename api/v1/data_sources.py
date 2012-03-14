@@ -742,8 +742,8 @@ class DrivingTimeDataSource (object):
                 cls.__name__,
                 utils.round_coord(orig_lat, sf=2),
                 utils.round_coord(orig_lon, sf=2),
-                utils.round_coord(dest_lat, sf=6),
-                utils.round_coord(dest_lon, sf=6),
+                utils.round_coord(dest_lat, sf=2),
+                utils.round_coord(dest_lon, sf=2),
         )
 
     @property
