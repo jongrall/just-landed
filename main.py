@@ -46,6 +46,9 @@ routes = [
         ]),
     ]),
     PathPrefixRoute('/_ah', [
+        Route('/queue/track', handler='api.v1.api_handlers.TrackWorker'),
+        Route('/queue/untrack', handler='api.v1.api_handlers.UntrackWorker'),
+        Route('/queue/process-alert', handler='api.v1.api_handlers.AlertWorker'),
         Route('/queue/mobile-push', handler='notifications.PushWorker'),
         Route('/warmup', handler='warmup.WarmupWorker'),
     ]),

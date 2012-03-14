@@ -149,21 +149,21 @@ class FlightDataSource (object):
 def fa_delete_alerts(alert_ids):
     source = FlightAwareSource()
     source_futs = []
-    @ndb.toplevel
-    @ndb.transactional
-    def del_txn():
-        # Delete the alerts from FlightAware
-        for alert_id in alert_ids:
-            source_futs.append(source.delete_alert(alert_id))
-        yield source_futs
 
-    # Delete all alerts from users
     @ndb.toplevel
-    def clear_alerts_from_users():
+    def clear_alerts():
+        @ndb.tasklet
+        @ndb.transactional
+        def del_txn():
+            # Delete the alerts from FlightAware
+            for alert_id in alert_ids:
+                source_futs.append(source.delete_alert(alert_id))
+            yield source_futs
+
+        yield del_txn()
         yield iOSUser.clear_alerts()
 
-    del_txn()
-    clear_alerts_from_users()
+    clear_alerts()
 
 
 class FlightAwareSource (FlightDataSource):
@@ -474,7 +474,7 @@ class FlightAwareSource (FlightDataSource):
 
             raise tasklets.Return(flights)
 
-    @ndb.toplevel
+    @ndb.tasklet
     def process_alert(self, alert_body):
         assert isinstance(alert_body, dict)
         alert_id = alert_body.get('alert_id')
@@ -632,7 +632,7 @@ class FlightAwareSource (FlightDataSource):
                        _queue='admin')
         raise tasklets.Return({'clearing_alert_count': len(alert_ids)})
 
-    @ndb.toplevel
+    @ndb.tasklet
     def start_tracking_flight(self, flight_id, flight_num, **kwargs):
         assert isinstance(flight_id, basestring) and len(flight_id)
         assert utils.valid_flight_number(flight_num)
@@ -691,7 +691,7 @@ class FlightAwareSource (FlightDataSource):
         # TRANSACTIONAL TRACKING!
         yield ndb.transaction_async(lambda: track_txn(flight_id, flight_num, uuid, push_token, alert_id), xg=True)
 
-    @ndb.toplevel
+    @ndb.tasklet
     def stop_tracking_flight(self, flight_id, **kwargs):
         uuid = kwargs.get('uuid')
         flight_num = utils.flight_num_from_fa_flight_id(flight_id)

@@ -13,7 +13,7 @@ import logging
 import json
 
 from google.appengine.ext import webapp
-from google.appengine.ext import deferred
+from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 
 from data_sources import FlightAwareSource, GoogleDistanceSource
@@ -111,12 +111,23 @@ class SearchHandler(AuthenticatedAPIHandler):
 ###############################################################################
 
 
-def track_flight(flight_id, flight_number, uuid=None, push_token=None):
-    """Deferred flight track queued work."""
-    source.start_tracking_flight(flight_id,
-                                 flight_number,
-                                 uuid=uuid,
-                                 push_token=push_token)
+class TrackWorker(webapp.RequestHandler):
+    """Deferred work when tracking a flight."""
+    @ndb.toplevel
+    def post(self):
+        params = self.request.params
+        flight_id = params.get('flight_id')
+        flight_number = params.get('flight_number')
+        assert (isinstance(flight_id, basestring) and len(flight_id) and
+            utils.valid_flight_number(flight_number))
+
+        uuid = params.get('uuid')
+        push_token = params.get('push_token')
+        yield source.start_tracking_flight(flight_id,
+                                        flight_number,
+                                        uuid=uuid,
+                                        push_token=push_token)
+
 
 class TrackHandler(AuthenticatedAPIHandler):
     """Handles tracking a flight by flight number and id."""
@@ -176,16 +187,25 @@ class TrackHandler(AuthenticatedAPIHandler):
         self.respond(flight.dict_for_client())
 
         # Track the flight (deferred)
-        deferred.defer(track_flight,
-                       flight_id,
-                       flight_number,
-                       uuid=uuid,
-                       push_token=push_token,
-                       _queue='track')
+        task = taskqueue.Task(params = {
+            'flight_id' : flight_id,
+            'flight_number' : flight_number,
+            'uuid' : uuid,
+            'push_token' : push_token,
+        }, countdown=2)
+        taskqueue.Queue('track').add(task)
 
-def untrack_flight(flight_id, uuid=None):
-   """Deferred flight untrack queued work."""
-   source.stop_tracking_flight(flight_id, uuid=uuid)
+
+class UntrackWorker(webapp.RequestHandler):
+    """Deferred work when untracking a flight."""
+    @ndb.toplevel
+    def post(self):
+        params = self.request.params
+        flight_id = params.get('flight_id')
+        assert isinstance(flight_id, basestring) and len(flight_id)
+
+        uuid = params.get('uuid')
+        yield source.stop_tracking_flight(flight_id, uuid=uuid)
 
 
 class UntrackHandler(AuthenticatedAPIHandler):
@@ -200,22 +220,26 @@ class UntrackHandler(AuthenticatedAPIHandler):
 
         # FIXME: Assume iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
-
         self.respond({'untracked' : flight_id})
 
         # Untrack the flight (deferred)
-        deferred.defer(untrack_flight,
-                       flight_id,
-                       uuid=uuid,
-                       _queue='untrack')
+        task = taskqueue.Task(params = {
+            'flight_id' : flight_id,
+            'uuid' : uuid,
+        }, countdown=2)
+        taskqueue.Queue('untrack').add(task)
 
 ###############################################################################
 """Processing Alerts"""
 ###############################################################################
 
-def process_alert(alert_body):
-    """Deferred alert processing work."""
-    source.process_alert(alert_body)
+class AlertWorker(webapp.RequestHandler):
+    """Deferred work when handling an alert."""
+    @ndb.toplevel
+    def post(self):
+        alert_body = self.request.params
+        assert isinstance(alert_body, dict)
+        yield source.process_alert(alert_body)
 
 
 class AlertHandler(BaseAPIHandler):
@@ -230,9 +254,8 @@ class AlertHandler(BaseAPIHandler):
             alert_body = json.loads(self.request.body)
 
             # Process the alert (deferred)
-            deferred.defer(process_alert,
-                           alert_body,
-                           _queue='process-alert')
+            task = taskqueue.Task(params=alert_body)
+            taskqueue.Queue('process-alert').add(task)
         else:
             logging.error('Unknown user-agent or host posting alert: (%s, %s)' %
                             (self.request.environ.get('HTTP_USER_AGENT'),
