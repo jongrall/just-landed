@@ -46,7 +46,7 @@ import aircraft_types
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
-debug_cache = True
+debug_cache = False
 debug_alerts = False
 
 ###############################################################################
@@ -476,7 +476,6 @@ class FlightAwareSource (FlightDataSource):
 
     @ndb.tasklet
     def process_alert(self, alert_body):
-        assert isinstance(alert_body, dict)
         alert_id = alert_body.get('alert_id')
         event_code = alert_body.get('eventcode')
         flight_data = alert_body.get('flight')
@@ -743,8 +742,8 @@ class DrivingTimeDataSource (object):
                 cls.__name__,
                 utils.round_coord(orig_lat, sf=2),
                 utils.round_coord(orig_lon, sf=2),
-                utils.round_coord(dest_lat, sf=2),
-                utils.round_coord(dest_lon, sf=2),
+                utils.round_coord(dest_lat, sf=6),
+                utils.round_coord(dest_lon, sf=6),
         )
 
     @property

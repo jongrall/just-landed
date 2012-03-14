@@ -238,7 +238,7 @@ class AlertWorker(webapp.RequestHandler):
     @ndb.toplevel
     def post(self):
         alert_body = self.request.params
-        assert isinstance(alert_body, dict)
+        assert alert_body
         yield source.process_alert(alert_body)
 
 
