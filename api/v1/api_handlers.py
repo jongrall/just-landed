@@ -192,7 +192,7 @@ class TrackHandler(AuthenticatedAPIHandler):
             'flight_number' : flight_number,
             'uuid' : uuid,
             'push_token' : push_token,
-        }, countdown=2)
+        })
         taskqueue.Queue('track').add(task)
 
 
@@ -226,7 +226,7 @@ class UntrackHandler(AuthenticatedAPIHandler):
         task = taskqueue.Task(params = {
             'flight_id' : flight_id,
             'uuid' : uuid,
-        }, countdown=2)
+        })
         taskqueue.Queue('untrack').add(task)
 
 ###############################################################################

@@ -109,9 +109,17 @@ class FlightAwareTrackedFlight(TrackedFlight):
     @classmethod
     @ndb.tasklet
     def get_flight_by_id(cls, flight_id):
+        assert isinstance(flight_id, basestring) and len(flight_id)
         flight_key = ndb.Key(cls, flight_id)
         flight = yield flight_key.get_async()
         raise tasklets.Return(flight)
+
+    @classmethod
+    @ndb.tasklet
+    def create_flight(cls, flight_id):
+        assert isinstance(flight_id, basestring) and len(flight_id)
+        new_flight = yield cls(flight_id).put_async()
+        raise tasklets.Return(new_flight)
 
     @classmethod
     @ndb.tasklet

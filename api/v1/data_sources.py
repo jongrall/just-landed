@@ -663,7 +663,9 @@ class FlightAwareSource (FlightDataSource):
                     valid_alert_id = False # Trigger new alert creation
 
             # Mark the flight as being tracked
-            yield FlightAwareTrackedFlight.get_or_insert_async(flight_id)
+            existing_flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
+            if not existing_flight:
+                yield FlightAwareTrackedFlight.create_flight(flight_id)
 
             # Save the user's tracking activity if we have a uuid
             if uuid:
