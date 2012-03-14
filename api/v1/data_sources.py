@@ -46,7 +46,7 @@ import aircraft_types
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
-debug_cache = False
+debug_cache = True
 debug_alerts = False
 
 ###############################################################################
@@ -300,7 +300,7 @@ class FlightAwareSource (FlightDataSource):
 
                     if not memcache.set(memcache_key, airport):
                         logging.error("Unable to cache airport info!")
-                    if debug_cache:
+                    elif debug_cache:
                         logging.info('AIRPORT INFO CACHE SET')
 
                     raise tasklets.Return(airport)
@@ -735,6 +735,17 @@ class FlightAwareSource (FlightDataSource):
 class DrivingTimeDataSource (object):
     """A class that defines a DrivingTimeDataSource interface that driving time
     data sources should implement."""
+    @classmethod
+    def driving_cache_key(cls, orig_lat, orig_lon, dest_lat, dest_lon):
+        # Rounding the coordinates has the effect of re-using driving distance
+        # calculations for locations close to each other
+        return '%s-driving_time-%f,%f,%f,%f' % (
+                cls.__name__,
+                utils.round_coord(orig_lat, sf=2),
+                utils.round_coord(orig_lon, sf=2),
+                utils.round_coord(dest_lat, sf=2),
+                utils.round_coord(dest_lon, sf=2),
+        )
 
     @property
     def base_url(self):
@@ -759,21 +770,9 @@ class GoogleDistanceSource (DrivingTimeDataSource):
     http://code.google.com/apis/maps/documentation/distancematrix/
 
     """
-    @classmethod
-    def driving_cache_key(cls, orig_lat, orig_lon, dest_lat, dest_lon):
-        # Rounding the coordinates has the effect of re-using driving distance
-        # calculations for locations close to each other
-        return '%s-driving_time-%f,%f,%f,%f' % (
-                cls.__name__,
-                utils.round_coord(orig_lat, sf=2),
-                utils.round_coord(orig_lon, sf=2),
-                utils.round_coord(dest_lat, sf=2),
-                utils.round_coord(dest_lon, sf=2),
-        )
-
     @property
     def base_url(self):
-        return 'http://maps.googleapis.com/maps/api/distancematrix'
+        return 'https://maps.googleapis.com/maps/api/distancematrix'
 
     def __init__(self):
         self.conn = Connection(self.base_url)
@@ -816,7 +815,79 @@ class GoogleDistanceSource (DrivingTimeDataSource):
             if status == 'OK':
                 try:
                     time = result['rows'][0]['elements'][0]['duration']['value']
+                    # Cache result, not using traffic info, so data good indefinitely
                     if use_cache and not memcache.set(driving_cache_key, time):
+                        logging.error("Unable to cache driving time!")
+                    if use_cache and debug_cache:
+                        logging.info('DRIVING CACHE SET')
+                    raise tasklets.Return(time)
+                except Exception:
+                    logging.info(result)
+                    raise UnknownDrivingTimeException(origin_lat, origin_lon,
+                                                      dest_lat, dest_lon)
+            elif status == 'REQUEST_DENIED':
+                raise DrivingDistanceDeniedException(origin_lat, origin_lon,
+                                                     dest_lat, dest_lon)
+            elif status == 'OVER_QUERY_LIMIT':
+                raise DrivingAPIQuotaException()
+            else:
+                raise UnknownDrivingTimeException(origin_lat, origin_lon,
+                                                  dest_lat, dest_lon)
+
+
+class BingMapsDistanceSource (DrivingTimeDataSource):
+    """Concrete subclass of DrivingTimeDataSource that pulls its data from the
+    commercial Bing Maps API:
+
+    http://msdn.microsoft.com/en-us/library/ff701722.aspx
+
+    """
+    @property
+    def base_url(self):
+        return 'https://dev.virtualearth.net/REST/v1'
+
+    def __init__(self):
+        self.conn = Connection(self.base_url)
+
+    @ndb.tasklet
+    def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
+        """Implements driving_time method of DrivingTimeDataSource. Supports
+        additional kwargs:
+
+        - `no_cache` : Set to True to not use any caching.
+
+        """
+        use_cache = not kwargs.get('no_cache')
+        time = None
+        driving_cache_key = BingMapsDistanceSource.driving_cache_key(origin_lat,
+                                                                    origin_lon,
+                                                                    dest_lat,
+                                                                    dest_lon)
+        if use_cache:
+            time = memcache.get(driving_cache_key)
+
+        if use_cache and time is not None:
+            if debug_cache:
+                logging.info('DRIVING CACHE HIT')
+            raise tasklets.Return(time)
+        else:
+            if debug_cache:
+                logging.info('DRIVING CACHE MISS')
+            params = {
+                'key' : config['bing_maps']['key'],
+                'wp.0' : '%f,%f' % (origin_lat, origin_lon),
+                'wp.1' : '%f,%f' % (dest_lat, dest_lon),
+                'optmz' : 'timeWithTraffic',
+                'du' : 'mi',
+            }
+
+            data = yield self.conn.get_json('/Routes', args=params)
+            status = data.get('statusCode')
+
+            if status == 200:
+                try:
+                    time = data['resourceSets'][0]['resources'][0]['travelDuration']
+                    if use_cache and not memcache.set(driving_cache_key, time, config['traffic_cache_time']):
                         logging.error("Unable to cache driving time!")
                     if use_cache and debug_cache:
                         logging.info('DRIVING CACHE SET')
@@ -824,10 +895,10 @@ class GoogleDistanceSource (DrivingTimeDataSource):
                 except Exception:
                     raise UnknownDrivingTimeException(origin_lat, origin_lon,
                                                       dest_lat, dest_lon)
-            elif status == 'REQUEST_DENIED':
+            elif status == 401 or status == 404:
                 raise DrivingDistanceDeniedException(origin_lat, origin_lon,
                                                      dest_lat, dest_lon)
-            elif status == 'OVER_QUERY_LIMIT':
+            elif status == 403:
                 raise DrivingAPIQuotaException()
             else:
                 raise UnknownDrivingTimeException(origin_lat, origin_lon,

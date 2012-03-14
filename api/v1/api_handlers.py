@@ -16,7 +16,7 @@ from google.appengine.ext import webapp
 from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 
-from data_sources import FlightAwareSource, GoogleDistanceSource
+from data_sources import FlightAwareSource, GoogleDistanceSource, BingMapsDistanceSource
 
 from datasource_exceptions import *
 from config import on_local
@@ -24,7 +24,8 @@ import utils
 
 # Currently using FlightAware and Google Distance APIs
 source = FlightAwareSource()
-distance_source = GoogleDistanceSource()
+#distance_source = GoogleDistanceSource()
+distance_source = BingMapsDistanceSource()
 
 ###############################################################################
 """Base Handlers"""
@@ -178,7 +179,6 @@ class TrackHandler(AuthenticatedAPIHandler):
                                                                   longitude,
                                                                   dest_latitude,
                                                                   dest_longitude)
-
                 flight.set_driving_time(driving_time)
             except (UnknownDrivingTimeException, DrivingDistanceDeniedException,
                     DrivingAPIQuotaException) as e:

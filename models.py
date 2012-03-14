@@ -118,7 +118,7 @@ class FlightAwareTrackedFlight(TrackedFlight):
     @ndb.tasklet
     def create_flight(cls, flight_id):
         assert isinstance(flight_id, basestring) and len(flight_id)
-        new_flight = yield cls(flight_id).put_async()
+        new_flight = yield cls(id=flight_id).put_async()
         raise tasklets.Return(new_flight)
 
     @classmethod

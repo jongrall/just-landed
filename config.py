@@ -226,6 +226,14 @@ config['close_to_airport'] = 1.0
 # Number of miles to the airport above which driving estimate isn't needed
 config['far_from_airport'] = 200.0
 
+# Amount of time to cache driving time for when using real-time traffic
+config['traffic_cache_time'] = 1800
+
+# Bing Maps Credentials
+config['bing_maps'] = {
+    'key' : 'AjUZ_rECu8dsAMwFNtVRXALPksPaXALYysv-pZ8FSFCWpyhcBkJRb82LEWgECEgZ',
+}
+
 ###############################################################################
 """Push Notification Settings & API Keys"""
 ###############################################################################
