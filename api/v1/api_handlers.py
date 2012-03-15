@@ -181,7 +181,7 @@ class TrackHandler(AuthenticatedAPIHandler):
                                                                   dest_longitude)
                 flight.set_driving_time(driving_time)
             except (UnknownDrivingTimeException, DrivingDistanceDeniedException,
-                    DrivingAPIQuotaException) as e:
+                    DrivingAPIQuotaException, MalformedDrivingDataException) as e:
                 logging.error(e.message)
 
         self.respond(flight.dict_for_client())
@@ -237,8 +237,8 @@ class AlertWorker(webapp.RequestHandler):
     """Deferred work when handling an alert."""
     @ndb.toplevel
     def post(self):
-        alert_body = self.request.params
-        assert alert_body
+        alert_body = json.loads(self.request.body)
+        assert isinstance(alert_body, dict)
         yield source.process_alert(alert_body)
 
 
@@ -251,10 +251,10 @@ class AlertHandler(BaseAPIHandler):
     def post(self):
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
-            alert_body = json.loads(self.request.body)
-
             # Process the alert (deferred)
-            task = taskqueue.Task(params=alert_body)
+            retry_opts = taskqueue.TaskRetryOptions(task_retry_limit=1) # Can't risk a flood of push notifications
+            task = taskqueue.Task(payload=self.request.body,
+                                  retry_options=retry_opts)
             taskqueue.Queue('process-alert').add(task)
         else:
             logging.error('Unknown user-agent or host posting alert: (%s, %s)' %

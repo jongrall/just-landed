@@ -30,6 +30,7 @@ def get_airship():
 
     return urbanairship.Airship(**ua_creds)
 
+debug_push = True
 _UA = get_airship()
 push_types = config['push_types']
 FLIGHT_STATES = config['flight_states']
@@ -79,6 +80,21 @@ class PushWorker(webapp.RequestHandler):
     def post(self):
         # Find out what we were supposed to do
         method, args, kwds = pickle.loads(self.request.body)
+
+        # Debug push
+        if debug_push:
+            if method == 'register':
+                token = args[0]
+                logging.info('REGISTERING DEVICE TOKEN: %s' % token)
+            elif method == 'deregister':
+                token = args[0]
+                logging.info('DE-REGISTERING DEVICE TOKEN: %s' % token)
+            elif method == 'push':
+                token = kwds.get('device_tokens')[0]
+                # FIXME: Assumes iOS
+                data = args[0]
+                message = data['aps']['alert']
+                logging.info('PUSHING MESSAGE TO %s: \n%s' % (token, message))
 
         # Check that urban airship supports the method we want to call
         func = getattr(_UA, method, None)

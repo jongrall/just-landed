@@ -476,6 +476,7 @@ class FlightAwareSource (FlightDataSource):
 
     @ndb.tasklet
     def process_alert(self, alert_body):
+        assert isinstance(alert_body, dict)
         alert_id = alert_body.get('alert_id')
         event_code = alert_body.get('eventcode')
         flight_data = alert_body.get('flight')
@@ -488,7 +489,7 @@ class FlightAwareSource (FlightDataSource):
             flight_cache_key = FlightAwareSource.flight_info_cache_key(flight_id)
             airline_cache_key = FlightAwareSource.airline_info_cache_key(flight_id)
             res = memcache.delete_multi([flight_cache_key, airline_cache_key])
-            if res:
+            if res and debug_cache:
                 logging.info('DELETED FLIGHT INFO CACHE KEYS %s' %
                         [flight_cache_key, airline_cache_key])
 
@@ -544,7 +545,7 @@ class FlightAwareSource (FlightDataSource):
                     cache_keys.append(FlightAwareSource.lookup_flights_cache_key(f_num))
                 if cache_keys:
                     res = memcache.delete_multi(cache_keys)
-                    if res:
+                    if res and debug_cache:
                         logging.info('DELETED LOOKUP CACHE KEYS %s' % cache_keys)
 
     @ndb.tasklet
@@ -808,22 +809,21 @@ class GoogleDistanceSource (DrivingTimeDataSource):
                 units='imperial',
             )
 
-            result = yield self.conn.get_json('/json', args=params)
-            status = result.get('status')
+            data = yield self.conn.get_json('/json', args=params)
+            status = data.get('status')
 
             if status == 'OK':
                 try:
-                    time = result['rows'][0]['elements'][0]['duration']['value']
-                    # Cache result, not using traffic info, so data good indefinitely
+                    time = data['rows'][0]['elements'][0]['duration']['value']
+                    # Cache data, not using traffic info, so data good indefinitely
                     if use_cache and not memcache.set(driving_cache_key, time):
                         logging.error("Unable to cache driving time!")
                     if use_cache and debug_cache:
                         logging.info('DRIVING CACHE SET')
                     raise tasklets.Return(time)
                 except Exception:
-                    logging.info(result)
-                    raise UnknownDrivingTimeException(origin_lat, origin_lon,
-                                                      dest_lat, dest_lon)
+                    raise MalformedDrivingDataException(origin_lat, origin_lon,
+                                                      dest_lat, dest_lon, data)
             elif status == 'REQUEST_DENIED':
                 raise DrivingDistanceDeniedException(origin_lat, origin_lon,
                                                      dest_lat, dest_lon)
@@ -892,8 +892,8 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
                         logging.info('DRIVING CACHE SET')
                     raise tasklets.Return(time)
                 except Exception:
-                    raise UnknownDrivingTimeException(origin_lat, origin_lon,
-                                                      dest_lat, dest_lon)
+                    raise MalformedDrivingDataException(origin_lat, origin_lon,
+                                                      dest_lat, dest_lon, data)
             elif status == 401 or status == 404:
                 raise DrivingDistanceDeniedException(origin_lat, origin_lon,
                                                      dest_lat, dest_lon)

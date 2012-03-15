@@ -72,6 +72,12 @@ class UnknownDrivingTimeException (Exception):
                         orig_lat, orig_lon, dest_lat, dest_lon)
         self.code = 404 # Not found
 
+class MalformedDrivingDataException (Exception):
+    def __init__(self, orig_lat, orig_lon, dest_lat, dest_lon, data):
+        self.message = "Can't get driving distance (%f,%f) to (%f,%f): \n %s" % (
+                        orig_lat, orig_lon, dest_lat, dest_lon, data)
+        self.code = 404 # Not found
+
 class DrivingAPIQuotaException (Exception):
     def __init__(self):
         self.message = 'Exceeded driving API quota.'
