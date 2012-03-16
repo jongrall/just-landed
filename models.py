@@ -347,7 +347,6 @@ class iOSUser(_User):
             flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
             if isinstance(alert_id, (int, long)) and alert_id > 0:
                 alert_key = ndb.Key(FlightAwareAlert, alert_id)
-
         assert flight_key
 
         # See if the user exists
@@ -362,6 +361,7 @@ class iOSUser(_User):
                 logging.info('USER ALREADY TRACKING %s' % existing_user)
             raise tasklets.Return(existing_user)
         else:
+            to_put = []
             user = existing_user
             if not user:
                 user = cls(id=uuid,
@@ -373,13 +373,13 @@ class iOSUser(_User):
 
             # Update the user's location
             if user_latitude and user_longitude:
-                user.last_known_location = ndb.GeoPt(user_latitude, user_longitude)
+                user.last_known_location = ndb.GeoPt(user_latitude, lon=user_longitude)
 
             if not user.is_tracking_flight(flight_id):
                 user.add_tracked_flight(flight_id, flight_num, source=source)
                 flight = yield flight_key.get_async()
                 flight.num_users_tracking += 1
-                yield flight.put_async()
+                to_put.append(flight.put_async())
 
                 if debug_datastore:
                     logging.info('USER STARTED TRACKING FLIGHT %s' % flight_key)
@@ -388,7 +388,7 @@ class iOSUser(_User):
                 user.alerts.append(alert_key)
                 alert = yield alert_key.get_async()
                 alert.num_users_with_alert += 1
-                yield alert.put_async()
+                to_put.append(alert.put_async())
                 if debug_datastore:
                     logging.info('USER SUBSCRIBED TO ALERT %s' % alert_key)
 
@@ -397,7 +397,8 @@ class iOSUser(_User):
                 logging.info('USER PUSH TOKEN UPDATED')
 
             user.push_token = push_token or user.push_token
-            user.put_async()
+            to_put.append(user.put_async())
+            yield to_put # Parallel yield
             raise tasklets.Return(user)
 
     @classmethod
@@ -425,13 +426,14 @@ class iOSUser(_User):
 
         user = yield cls.get_by_uuid(uuid)
         if user:
+            to_put = []
             # Remove the tracked flight
             if user.is_tracking_flight(flight_id):
                 user.remove_tracked_flight(flight_id)
                 flight = yield flight_key.get_async()
                 if flight:
                     flight.num_users_tracking -= 1
-                    yield flight.put_async()
+                    to_put.append(flight.put_async())
 
             # Remove alert
             if alert_key and alert_key in user.alerts:
@@ -439,11 +441,14 @@ class iOSUser(_User):
                 alert = yield alert_key.get_async()
                 if alert:
                     alert.num_users_with_alert -= 1
-                    yield alert.put_async()
+                    to_put.append(alert.put_async())
 
             # Remove reminders
             user.remove_flight_reminders(flight_id, source=source)
-            yield user.put_async()
+            to_put.append(user.put_async())
+
+            # Parallel yield
+            yield to_put
 
     @classmethod
     @ndb.tasklet

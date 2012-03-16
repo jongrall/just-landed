@@ -127,7 +127,7 @@ class TrackWorker(webapp.RequestHandler):
 
         if utils.is_float(user_latitude) and utils.is_float(user_longitude):
             user_latitude = float(user_latitude)
-            user_longitude = float(user_latitude)
+            user_longitude = float(user_longitude)
         else:
             user_latitude = None
             user_longitude = None
