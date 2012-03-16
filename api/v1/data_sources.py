@@ -40,14 +40,14 @@ from models import (Airport, FlightAwareTrackedFlight, FlightAwareAlert, iOSUser
     Origin, Destination, Flight)
 from datasource_exceptions import *
 from notifications import *
-from connections import Connection
+from connections import Connection, build_url
 import utils
 import aircraft_types
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
-debug_cache = False
-debug_alerts = False
+debug_cache = True
+debug_alerts = True
 
 ###############################################################################
 """Flight Data Sources"""
@@ -120,13 +120,17 @@ class FlightDataSource (object):
         """
         pass
 
-    def start_tracking_flight(self, flight_id, flight_num, **kwargs):
+    def track_flight(self, flight_id, flight_num, **kwargs):
         """Marks a flight as tracked. If there is a uuid supplied, we also mark
         the user as tracking the flight. If there is a push_token, we set an
         alert and make sure the user is notified of incoming alerts for that
         flight.
 
         """
+        pass
+
+    def delayed_track(self, flight_id, uuid):
+        """Initiates a delayed track for a user of a specific flight."""
         pass
 
     def stop_tracking_flight(self, flight_id, **kwargs):
@@ -213,6 +217,36 @@ class FlightAwareSource (FlightDataSource):
                 password=config['flightaware']['production']['key'])
 
     @ndb.tasklet
+    def do_track(self, request, user, flight_id):
+        assert request
+        assert isinstance(user, iOSUser)
+        assert isinstance(flight_id, basestring) and len(flight_id)
+
+        user_flight_num = user.flight_num_for_flight_id(flight_id)
+        # Fire off a /track for the user, which will update their reminders
+        url_scheme = (on_local() and 'http') or 'https'
+        track_url = request.uri_for('track',
+                                    flight_number=user_flight_num,
+                                    flight_id=flight_id,
+                                    _full=True,
+                                    _scheme=url_scheme)
+        full_track_url = build_url(track_url, '', args={
+            'push_token' : user.push_token,
+            'latitude' : user.last_known_location and user.last_known_location.lat,
+            'longitude' : user.last_known_location and user.last_known_location.lon,
+        })
+
+        sig = utils.api_query_signature(full_track_url, client='Server')
+        headers = {'X-Just-Landed-UUID' : user.key.string_id(),
+                   'X-Just-Landed-Signature' : sig}
+
+        ctx = ndb.get_context()
+        yield ctx.urlfetch(full_track_url,
+                            headers=headers,
+                            deadline=120,
+                            validate_certificate=(not on_local()))
+
+    @ndb.tasklet
     def raw_flight_data_to_flight(self, data, sanitized_flight_num):
         if data and utils.valid_flight_number(sanitized_flight_num):
             # Keep a subset of the response fields
@@ -240,9 +274,7 @@ class FlightAwareSource (FlightDataSource):
 
             # Convert aircraft type
             flight.aircraft_type = aircraft_types.type_to_major_type(data.get('aircraftType'))
-            flight.origin.city = data['originCity'].split(',')[0]
             flight.origin.name = utils.proper_airport_name(data['originName'])
-            flight.destination.city = data['destinationCity'].split(',')[0]
             flight.destination.name = utils.proper_airport_name(data['destinationName'])
             raise tasklets.Return(flight)
 
@@ -475,7 +507,7 @@ class FlightAwareSource (FlightDataSource):
             raise tasklets.Return(flights)
 
     @ndb.tasklet
-    def process_alert(self, alert_body):
+    def process_alert(self, alert_body, request):
         assert isinstance(alert_body, dict)
         alert_id = alert_body.get('alert_id')
         event_code = alert_body.get('eventcode')
@@ -502,6 +534,8 @@ class FlightAwareSource (FlightDataSource):
                 # Send out push notifications
                 push_types = config['push_types']
                 flight_numbers = set()
+                ctx = ndb.get_context()
+                track_requests = []
 
                 # FIXME: Assume iOS user
                 users_to_notify = yield iOSUser.users_to_notify(alert_id, flight_id, source=DATA_SOURCES.FlightAware)
@@ -539,6 +573,9 @@ class FlightAwareSource (FlightDataSource):
                     else:
                         logging.error('Unknown eventcode.')
 
+                    # Fire off a /track for the user, which will update their reminders
+                    track_requests.append(self.do_track(request, u, flight_id))
+
                 # Clear memcache keys for lookup
                 cache_keys = []
                 for f_num in flight_numbers:
@@ -547,6 +584,9 @@ class FlightAwareSource (FlightDataSource):
                     res = memcache.delete_multi(cache_keys)
                     if res and debug_cache:
                         logging.info('DELETED LOOKUP CACHE KEYS %s' % cache_keys)
+
+                # Parallel yield track requests
+                yield track_requests
 
     @ndb.tasklet
     def set_alert(self, **kwargs):
@@ -633,12 +673,18 @@ class FlightAwareSource (FlightDataSource):
         raise tasklets.Return({'clearing_alert_count': len(alert_ids)})
 
     @ndb.tasklet
-    def start_tracking_flight(self, flight_id, flight_num, **kwargs):
+    def track_flight(self, flight_data, **kwargs):
+        flight = Flight.from_dict(flight_data)
+        flight_id = flight.flight_id
+        flight_num = flight.flight_number
         assert isinstance(flight_id, basestring) and len(flight_id)
         assert utils.valid_flight_number(flight_num)
 
         uuid = kwargs.get('uuid')
         push_token = kwargs.get('push_token')
+        user_latitude = kwargs.get('user_latitude')
+        user_longitude = kwargs.get('user_longitude')
+        driving_time = kwargs.get('driving_time')
         alert_id = None
 
         if push_token:
@@ -665,7 +711,10 @@ class FlightAwareSource (FlightDataSource):
             # Mark the flight as being tracked
             existing_flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
             if not existing_flight:
-                yield FlightAwareTrackedFlight.create_flight(flight_id)
+                yield FlightAwareTrackedFlight.create_flight(flight)
+            else:
+                existing_flight.last_flight_data = flight.to_dict()
+                yield existing_flight.put_async()
 
             # Save the user's tracking activity if we have a uuid
             if uuid:
@@ -678,12 +727,18 @@ class FlightAwareSource (FlightDataSource):
                     existing_user = yield iOSUser.get_by_uuid(uuid)
                     old_push_token = existing_user and existing_user.push_token
 
-                yield iOSUser.track_flight(uuid=uuid,
-                                        flight_id=flight_id,
-                                        flight_num=flight_num,
-                                        push_token=push_token,
-                                        alert_id=alert_id,
-                                        source=DATA_SOURCES.FlightAware)
+                user = yield iOSUser.track_flight(uuid=uuid,
+                                                  flight_id=flight_id,
+                                                  flight_num=flight_num,
+                                                  user_latitude=user_latitude,
+                                                  user_longitude=user_longitude,
+                                                  push_token=push_token,
+                                                  alert_id=alert_id,
+                                                  source=DATA_SOURCES.FlightAware)
+
+                if driving_time is not None:
+                    user.set_or_update_flight_reminders(flight, driving_time, source=DATA_SOURCES.FlightAware)
+                    yield user.put_async()
 
                 # Tell UrbanAirship about push tokens
                 if push_token and (not old_push_token or (old_push_token != push_token)):
@@ -692,6 +747,16 @@ class FlightAwareSource (FlightDataSource):
                     deregister_token(old_push_token)
         # TRANSACTIONAL TRACKING!
         yield ndb.transaction_async(lambda: track_txn(flight_id, flight_num, uuid, push_token, alert_id), xg=True)
+
+    @ndb.tasklet
+    def delayed_track(self, request, flight_id, uuid):
+        """Initiates a delayed track for a user of a specific flight to update their reminders."""
+        assert request
+        assert isinstance(flight_id, basestring) and len(flight_id)
+        assert isinstance(uuid, basestring) and len(uuid)
+        user = yield iOSUser.get_by_uuid(uuid)
+        if user.is_tracking_flight(flight_id) and user.push_enabled and user.has_unsent_reminders:
+            yield self.do_track(request, user, flight_id)
 
     @ndb.tasklet
     def stop_tracking_flight(self, flight_id, **kwargs):
@@ -818,10 +883,10 @@ class GoogleDistanceSource (DrivingTimeDataSource):
                     # Cache data, not using traffic info, so data good indefinitely
                     if use_cache and not memcache.set(driving_cache_key, time):
                         logging.error("Unable to cache driving time!")
-                    if use_cache and debug_cache:
+                    elif use_cache and debug_cache:
                         logging.info('DRIVING CACHE SET')
                     raise tasklets.Return(time)
-                except Exception:
+                except (KeyError, IndexError, TypeError):
                     raise MalformedDrivingDataException(origin_lat, origin_lon,
                                                       dest_lat, dest_lon, data)
             elif status == 'REQUEST_DENIED':
@@ -888,10 +953,10 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
                     time = data['resourceSets'][0]['resources'][0]['travelDuration']
                     if use_cache and not memcache.set(driving_cache_key, time, config['traffic_cache_time']):
                         logging.error("Unable to cache driving time!")
-                    if use_cache and debug_cache:
+                    elif use_cache and debug_cache:
                         logging.info('DRIVING CACHE SET')
                     raise tasklets.Return(time)
-                except Exception:
+                except (KeyError, IndexError, TypeError):
                     raise MalformedDrivingDataException(origin_lat, origin_lon,
                                                       dest_lat, dest_lon, data)
             elif status == 401 or status == 404:

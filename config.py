@@ -74,6 +74,13 @@ config['push_types'] = Enum([
     'DEPARTED',
     'ARRIVED',
     'CHANGED',
+    'LEAVE_SOON',
+    'LEAVE_NOW',
+])
+
+config['reminder_types'] = Enum([
+   config['push_types'].LEAVE_SOON,
+   config['push_types'].LEAVE_NOW,
 ])
 
 config['flight_states'] = Enum([
@@ -85,6 +92,12 @@ config['flight_states'] = Enum([
     'LANDED',
     'EARLY'
 ])
+
+# Number of seconds that we should set a 'leave soon' reminder before they should leave for the airport
+config['leave_soon_seconds_before'] = 300
+
+# Reminder freshness requirement (don't send reminders that are older than than this)
+config['max_reminder_age'] = 120
 
 def on_production():
   """Returns true if the app is running in production"""

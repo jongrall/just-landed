@@ -17,6 +17,10 @@ queue:
   bucket_size: 100
   rate: 500/s
 
+- name: delayed-track
+  bucket_size: 100
+  rate: 500/s
+
 - name: untrack
   bucket_size: 50
   rate: 250/s

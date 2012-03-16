@@ -79,7 +79,16 @@ def distance(p1lat, p1lon, p2lat, p2lon):
   return EARTH_RADIUS * math.acos(math.sin(p1lat) * math.sin(p2lat) +
       math.cos(p1lat) * math.cos(p2lat) * math.cos(p2lon - p1lon))
 
-def is_number(s):
+def is_int(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+    except TypeError:
+        return False
+
+def is_float(s):
     try:
         float(s)
         return True

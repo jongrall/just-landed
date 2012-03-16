@@ -22,6 +22,7 @@ from config import config
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
 debug_datastore = False
+reminder_types = config['reminder_types']
 
 class Airport(ndb.Model):
     """ Model associated with an Airport entity stored in the GAE datastore.
@@ -100,11 +101,16 @@ class FlightAwareTrackedFlight(TrackedFlight):
     - `num_users_tracking` : The number of users currently tracking a flight.
     - `flight_number` : The flight number computed from the flight_id.
     - `is_tracking` : Whether the flight is still being tracked.
-
+    - `last_flight_data` : The last flight data we have.
+    - `orig_departure_time` : The original departure time as far as we know.
+    - `orig_flight_duration` : The original flight duration as far as we know.
     """
     num_users_tracking = ndb.IntegerProperty('num_u', default=0)
     flight_number = ndb.ComputedProperty(lambda f: utils.flight_num_from_fa_flight_id(f.key.string_id()), 'f_num')
     is_tracking = ndb.ComputedProperty(lambda f: f.num_users_tracking > 0)
+    last_flight_data = ndb.JsonProperty(required=True)
+    orig_departure_time = ndb.IntegerProperty(required=True)
+    orig_flight_duration = ndb.IntegerProperty(required=True)
 
     @classmethod
     @ndb.tasklet
@@ -116,9 +122,12 @@ class FlightAwareTrackedFlight(TrackedFlight):
 
     @classmethod
     @ndb.tasklet
-    def create_flight(cls, flight_id):
-        assert isinstance(flight_id, basestring) and len(flight_id)
-        new_flight = yield cls(id=flight_id).put_async()
+    def create_flight(cls, flight):
+        assert isinstance(flight, Flight)
+        new_flight = yield cls(id=flight.flight_id,
+                               orig_departure_time=flight.scheduled_departure_time,
+                               orig_flight_duration=flight.scheduled_flight_duration,
+                               last_flight_data=flight.to_dict()).put_async()
         raise tasklets.Return(new_flight)
 
     @classmethod
@@ -205,6 +214,28 @@ class FlightAwareAlert(FlightAlert):
         raise tasklets.Return(True)
 
 
+class FlightReminder(ndb.Model):
+    """Model for a reminder telling a user to leave for the airport.
+
+    Fields:
+    - `created` : The date the reminder was created.
+    - `updated` : The date the reminder was last updated.
+    - `fire_time` : The date and time when the reminder should be sent.
+    - `reminder_type` : The type of the reminder.
+    - `sent` : Whether the reminder has been sent or not.
+    - `body` : The body of the reminder.
+    - `flight` : The flight this reminder is associated with.
+    """
+    created = ndb.DateTimeProperty(auto_now_add=True)
+    updated = ndb.DateTimeProperty(auto_now=True)
+    fire_time = ndb.DateTimeProperty(required=True)
+    reminder_type = ndb.StringProperty('type', choices=[reminder_types.LEAVE_SOON, reminder_types.LEAVE_NOW],
+                                       required=True)
+    sent = ndb.BooleanProperty(default=False)
+    body = ndb.TextProperty(required=True)
+    flight = ndb.KeyProperty(required=True)
+
+
 class PushNotificationSetting(ndb.Model):
   """Model for a push notification setting (stored as key-value).
 
@@ -220,19 +251,6 @@ class PushNotificationSetting(ndb.Model):
   """
   name = ndb.StringProperty(required=True)
   value = ndb.BooleanProperty(required=True)
-
-
-class UserSuppliedFlightNumberMapping(ndb.Model):
-    """Model representing a mapping of flight IDs to flight numbers (tail
-    numbers) that the user entered. This mapping enables us to recover what
-    the user entered when searching for a flight so that notifications to
-    that user can be returned using the flight number that they are familiar
-    with and yet multiple users can share the same alert under a standardized
-    and sanitized flight_num.
-
-    """
-    flight_id = ndb.StringProperty(required=True)
-    user_flight_num = ndb.StringProperty(required=True)
 
 
 class _User(ndb.Model):
@@ -251,27 +269,49 @@ class _User(ndb.Model):
     banned = ndb.BooleanProperty(default=False)
 
 
+class UserTrackedFlight(ndb.Model):
+    """Model representing a flight that a user is tracking.
+
+    Fields:
+    - `flight` : The flight being tracked.
+    - `user_flight_num` : The flight number the user entered to find this flight.
+    """
+    flight = ndb.KeyProperty(required=True)
+    flight_id = ndb.StringProperty(required=True)
+    user_flight_num = ndb.StringProperty('u_f_num', required=True)
+
+
 class iOSUser(_User):
     """An iOS user/client. The key of the user is their UUID, which is unique
     to each device/client. So really, a single person may have multiple users
     in the system - one for each device with Just Landed installed.
 
     Fields:
+    - `last_known_location` : The user's last known location.
+    - `has_location` : Whether we know the user's last known location.
     - `tracked_flights` : The flight(s) that the user is currently tracking.
     - `is_tracking_flights` : Whether the user is currently tracking flights.
-    - `alerts` : The alert(s) that this user should receive.
-    - `has_alerts` : Whether this user has alerterts set.
+    - `alerts` : The flight alert(s) that this user should receive.
+    - `has_alerts` : Whether this user has alerts set.
+    - `reminders` : The flight reminders that are set for this user.
+    - `has_reminders` : Whether this user has reminders set.
+    - `has_unsent_reminders` : Whether this user has unsent reminders.
     - `push_token` : The push token associated with this user.
+    - `push_settings` : The push notification settings for this user.
     - `push_enabled` : Whether this user accepts push notifications.
 
     """
-    tracked_flights = ndb.KeyProperty('flights', repeated=True)
+    last_known_location = ndb.GeoPtProperty('last_loc')
+    has_location = ndb.ComputedProperty(lambda u: bool(u.last_known_location))
+    tracked_flights = ndb.StructuredProperty(UserTrackedFlight, 'flights', repeated=True)
     is_tracking_flights = ndb.ComputedProperty(lambda u: bool(len(u.tracked_flights)), 'is_tracking')
     alerts = ndb.KeyProperty(repeated=True)
     has_alerts = ndb.ComputedProperty(lambda u: bool(len(u.alerts)))
+    reminders = ndb.StructuredProperty(FlightReminder, repeated=True)
+    has_reminders = ndb.ComputedProperty(lambda u: bool(len(u.reminders)))
+    has_unsent_reminders = ndb.ComputedProperty(lambda u: bool([r for r in u.reminders if r.sent == False]))
     push_token = ndb.TextProperty()
     push_settings = ndb.StructuredProperty(PushNotificationSetting, repeated=True)
-    flight_num_mappings = ndb.StructuredProperty(UserSuppliedFlightNumberMapping, 'f_num_mappings', repeated=True)
     push_enabled = ndb.ComputedProperty(lambda u: bool(len(u.push_token)))
 
     @classmethod
@@ -293,8 +333,9 @@ class iOSUser(_User):
 
     @classmethod
     @ndb.tasklet
-    def track_flight(cls, uuid, flight_id, flight_num, push_token=None,
-                     alert_id=None, source=DATA_SOURCES.FlightAware):
+    def track_flight(cls, uuid, flight_id, flight_num, user_latitude=None,
+                     user_longitude=None, push_token=None, alert_id=None,
+                     source=DATA_SOURCES.FlightAware):
         assert isinstance(uuid, basestring) and len(uuid)
         assert isinstance(flight_id, basestring) and len(flight_id)
         assert isinstance(flight_num, basestring) and utils.valid_flight_number(flight_num)
@@ -313,12 +354,13 @@ class iOSUser(_User):
         existing_user = yield cls.get_by_uuid(uuid)
 
         # Return the user key if it's already up-to-date
-        if (existing_user and (flight_key in existing_user.tracked_flights) and
+        if (existing_user and existing_user.is_tracking_flight(flight_id) and
+            existing_user.location_is_current(user_latitude, user_longitude) and
             existing_user.push_token == push_token and
             (alert_key is None or alert_key in existing_user.alerts)):
             if debug_datastore:
                 logging.info('USER ALREADY TRACKING %s' % existing_user)
-            raise tasklets.Return(True)
+            raise tasklets.Return(existing_user)
         else:
             user = existing_user
             if not user:
@@ -329,12 +371,12 @@ class iOSUser(_User):
             elif debug_datastore:
                 logging.info('UPDATING EXISTING USER %s' % user)
 
-            if flight_key not in user.tracked_flights:
-                user.tracked_flights.append(flight_key)
-                mapping = UserSuppliedFlightNumberMapping(flight_id=flight_key.id(),
-                                                          user_flight_num=flight_num)
-                user.flight_num_mappings.append(mapping)
-                # Increment the flight counter
+            # Update the user's location
+            if user_latitude and user_longitude:
+                user.last_known_location = ndb.GeoPt(user_latitude, user_longitude)
+
+            if not user.is_tracking_flight(flight_id):
+                user.add_tracked_flight(flight_id, flight_num, source=source)
                 flight = yield flight_key.get_async()
                 flight.num_users_tracking += 1
                 yield flight.put_async()
@@ -344,7 +386,6 @@ class iOSUser(_User):
 
             if alert_key and alert_key not in user.alerts:
                 user.alerts.append(alert_key)
-                # Increment the alert counter
                 alert = yield alert_key.get_async()
                 alert.num_users_with_alert += 1
                 yield alert.put_async()
@@ -357,7 +398,7 @@ class iOSUser(_User):
 
             user.push_token = push_token or user.push_token
             user.put_async()
-            raise tasklets.Return(True)
+            raise tasklets.Return(user)
 
     @classmethod
     @ndb.tasklet
@@ -385,9 +426,8 @@ class iOSUser(_User):
         user = yield cls.get_by_uuid(uuid)
         if user:
             # Remove the tracked flight
-            if flight_key in user.tracked_flights:
-                user.tracked_flights.remove(flight_key)
-                # Decrement the counter on the flight
+            if user.is_tracking_flight(flight_id):
+                user.remove_tracked_flight(flight_id)
                 flight = yield flight_key.get_async()
                 if flight:
                     flight.num_users_tracking -= 1
@@ -396,16 +436,13 @@ class iOSUser(_User):
             # Remove alert
             if alert_key and alert_key in user.alerts:
                 user.alerts.remove(alert_key)
-                # Decrement the counter on the alert
                 alert = yield alert_key.get_async()
                 if alert:
                     alert.num_users_with_alert -= 1
                     yield alert.put_async()
 
-            # Remove the flight_id to flight_num mapping
-            for mapping in user.flight_num_mappings:
-                if mapping.flight_id == flight_key.id():
-                    user.flight_num_mappings.remove(mapping)
+            # Remove reminders
+            user.remove_flight_reminders(flight_id, source=source)
             yield user.put_async()
 
     @classmethod
@@ -414,7 +451,7 @@ class iOSUser(_User):
         assert isinstance(flight_id, basestring) and len(flight_id)
         if source == DATA_SOURCES.FlightAware:
             flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
-            q = cls.query(cls.tracked_flights == flight_key)
+            q = cls.query(cls.tracked_flights.flight == flight_key)
             raise tasklets.Return(q.iter(keys_only=True))
 
     @classmethod
@@ -426,11 +463,19 @@ class iOSUser(_User):
             alert_key = ndb.Key(FlightAwareAlert, alert_id)
             flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
 
-            q = cls.query(cls.tracked_flights == flight_key,
+            q = cls.query(cls.tracked_flights.flight == flight_key,
                           cls.alerts == alert_key,
                           cls.push_enabled == True)
             # Returns an iterator
-            raise tasklets.Return(q.iter(batch_size=50))
+            raise tasklets.Return(q.iter())
+
+    @classmethod
+    @ndb.tasklet
+    def users_with_overdue_reminders(cls):
+        q = cls.query(cls.has_unsent_reminders == True,
+                      cls.push_enabled == True,
+                      cls.reminders.fire_time < datetime.utcnow())
+        raise tasklets.Return(q.iter(keys_only=True))
 
     @classmethod
     @ndb.tasklet
@@ -448,9 +493,148 @@ class iOSUser(_User):
 
     def flight_num_for_flight_id(self, flight_id):
         assert isinstance(flight_id, basestring) and len(flight_id)
-        for mapping in self.flight_num_mappings:
-            if mapping.flight_id == flight_id:
-                return mapping.user_flight_num
+        for f in self.tracked_flights:
+            if f.flight_id == flight_id:
+                return f.user_flight_num
+
+    def is_tracking_flight(self, flight_id):
+        for f in self.tracked_flights:
+            if f.flight_id == flight_id:
+                return True
+        return False
+
+    def add_tracked_flight(self, flight_id, flight_num, source=DATA_SOURCES.FlightAware):
+        flight_key = None
+        if source == DATA_SOURCES.FlightAware:
+            flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
+        assert flight_key
+
+        assert isinstance(flight_id, basestring) and len(flight_id)
+        assert utils.valid_flight_number(flight_num)
+        new_flight = UserTrackedFlight(flight=flight_key,
+                                       flight_id=flight_id,
+                                       user_flight_num=flight_num)
+        self.tracked_flights.append(new_flight)
+
+    def remove_tracked_flight(self, flight_id):
+        to_remove = []
+        for f in self.tracked_flights:
+            if f.flight_id == flight_id:
+                to_remove.append(f)
+        for f in to_remove:
+            self.tracked_flights.remove(f)
+
+    def get_reminders_for_flight(self, flight_id, source=DATA_SOURCES.FlightAware):
+        flight_key = None
+        matches = []
+        if source == DATA_SOURCES.FlightAware:
+            flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
+        assert flight_key
+
+        for r in self.reminders:
+            if r.flight == flight_key:
+                matches.append(r)
+        return matches
+
+    def location_is_current(self, latitude, longitude):
+        loc = self.last_known_location
+        if loc is None and latitude is None and longitude is None:
+            return True
+        elif loc is None and latitude is not None:
+            return False
+        else:
+            return loc.lat == latitude and loc.lon == longitude
+
+    def get_unsent_reminders(self):
+        unsent = []
+        for r in self.reminders:
+            if r.sent == False:
+                unsent.append(r)
+        return unsent
+
+    def remove_flight_reminders(self, flight_id, source=DATA_SOURCES.FlightAware):
+        flight_key = None
+        if source == DATA_SOURCES.FlightAware:
+            flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
+        assert flight_key
+        to_remove = []
+        for r in self.reminders:
+            if r.flight == flight_key:
+                to_remove.append(r)
+        for r in to_remove:
+            self.reminders.remove(r)
+
+    def set_or_update_flight_reminders(self, flight, driving_time, source=DATA_SOURCES.FlightAware):
+        assert isinstance(driving_time, (int, long))
+        assert isinstance(flight, Flight)
+        reminders = self.get_reminders_for_flight(flight.flight_id, source=source)
+        flight_num = self.flight_num_for_flight_id(flight.flight_id)
+        dest_terminal = flight.destination.terminal
+        dest_name = (flight.destination.name or flight.destination.iata_code or
+                    flight.destination.icao_code)
+        leave_soon_interval = config['leave_soon_seconds_before']
+        leave_soon_pretty_interval = utils.pretty_time_interval(leave_soon_interval, round_days=True)
+        now = datetime.utcnow()
+
+        # Figure out the reminder bodies
+        leave_soon_body = None
+        leave_now_body = None
+        if dest_terminal and dest_terminal == 'I':
+            leave_soon_body = 'Leave for %s in %s. Flight %s arrives at the international terminal.' % (
+                                dest_name, leave_soon_pretty_interval, flight_num)
+            leave_now_body = 'Leave now for %s. Flight %s arrives at the international terminal.' % (
+                                dest_name, flight_num)
+        elif dest_terminal:
+            leave_soon_body = 'Leave for %s in %s. Flight %s arrives at terminal %s.' % (
+                                dest_name, leave_soon_pretty_interval, flight_num, dest_terminal)
+            leave_now_body = 'Leave now for %s. Flight %s arrives at terminal %s.' % (
+                                dest_name, flight_num, dest_terminal)
+        else:
+            leave_soon_body = 'Leave for %s in %s. Flight %s arrives soon.' % (
+                                dest_name, leave_soon_pretty_interval, flight_num)
+            leave_now_body = 'Leave now for %s. Flight %s arrives soon.' % (
+                                dest_name, flight_num)
+
+        # Figure out the reminder times
+        leave_soon_time = datetime.utcfromtimestamp(
+            flight.estimated_arrival_time - driving_time - leave_soon_interval)
+        leave_now_time = datetime.utcfromtimestamp(
+            flight.estimated_arrival_time - driving_time)
+
+        # If they have no reminders for this flight, set them (even if they were supposed to fire in the past)
+        if not reminders:
+            flight_key = None
+            if source == DATA_SOURCES.FlightAware:
+                flight_key = ndb.Key(FlightAwareTrackedFlight, flight.flight_id)
+            assert flight_key
+            # Set a leave soon reminder
+            leave_soon = FlightReminder(created=now,
+                                        updated=now,
+                                        fire_time=leave_soon_time,
+                                        reminder_type=reminder_types.LEAVE_SOON,
+                                        flight=flight_key,
+                                        body=leave_soon_body)
+
+            # Set a leave now reminder
+            leave_now = FlightReminder(created=now,
+                                       updated=now,
+                                       fire_time=leave_now_time,
+                                       reminder_type=reminder_types.LEAVE_NOW,
+                                       flight=flight_key,
+                                       body=leave_now_body)
+
+            self.reminders.extend([leave_soon, leave_now])
+        else:
+            for r in reminders:
+                # Only update unsent reminders (stops reminders from being sent twice)
+                if r.sent == False:
+                    r.updated = now
+                    if r.reminder_type == reminder_types.LEAVE_SOON:
+                        r.fire_time = leave_soon_time
+                        r.body = leave_soon_body
+                    else:
+                        r.fire_time = leave_now_time
+                        r.body = leave_now_body
 
 
 class Origin(object):
@@ -511,7 +695,7 @@ class Origin(object):
 
     @property
     def terminal(self):
-        return self._data.get('terminal').upper().strip()
+        return self._data.get('terminal')
 
     @property
     def best_name(self):
@@ -520,7 +704,7 @@ class Origin(object):
 
     @terminal.setter
     def terminal(self, value):
-        self._data['terminal'] = value
+        self._data['terminal'] = value.upper().strip()
 
     def dict_for_client(self):
         info = {}
@@ -547,6 +731,14 @@ class Flight(object):
             self._data = flight_info
         else:
             self._data = {}
+
+    @classmethod
+    def from_dict(cls, flight_dict):
+        assert isinstance(flight_dict, dict)
+        f = cls(flight_dict)
+        f.origin = Origin(flight_dict.get('origin'))
+        f.destination = Origin(flight_dict.get('destination'))
+        return f
 
     @property
     def aircraft_type(self):
@@ -645,6 +837,10 @@ class Flight(object):
         self._data['scheduledFlightDuration'] = value
 
     @property
+    def scheduled_arrival_time(self):
+        return self.scheduled_departure_time + self.scheduled_flight_duration
+
+    @property
     def est_arrival_diff_from_schedule(self):
         return (self.estimated_arrival_time -
             (self.scheduled_departure_time + self.scheduled_flight_duration))
@@ -730,10 +926,14 @@ class Flight(object):
     def set_driving_time(self, driving_time):
         self.leave_for_airport_time = self.estimated_arrival_time - driving_time
 
-    def dict_for_client(self):
+    def to_dict(self):
         info = utils.sub_dict_select(self._data, config['flight_fields'])
         info['origin'] = self.origin.dict_for_client()
         info['destination'] = self.destination.dict_for_client()
+        return info
+
+    def dict_for_client(self):
+        info = self.to_dict()
         info['status'] = self.status
         info['detailedStatus'] = self.detailed_status
         return info

@@ -11,6 +11,7 @@ __email__ = "grall@alum.mit.edu"
 
 import logging
 import json
+from datetime import timedelta, datetime
 
 from google.appengine.ext import webapp
 from google.appengine.api import taskqueue
@@ -19,7 +20,7 @@ from google.appengine.ext import ndb
 from data_sources import FlightAwareSource, GoogleDistanceSource, BingMapsDistanceSource
 
 from datasource_exceptions import *
-from config import on_local
+from config import on_local, config
 import utils
 
 # Currently using FlightAware and Google Distance APIs
@@ -117,17 +118,44 @@ class TrackWorker(webapp.RequestHandler):
     @ndb.toplevel
     def post(self):
         params = self.request.params
-        flight_id = params.get('flight_id')
-        flight_number = params.get('flight_number')
-        assert (isinstance(flight_id, basestring) and len(flight_id) and
-            utils.valid_flight_number(flight_number))
-
+        flight_data = json.loads(params.get('flight'))
         uuid = params.get('uuid')
         push_token = params.get('push_token')
-        yield source.start_tracking_flight(flight_id,
-                                        flight_number,
-                                        uuid=uuid,
-                                        push_token=push_token)
+        user_latitude = params.get('user_latitude')
+        user_longitude = params.get('user_longitude')
+        driving_time = params.get('driving_time')
+
+        if utils.is_float(user_latitude) and utils.is_float(user_longitude):
+            user_latitude = float(user_latitude)
+            user_longitude = float(user_latitude)
+        else:
+            user_latitude = None
+            user_longitude = None
+
+        if utils.is_int(driving_time):
+            driving_time = int(driving_time)
+        else:
+            driving_time = None
+
+        yield source.track_flight(flight_data,
+                                  uuid=uuid,
+                                  push_token=push_token,
+                                  user_latitude=user_latitude,
+                                  user_longitude=user_longitude,
+                                  driving_time=driving_time)
+
+
+class DelayedTrackWorker(webapp.RequestHandler):
+    """Delayed track worker - used when updating reminders for latest traffic
+    conditions."""
+    @ndb.toplevel
+    def post(self):
+        params = self.request.params
+        uuid = params.get('uuid')
+        flight_id = params.get('flight_id')
+        assert isinstance(uuid, basestring) and len(uuid)
+        assert isinstance(flight_id, basestring) and len(flight_id)
+        yield source.delayed_track(self, flight_id, uuid)
 
 
 class TrackHandler(AuthenticatedAPIHandler):
@@ -153,18 +181,21 @@ class TrackHandler(AuthenticatedAPIHandler):
 
         """
         # Get the current flight information
-        flight = yield source.flight_info(flight_id=flight_id,
-                                          flight_number=flight_number)
+        flight_fut = source.flight_info(flight_id=flight_id,
+                                        flight_number=flight_number)
 
         # FIXME: Assume iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
         push_token = self.request.params.get('push_token')
 
-        # Get driving distance, if we have their location
+        # Get driving time, if we have their location
+        driving_time = None
         latitude = self.request.params.get('latitude')
-        latitude = utils.is_number(latitude) and float(latitude)
+        latitude = utils.is_float(latitude) and float(latitude)
         longitude = self.request.params.get('longitude')
-        longitude = utils.is_number(longitude) and float(longitude)
+        longitude = utils.is_float(longitude) and float(longitude)
+
+        flight = yield flight_fut
         dest_latitude = flight.destination.latitude
         dest_longitude = flight.destination.longitude
 
@@ -187,13 +218,30 @@ class TrackHandler(AuthenticatedAPIHandler):
         self.respond(flight.dict_for_client())
 
         # Track the flight (deferred)
-        task = taskqueue.Task(params = {
-            'flight_id' : flight_id,
-            'flight_number' : flight_number,
+        task = taskqueue.Task(params={
+            'flight' : json.dumps(flight.to_dict()),
             'uuid' : uuid,
             'push_token' : push_token,
+            'user_latitude' : (utils.is_float(latitude) and latitude) or '',
+            'user_longitude' : (utils.is_float(longitude) and longitude) or '',
+            'driving_time' : (utils.is_int(driving_time) and int(driving_time)) or '',
         })
         taskqueue.Queue('track').add(task)
+
+        # Schedule a /track to happen in the future before landing - this will ensure that their
+        # leave alerts are accurate - taking into account traffic conditions
+        if utils.is_int(driving_time) and uuid and flight.is_in_flight :
+            timebefore = max(config['leave_soon_seconds_before'], driving_time)
+            eta = (datetime.utcfromtimestamp(flight.estimated_arrival_time) -
+                    timedelta(seconds=timebefore * 2))
+            if eta > datetime.utcnow():
+                retry_options = taskqueue.TaskRetryOptions(task_retry_limit=0) # No more than 1 try
+                delayed_task = taskqueue.Task(params={
+                                                'flight_id' : flight_id,
+                                                'uuid' : uuid,
+                                                },
+                                                eta=eta, retry_options=retry_options)
+                taskqueue.Queue('delayed-track').add(delayed_task)
 
 
 class UntrackWorker(webapp.RequestHandler):
@@ -239,7 +287,7 @@ class AlertWorker(webapp.RequestHandler):
     def post(self):
         alert_body = json.loads(self.request.body)
         assert isinstance(alert_body, dict)
-        yield source.process_alert(alert_body)
+        yield source.process_alert(alert_body, self)
 
 
 class AlertHandler(BaseAPIHandler):
@@ -252,7 +300,7 @@ class AlertHandler(BaseAPIHandler):
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
             # Process the alert (deferred)
-            retry_opts = taskqueue.TaskRetryOptions(task_retry_limit=1) # Can't risk a flood of push notifications
+            retry_opts = taskqueue.TaskRetryOptions(task_retry_limit=0) # Can't risk a flood of push notifications
             task = taskqueue.Task(payload=self.request.body,
                                   retry_options=retry_opts)
             taskqueue.Queue('process-alert').add(task)

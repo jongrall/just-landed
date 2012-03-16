@@ -7,19 +7,21 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 import logging
+from datetime import datetime, timedelta
 
 from google.appengine.ext import ndb
 from google.appengine.ext import webapp
 from google.appengine.api import urlfetch
 
-from config import on_production
+from config import on_production, config
 from models import FlightAwareTrackedFlight, iOSUser
 from api.v1.data_sources import FlightAwareSource
 from api.v1.datasource_exceptions import *
 import utils
+from notifications import LeaveSoonAlert, LeaveNowAlert
 
 source = FlightAwareSource()
-
+reminder_types = config['reminder_types']
 
 class UntrackOldFlightsWorker(webapp.RequestHandler):
     """Cron worker for untracking old flights."""
@@ -51,13 +53,13 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                                                 _full=True,
                                                 _scheme=url_scheme)
                     requests =[]
+                    ctx = ndb.get_context()
 
                     while (yield user_keys_tracking.has_next_async()):
                         u_key = user_keys_tracking.next()
                         headers = {'X-Just-Landed-UUID' : u_key.string_id(),
                                    'X-Just-Landed-Signature' : sig}
 
-                        ctx = ndb.get_context()
                         req_fut = ctx.urlfetch(untrack_url,
                                                 headers=headers,
                                                 deadline=120,
@@ -65,3 +67,38 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                         requests.append(req_fut)
 
                     yield requests # Parallel yield of all requests
+
+
+class SendRemindersWorker(webapp.RequestHandler):
+    """Cron worker for sending unsent reminders."""
+    @ndb.toplevel
+    def get(self):
+        # Get all users who have overdue reminders
+        user_keys = yield iOSUser.users_with_overdue_reminders()
+
+        while (yield user_keys.has_next_async()):
+            u_key = user_keys.next()
+
+            @ndb.tasklet
+            def send_txn():
+                user = yield u_key.get_async()
+                unsent_reminders = user.get_unsent_reminders()
+                outbox = []
+                now = datetime.utcnow()
+                max_age = now - timedelta(seconds=config['max_reminder_age'])
+
+                for r in unsent_reminders:
+                    if max_age < r.fire_time <= now:
+                        # Max 5 transactional tasks per txn
+                        if len(outbox) < 6 and user.wants_notification_type(r.reminder_type):
+                            r.sent = True # Mark sent
+                            if r.reminder_type == reminder_types.LEAVE_SOON:
+                                outbox.append(LeaveSoonAlert(user.push_token, r.body))
+                            else:
+                                outbox.append(LeaveNowAlert(user.push_token, r.body))
+                if outbox:
+                    yield user.put_async()
+                    for r in outbox:
+                        r.push(_transactional=True)
+
+            yield ndb.transaction_async(send_txn)

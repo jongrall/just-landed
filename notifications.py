@@ -41,9 +41,11 @@ FLIGHT_STATES = config['flight_states']
 
 def _defer(method, *args, **kwargs):
     """Adds a method to the push notification queue for later execution."""
+    transactional = kwargs.get('_transactional') or False
     payload = pickle.dumps((method, args, kwargs))
-    task = taskqueue.Task(payload=payload)
-    taskqueue.Queue('mobile-push').add(task)
+    task = taskqueue.Task(payload=payload,
+                          retry_options=taskqueue.TaskRetryOptions(task_retry_limit=0)) # No more than 1 try
+    taskqueue.Queue('mobile-push').add(task, transactional=transactional)
 
 
 def register_token(device_token):
@@ -80,6 +82,8 @@ class PushWorker(webapp.RequestHandler):
     def post(self):
         # Find out what we were supposed to do
         method, args, kwds = pickle.loads(self.request.body)
+        if '_transactional' in kwds.keys():
+            del(kwds['_transactional'])
 
         # Debug push
         if debug_push:
@@ -107,26 +111,19 @@ class PushWorker(webapp.RequestHandler):
 specific types of events."""
 ###############################################################################
 
-class _FlightAlert(object):
-    """Defines an object to represent a push notification. Not intended to be
-    used directly, but rather subclassed."""
-    def __init__(self, device_token, flight, user_flight_num):
+class _Alert(object):
+    """Represent a push notification. Not intended to be used directly, but
+    rather subclassed."""
+    def __init__(self, device_token):
         assert device_token
-        assert flight
-        assert utils.valid_flight_number(user_flight_num)
         self._device_token = device_token
-        self._flight = flight
-        self._user_flight_num = user_flight_num
-        self._origin_city_or_airport = (flight.origin.city or
-                                       flight.origin.best_name)
-        self._destination_city_or_airport = (flight.destination.city or
-                                            flight.destination.best_name)
 
-    def push(self):
+    def push(self, **kwargs):
         data =  self.payload
+        kwargs['device_tokens'] = [self._device_token]
         # Don't send empty messages
         if data['aps']['alert']:
-            _defer('push', data, device_tokens=[self._device_token])
+            _defer('push', data, **kwargs)
 
     @property
     def payload(self):
@@ -158,6 +155,35 @@ class _FlightAlert(object):
         """Returns the name of the sound that should play when the alert
         arrives on the receiving device."""
         return 'announcement.caf'
+
+
+class _FlightAlert(_Alert):
+    """Represents a Flight Alert notification. Not intended to be used directly,
+    but rather subclassed."""
+    def __init__(self, device_token, flight, user_flight_num):
+        super(_FlightAlert, self).__init__(device_token)
+        assert flight
+        assert utils.valid_flight_number(user_flight_num)
+        self._flight = flight
+        self._user_flight_num = user_flight_num
+        self._origin_city_or_airport = (flight.origin.city or
+                                       flight.origin.best_name)
+        self._destination_city_or_airport = (flight.destination.city or
+                                            flight.destination.best_name)
+
+
+class _GenericAlert(_Alert):
+    """Defines a generic alert that sends a push notification."""
+    def __init__(self, device_token, message):
+        super(_GenericAlert, self).__init__(device_token)
+        self._message = message
+
+    @property
+    def message(self):
+        """Returns the message body of the push notification. Subclasses are
+        expected to implement this method and return a short string to be
+        displayed to the user."""
+        return self._message
 
 
 class FlightDivertedAlert(_FlightAlert):
@@ -271,3 +297,17 @@ class FlightFiledAlert(FlightPlanChangeAlert):
     @property
     def notification_type(self):
         return push_types.FILED
+
+
+class LeaveSoonAlert(_GenericAlert):
+    """A push notification indicating that the user should leave soon for the airport."""
+    @property
+    def notification_type(self):
+        return push_types.LEAVE_SOON
+
+
+class LeaveNowAlert(_GenericAlert):
+    """A push notification indicating that the user should leave now for the airport."""
+    @property
+    def notification_type(self):
+        return push_types.LEAVE_NOW
