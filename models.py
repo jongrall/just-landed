@@ -597,7 +597,7 @@ class iOSUser(_User):
 
         # Figure out the reminder times
         leave_soon_time = datetime.utcfromtimestamp(
-            flight.estimated_arrival_time - driving_time - leave_soon_interval)
+            flight.estimated_arrival_time - driving_time - leave_soon_interval - 60) # -60 fudge to get alert times to match up
         leave_now_time = datetime.utcfromtimestamp(
             flight.estimated_arrival_time - driving_time)
 
