@@ -31,7 +31,7 @@ import logging
 # We use memcache service to cache results from 3rd party APIs. This improves
 # performance and also reduces our bill :)
 from google.appengine.api import memcache
-from google.appengine.ext import deferred
+from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 from google.appengine.ext.ndb import tasklets
 
@@ -150,25 +150,6 @@ class FlightDataSource (object):
 """FlightAware"""
 ###############################################################################
 
-def fa_delete_alerts(alert_ids):
-    source = FlightAwareSource()
-    source_futs = []
-
-    @ndb.toplevel
-    def clear_alerts():
-        @ndb.tasklet
-        @ndb.transactional
-        def del_txn():
-            # Delete the alerts from FlightAware
-            for alert_id in alert_ids:
-                source_futs.append(source.delete_alert(alert_id))
-            yield source_futs
-
-        yield del_txn()
-        yield iOSUser.clear_alerts()
-
-    clear_alerts()
-
 
 class FlightAwareSource (FlightDataSource):
     """Concrete subclass of FlightDataSource that pulls its data from the
@@ -198,6 +179,29 @@ class FlightAwareSource (FlightDataSource):
         return "%s-lookup_flights-%s" % (cls.__name__,
                                         utils.sanitize_flight_number(flight_num))
 
+    @classmethod
+    def clear_flight_info_cache(cls, flight_id):
+        flight_cache_key = cls.flight_info_cache_key(flight_id)
+        airline_cache_key = cls.airline_info_cache_key(flight_id)
+        res = memcache.delete_multi([flight_cache_key, airline_cache_key])
+        if res and debug_cache:
+            logging.info('DELETED FLIGHT INFO CACHE KEYS %s' %
+                    [flight_cache_key, airline_cache_key])
+
+    @classmethod
+    def  clear_flight_lookup_cache(cls, flight_numbers):
+        if not isinstance(flight_numbers, list):
+            flight_numbers = list(flight_numbers)
+
+        # De-dupe
+        flight_numbers = list(set(flight_numbers))
+        cache_keys = [cls.lookup_flights_cache_key(f_num) for f_num in flight_numbers]
+
+        if cache_keys:
+            res = memcache.delete_multi(cache_keys)
+            if res and debug_cache:
+                logging.info('DELETED LOOKUP CACHE KEYS %s' % cache_keys)
+
     @property
     def base_url(self):
         return "http://flightxml.flightaware.com/json/FlightXML2"
@@ -217,7 +221,7 @@ class FlightAwareSource (FlightDataSource):
                 password=config['flightaware']['production']['key'])
 
     @ndb.tasklet
-    def do_track(self, request, user, flight_id):
+    def do_track(self, request, user, flight_id, delayed=False):
         assert request
         assert isinstance(user, iOSUser)
         assert isinstance(flight_id, basestring) and len(flight_id)
@@ -234,6 +238,7 @@ class FlightAwareSource (FlightDataSource):
             'push_token' : user.push_token,
             'latitude' : user.last_known_location and user.last_known_location.lat,
             'longitude' : user.last_known_location and user.last_known_location.lon,
+            'delayed' : (delayed and 1) or 0,
         })
 
         sig = utils.api_query_signature(full_track_url, client='Server')
@@ -518,12 +523,7 @@ class FlightAwareSource (FlightDataSource):
 
         if alert_id and event_code and flight_id and origin and destination:
             # Clear memcache keys for flight & airline info
-            flight_cache_key = FlightAwareSource.flight_info_cache_key(flight_id)
-            airline_cache_key = FlightAwareSource.airline_info_cache_key(flight_id)
-            res = memcache.delete_multi([flight_cache_key, airline_cache_key])
-            if res and debug_cache:
-                logging.info('DELETED FLIGHT INFO CACHE KEYS %s' %
-                        [flight_cache_key, airline_cache_key])
+            FlightAwareSource.clear_flight_info_cache(flight_id)
 
             # Get current flight information for the flight mentioned by the alert
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
@@ -533,8 +533,8 @@ class FlightAwareSource (FlightDataSource):
             if alerted_flight:
                 # Send out push notifications
                 push_types = config['push_types']
-                flight_numbers = set()
                 ctx = ndb.get_context()
+                flight_numbers = []
                 track_requests = []
 
                 # FIXME: Assume iOS user
@@ -542,7 +542,7 @@ class FlightAwareSource (FlightDataSource):
                 while (yield users_to_notify.has_next_async()):
                     u = users_to_notify.next()
                     user_flight_num = u.flight_num_for_flight_id(flight_id) or flight_num
-                    flight_numbers.add(utils.sanitize_flight_number(user_flight_num))
+                    flight_numbers.append(utils.sanitize_flight_number(user_flight_num))
                     device_token = u.push_token
 
                     # Send notifications to each user, only if they want that notification type
@@ -577,13 +577,7 @@ class FlightAwareSource (FlightDataSource):
                     track_requests.append(self.do_track(request, u, flight_id))
 
                 # Clear memcache keys for lookup
-                cache_keys = []
-                for f_num in flight_numbers:
-                    cache_keys.append(FlightAwareSource.lookup_flights_cache_key(f_num))
-                if cache_keys:
-                    res = memcache.delete_multi(cache_keys)
-                    if res and debug_cache:
-                        logging.info('DELETED LOOKUP CACHE KEYS %s' % cache_keys)
+                FlightAwareSource.clear_flight_lookup_cache(flight_numbers)
 
                 # Parallel yield track requests
                 yield track_requests
@@ -598,7 +592,7 @@ class FlightAwareSource (FlightDataSource):
 
         # Set the alert with FlightAware and keep a record of it in our system
         # Only set if the alert wasn't already there
-        alert_id = yield self.alert_already_set(flight_num)
+        alert_id = yield self.alert_already_set(flight_num) # Checks FA, not DB
         if not alert_id:
             channels = "{16 e_filed e_departure e_arrival e_diverted e_cancelled}"
             result = yield self.conn.get_json('/SetAlert',
@@ -615,7 +609,7 @@ class FlightAwareSource (FlightDataSource):
         if debug_alerts:
             logging.info('REGISTERED NEW ALERT')
         # Store the alert so we don't recreate it
-        created = yield FlightAwareAlert.create_alert(alert_id, flight_num)
+        created = yield FlightAwareAlert.create_or_reuse_alert(alert_id, flight_num)
         if created:
             raise tasklets.Return(alert_id)
         else:
@@ -653,10 +647,20 @@ class FlightAwareSource (FlightDataSource):
             if debug_alerts:
                 logging.info('DELETED ALERT %d' % alert_id)
 
-            # Disable the alert in the datastore, remove from users
+            # Disable the alert in the datastore
             yield FlightAwareAlert.disable_alert(alert_id)
             raise tasklets.Return(True)
         raise UnableToDeleteAlertException(alert_id)
+
+    @ndb.tasklet
+    def delete_alerts(self, alert_ids):
+        # Can't be run in a transaction - there could easily be too many alerts & users
+        # Delete the alerts from FlightAware & users
+        for alert_id in alert_ids:
+            del_fut = self.delete_alert(alert_id)
+            clear_fut = iOSUser.clear_alert_from_users(alert_id,
+                                                source=DATA_SOURCES.FlightAware)
+            yield del_fut, clear_fut
 
     @ndb.tasklet
     def clear_all_alerts(self):
@@ -667,9 +671,10 @@ class FlightAwareSource (FlightDataSource):
             logging.info('CLEARING %d ALERTS' % len(alert_ids))
 
         # Defer removal of all alerts
-        deferred.defer(fa_delete_alerts,
-                       alert_ids,
-                       _queue='admin')
+        alert_ids = [str(alert_id) for alert_id in alert_ids if isinstance(alert_id, (int, long))]
+        alert_list = ','.join(alert_ids)
+        task = taskqueue.Task(payload=alert_list)
+        taskqueue.Queue('clear-alerts').add(task)
         raise tasklets.Return({'clearing_alert_count': len(alert_ids)})
 
     @ndb.tasklet
@@ -756,7 +761,9 @@ class FlightAwareSource (FlightDataSource):
         assert isinstance(uuid, basestring) and len(uuid)
         user = yield iOSUser.get_by_uuid(uuid)
         if user.is_tracking_flight(flight_id) and user.push_enabled and user.has_unsent_reminders:
-            yield self.do_track(request, user, flight_id)
+            # Clear the cache (we want fresh data)
+            FlightAwareSource.clear_flight_info_cache(flight_id)
+            yield self.do_track(request, user, flight_id, delayed=True)
 
     @ndb.tasklet
     def stop_tracking_flight(self, flight_id, **kwargs):

@@ -234,3 +234,14 @@ def too_close_or_far(orig_lat, orig_lon, dest_lat, dest_lon):
         return False
     else:
         return True
+
+def leave_now_time(est_arrival_time, driving_time):
+    # -60 fudge factor for cron delay
+    touchdown_to_terminal = config['touchdown_to_terminal']
+    return datetime.utcfromtimestamp(
+        touchdown_to_terminal + est_arrival_time - driving_time - 60)
+
+def leave_soon_time(est_arrival_time, driving_time):
+    leave_soon_interval = config['leave_soon_seconds_before']
+    leave_now = timestamp(leave_now_time(est_arrival_time, driving_time))
+    return datetime.utcfromtimestamp(leave_now - leave_soon_interval)

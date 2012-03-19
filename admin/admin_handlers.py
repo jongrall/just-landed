@@ -11,6 +11,7 @@ import logging
 from google.appengine.ext import ndb
 
 from web_handlers import StaticHandler
+from google.appengine.ext import webapp
 from api.v1.api_handlers import BaseAPIHandler
 from api.v1.data_sources import FlightAwareSource
 
@@ -20,7 +21,6 @@ from config import config, on_local
 source = FlightAwareSource()
 
 class FlightAwareAdminHandler(StaticHandler):
-
     @ndb.toplevel
     def get(self):
         # Compute some basic stats
@@ -51,3 +51,13 @@ class FlightAwareAdminAPIHandler(BaseAPIHandler):
     def clear_alerts(self):
         result = yield source.clear_all_alerts()
         self.respond(result)
+
+
+class ClearAlertsWorker(webapp.RequestHandler):
+    @ndb.toplevel
+    def post(self):
+        alert_list = self.request.body
+        if alert_list:
+            alert_ids = alert_list.split(',')
+            alert_ids = [int(alert_id) for alert_id in alert_ids]
+            yield source.delete_alerts(alert_ids)

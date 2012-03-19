@@ -14,7 +14,7 @@ from google.appengine.ext import webapp
 from google.appengine.api import urlfetch
 
 from config import on_production, config
-from models import FlightAwareTrackedFlight, iOSUser
+from models import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert
 from api.v1.data_sources import FlightAwareSource
 from api.v1.datasource_exceptions import *
 import utils
@@ -22,6 +22,7 @@ from notifications import LeaveSoonAlert, LeaveNowAlert
 
 source = FlightAwareSource()
 reminder_types = config['reminder_types']
+
 
 class UntrackOldFlightsWorker(webapp.RequestHandler):
     """Cron worker for untracking old flights."""
@@ -102,3 +103,26 @@ class SendRemindersWorker(webapp.RequestHandler):
                         r.push(_transactional=True)
 
             yield ndb.transaction_async(send_txn)
+
+
+class ClearOrphanedAlertsWorker(webapp.RequestHandler):
+    """Cron worker for clearing orphaned FlightAware alerts."""
+    @ndb.toplevel
+    def get(self):
+        alerts = yield source.get_all_alerts()
+
+        # Get all the valid alert ids
+        alert_ids = [alert.get('alert_id') for alert in alerts]
+        valid_alert_ids = [alert_id for alert_id in alert_ids if isinstance(alert_id, (int, long))]
+
+        # Figure out which ones are no longer in use
+        orphaned_alerts = []
+        for alert_id in valid_alert_ids:
+            alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
+            if (alert and not alert.is_enabled) or not alert:
+                orphaned_alerts.append(alert_id)
+
+        # Do the removal
+        if orphaned_alerts:
+            logging.info('DELETING %d ORPHANED ALERTS' % len(orphaned_alerts))
+            yield source.delete_alerts(valid_alert_ids)

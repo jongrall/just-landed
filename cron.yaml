@@ -7,3 +7,7 @@ cron:
   - description: send flight reminders
     url: /cron/send_reminders
     schedule: every 1 minutes
+
+  - description: clear orphaned flightaware alerts
+    url: /cron/clear_orphaned_alerts
+    schedule: every 24 hours

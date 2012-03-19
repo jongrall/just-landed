@@ -25,7 +25,7 @@ queue:
   bucket_size: 50
   rate: 250/s
 
-- name: admin
+- name: clear-alerts
   bucket_size: 20
   rate: 20/s
 

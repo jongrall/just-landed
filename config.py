@@ -43,6 +43,9 @@ config['on_time_buffer'] = 600
 # Hours after a flight lands when it becomes "old"
 config['flight_old_hours'] = 3
 
+# Time to allow from tires down landing to baggage claim
+config['touchdown_to_terminal'] = 900
+
 # Flight datasources
 config['data_sources'] = Enum([
     'FlightAware',

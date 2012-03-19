@@ -74,8 +74,8 @@ class AuthenticatedAPIHandler(BaseAPIHandler):
     """An API handler that also authenticates incoming API requests."""
     def dispatch(self):
         is_server = self.request.headers.get('User-Agent').startswith('AppEngine')
-        client = (is_server and 'Server') or 'iOS'
-        if on_local() or utils.authenticate_api_request(self.request, client=client):
+        self.client = (is_server and 'Server') or 'iOS'
+        if on_local() or utils.authenticate_api_request(self.request, client=self.client):
             # Parent class will call the method to be dispatched
             # -- get() or post() or etc.
             super(AuthenticatedAPIHandler, self).dispatch()
@@ -188,6 +188,10 @@ class TrackHandler(AuthenticatedAPIHandler):
         uuid = self.request.headers.get('X-Just-Landed-UUID')
         push_token = self.request.params.get('push_token')
 
+        # Was this a server-initiated, delayed /track?
+        delayed = self.request.params.get('delayed')
+        server_scheduled = (utils.is_int(delayed) and bool(int(delayed))) or False
+
         # Get driving time, if we have their location
         driving_time = None
         latitude = self.request.params.get('latitude')
@@ -228,19 +232,35 @@ class TrackHandler(AuthenticatedAPIHandler):
         })
         taskqueue.Queue('track').add(task)
 
-        # Schedule a /track to happen in the future before landing - this will ensure that their
+        # Schedule a /track to happen a couple of times in the future before landing - this will ensure that their
         # leave alerts are accurate - taking into account traffic conditions
-        if utils.is_int(driving_time) and uuid and flight.is_in_flight :
-            timebefore = max(config['leave_soon_seconds_before'], driving_time)
-            eta = (datetime.utcfromtimestamp(flight.estimated_arrival_time) -
-                    timedelta(seconds=timebefore * 2))
-            if eta > datetime.utcnow():
-                retry_options = taskqueue.TaskRetryOptions(task_retry_limit=0) # No more than 1 try
+        # checking server_scheduled prevents a cascade of calls to /track
+        if not server_scheduled and utils.is_int(driving_time) and uuid and flight.is_in_flight :
+            driving_time = int(driving_time)
+            now = datetime.utcnow()
+            retry_options = taskqueue.TaskRetryOptions(task_retry_limit=0) # No more than 1 try
+
+            # Allow for 50% fluctuation in driving time, 1 min cron delay
+            first_check_time = utils.leave_now_time(flight.estimated_arrival_time, (driving_time * 1.5) + 60)
+            # Check again at leave soon minus 1 min
+            second_check_time = utils.leave_soon_time(flight.estimated_arrival_time, driving_time + 60)
+
+            if first_check_time > now:
                 delayed_task = taskqueue.Task(params={
                                                 'flight_id' : flight_id,
                                                 'uuid' : uuid,
                                                 },
-                                                eta=eta, retry_options=retry_options)
+                                                eta=first_check_time,
+                                                retry_options=retry_options)
+                taskqueue.Queue('delayed-track').add(delayed_task)
+
+            if second_check_time > now:
+                delayed_task = taskqueue.Task(params={
+                                                'flight_id' : flight_id,
+                                                'uuid' : uuid,
+                                                },
+                                                eta=second_check_time,
+                                                retry_options=retry_options)
                 taskqueue.Queue('delayed-track').add(delayed_task)
 
 

@@ -44,6 +44,7 @@ routes = [
         HandlerPrefixRoute('cron.', [
         Route('/untrack_old_flights', 'UntrackOldFlightsWorker'),
         Route('/send_reminders', 'SendRemindersWorker'),
+        Route('/clear_orphaned_alerts', 'ClearOrphanedAlertsWorker'),
         ]),
     ]),
     PathPrefixRoute('/_ah', [
@@ -52,6 +53,7 @@ routes = [
         Route('/queue/untrack', handler='api.v1.api_handlers.UntrackWorker'),
         Route('/queue/process-alert', handler='api.v1.api_handlers.AlertWorker'),
         Route('/queue/mobile-push', handler='notifications.PushWorker'),
+        Route('/queue/clear-alerts', handler='admin.admin_handlers.ClearAlertsWorker'),
         Route('/warmup', handler='warmup.WarmupWorker'),
     ]),
     Route('/', 'web_handlers.StaticHandler'),

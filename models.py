@@ -202,11 +202,20 @@ class FlightAwareAlert(FlightAlert):
 
     @classmethod
     @ndb.tasklet
-    def create_alert(cls, alert_id, flight_number):
+    def create_or_reuse_alert(cls, alert_id, flight_number):
         assert isinstance(alert_id, (int, long)) and alert_id > 0
         assert isinstance(flight_number, basestring) and utils.valid_flight_number(flight_number)
-        alert = cls(id=alert_id,
-                    flight_number=flight_number)
+        alert = yield ndb.Key(cls, alert_id).get_async()
+
+        if not alert:
+            alert = cls(id=alert_id,
+                        flight_number=flight_number)
+        else:
+            # Alert_id was re-used by FA, restore defaults in DB
+            alert.flight_number = flight_number
+            alert.is_enabled = True
+            alert.num_users_with_alert = 0
+
         yield alert.put_async()
 
         if debug_datastore:
@@ -401,14 +410,23 @@ class iOSUser(_User):
             yield to_put # Parallel yield
             raise tasklets.Return(user)
 
+
     @classmethod
     @ndb.tasklet
-    def clear_alerts(cls):
+    def clear_alert_from_users(cls, alert_id, source=DATA_SOURCES.FlightAware):
+        alert_key = None
+        if source == DATA_SOURCES.FlightAware:
+            if isinstance(alert_id, (int, long)) and alert_id > 0:
+                alert_key = ndb.Key(FlightAwareAlert, alert_id)
+        assert alert_key
+
         @ndb.tasklet
+        @ndb.transactional
         def remove_alert(u):
-            u.alerts = []
-            yield u.put_async()
-        qry = cls.query(cls.has_alerts == True)
+            if alert_key in u.alerts:
+                u.alerts.remove(alert_key)
+                yield u.put_async()
+        qry = cls.query(cls.alerts == alert_key)
         yield qry.map_async(remove_alert)
 
     @classmethod
@@ -600,11 +618,9 @@ class iOSUser(_User):
             leave_now_body = 'Leave now for %s. Flight %s arrives soon.' % (
                                 dest_name, flight_num)
 
-        # Figure out the reminder times
-        leave_soon_time = datetime.utcfromtimestamp(
-            flight.estimated_arrival_time - driving_time - leave_soon_interval - 120) # -120 fudge factor allows for cron
-        leave_now_time = datetime.utcfromtimestamp(
-            flight.estimated_arrival_time - driving_time - 60) # -60 fudge factor allows for cron
+        # Calculate the reminder times
+        leave_soon_time = utils.leave_soon_time(flight.estimated_arrival_time, driving_time)
+        leave_now_time = utils.leave_now_time(flight.estimated_arrival_time, driving_time)
 
         # If they have no reminders for this flight, set them (even if they were supposed to fire in the past)
         if not reminders:
