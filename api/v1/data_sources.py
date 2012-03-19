@@ -181,6 +181,7 @@ class FlightAwareSource (FlightDataSource):
 
     @classmethod
     def clear_flight_info_cache(cls, flight_id):
+        assert isinstance(flight_id, basestring) and len(flight_id)
         flight_cache_key = cls.flight_info_cache_key(flight_id)
         airline_cache_key = cls.airline_info_cache_key(flight_id)
         res = memcache.delete_multi([flight_cache_key, airline_cache_key])
@@ -189,12 +190,9 @@ class FlightAwareSource (FlightDataSource):
                     [flight_cache_key, airline_cache_key])
 
     @classmethod
-    def  clear_flight_lookup_cache(cls, flight_numbers):
-        if not isinstance(flight_numbers, list):
-            flight_numbers = list(flight_numbers)
-
+    def  clear_flight_lookup_cache(cls, flight_numbers=[]):
         # De-dupe
-        flight_numbers = list(set(flight_numbers))
+        flight_numbers = set(flight_numbers)
         cache_keys = [cls.lookup_flights_cache_key(f_num) for f_num in flight_numbers]
 
         if cache_keys:
