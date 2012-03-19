@@ -360,10 +360,8 @@ class FlightAwareSource (FlightDataSource):
         """Implements flight_info method of FlightDataSource and provides
         additional kwargs:
 
-        - `no_cache` : Set to True to not use cache.
         - `flight_number` : Required by FlightAware to lookup flights.
         """
-        use_cache = not kwargs.get('no_cache')
         flight_number = kwargs.get('flight_number')
 
         if not utils.valid_flight_number(flight_number):
@@ -372,33 +370,42 @@ class FlightAwareSource (FlightDataSource):
         if not flight_id:
             raise FlightNotFoundException(flight_number)
 
-        flight = None
         flight_cache_key = FlightAwareSource.flight_info_cache_key(flight_id)
         airline_cache_key = FlightAwareSource.airline_info_cache_key(flight_id)
+        sanitized_f_num = utils.sanitize_flight_number(flight_number)
 
         # Find the flight, try cache first
-        if use_cache:
-            flight = memcache.get(flight_cache_key)
-            if flight and debug_cache:
-                logging.info('FLIGHT CACHE HIT')
+        flight = memcache.get(flight_cache_key)
+
+        if flight and debug_cache:
+            logging.info('FLIGHT CACHE HIT')
 
         # Cache miss
         if flight is None:
-            if use_cache and debug_cache:
+            if debug_cache:
                 logging.info('FLIGHT CACHE MISS')
 
-            # Do filtered lookup without introducing 2nd layer of caching
-            flights = yield self.lookup_flights(flight_number,
-                                                find_flight_id=flight_id,
-                                                no_cache=True)
-            if len(flights):
-                # Take first match
-                flight = flights[0]
-                if use_cache and not memcache.set(flight_cache_key, flight,
-                    config['flightaware']['flight_cache_time']):
-                    logging.error("Unable to cache flight lookup!")
-                elif use_cache and debug_cache:
-                    logging.info('FLIGHT CACHE SET')
+            # Find the flight
+            flight_data = yield self.conn.get_json('/FlightInfoEx',
+                                        args={'ident': sanitized_f_num,
+                                              'howMany': 15})
+
+            if flight_data.get('error'):
+                raise FlightNotFoundException(sanitized_f_num)
+            else:
+                flight_data = flight_data['FlightInfoExResult']['flights']
+
+                for data in flight_data:
+                    if data['faFlightID'] == flight_id:
+                        flight = yield self.raw_flight_data_to_flight(data, sanitized_f_num)
+
+                        if not memcache.set(flight_cache_key, flight,
+                            config['flightaware']['flight_cache_time']):
+                            logging.error("Unable to cache flight lookup!")
+                        elif debug_cache:
+                            logging.info('FLIGHT CACHE SET')
+
+                        break
 
         # Missing flight indicates probably tracking an old flight
         if not flight or flight.is_old_flight:
@@ -409,13 +416,12 @@ class FlightAwareSource (FlightDataSource):
         airline_info = None
 
         # Check cache
-        if use_cache:
-            airline_info = memcache.get(airline_cache_key)
-            if (airline_info is not None) and debug_cache:
-                logging.info('AIRLINE INFO CACHE HIT')
+        airline_info = memcache.get(airline_cache_key)
+        if (airline_info is not None) and debug_cache:
+            logging.info('AIRLINE INFO CACHE HIT')
 
         if not airline_info:
-            if use_cache and debug_cache:
+            if debug_cache:
                 logging.info('AIRLINE INFO CACHE MISS')
 
             result = yield self.conn.get_json('/AirlineFlightInfo',
@@ -430,9 +436,9 @@ class FlightAwareSource (FlightDataSource):
             airline_info = utils.sub_dict_strict(airline_info, fields)
             airline_info = utils.map_dict_keys(airline_info, self.api_key_mapping)
 
-            if use_cache and not memcache.set(airline_cache_key, airline_info):
+            if not memcache.set(airline_cache_key, airline_info):
                 logging.error("Unable to cache airline flight info!")
-            elif use_cache and debug_cache:
+            elif debug_cache:
                 logging.info('AIRLINE INFO CACHE SET')
 
         # Add in the airline info and user-entered flight number
@@ -444,21 +450,10 @@ class FlightAwareSource (FlightDataSource):
 
     @ndb.tasklet
     def lookup_flights(self, flight_number, **kwargs):
-        """Concrete implementation of lookup_flights of FlightDataSource.
-
-        Supports two additional kwargs:
-        - `find_flight_id` : Filter results to look for a specific flight id.
-        - `no_cache` : Set to True to not use any caching.
-
-        """
-        find_flight_id = kwargs.get('find_flight_id')
-        use_cache = not kwargs.get('no_cache') # Cache by default
+        """Concrete implementation of lookup_flights of FlightDataSource."""
         sanitized_f_num = utils.sanitize_flight_number(flight_number)
-        flights = None
         lookup_cache_key = FlightAwareSource.lookup_flights_cache_key(sanitized_f_num)
-
-        if use_cache:
-            flights = memcache.get(lookup_cache_key)
+        flights = memcache.get(lookup_cache_key)
 
         def cache_stale():
             for f in flights:
@@ -466,12 +461,12 @@ class FlightAwareSource (FlightDataSource):
                     return True
             return False
 
-        if use_cache and flights is not None and not cache_stale():
+        if flights is not None and not cache_stale():
             if debug_cache:
                 logging.info('LOOKUP CACHE HIT')
             raise tasklets.Return(flights)
         else:
-            if use_cache and debug_cache:
+            if debug_cache:
                 logging.info('LOOKUP CACHE MISS')
 
             flight_data = yield self.conn.get_json('/FlightInfoEx',
@@ -497,15 +492,11 @@ class FlightAwareSource (FlightDataSource):
                 flights = [f for f in flights if not f.is_old_flight]
                 flights.sort(key=lambda f: f.scheduled_departure_time)
 
-            if use_cache and not memcache.set(lookup_cache_key, flights,
+            if not memcache.set(lookup_cache_key, flights,
                                 config['flightaware']['flight_lookup_cache_time']):
                 logging.error("Unable to cache lookup response!")
-            elif use_cache and debug_cache:
+            elif debug_cache:
                 logging.info('LOOKUP CACHE SET')
-
-            # If we're looking for a specific flight, filter the flights
-            if find_flight_id:
-                flights = [f for f in flights if f.flight_id == find_flight_id]
 
             raise tasklets.Return(flights)
 
@@ -849,22 +840,14 @@ class GoogleDistanceSource (DrivingTimeDataSource):
 
     @ndb.tasklet
     def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
-        """Implements driving_time method of DrivingTimeDataSource. Supports
-        additional kwargs:
-
-        - `no_cache` : Set to True to not use any caching.
-
-        """
-        use_cache = not kwargs.get('no_cache')
-        time = None
+        """Implements driving_time method of DrivingTimeDataSource. """
         driving_cache_key = GoogleDistanceSource.driving_cache_key(origin_lat,
                                                                    origin_lon,
                                                                    dest_lat,
                                                                    dest_lon)
-        if use_cache:
-            time = memcache.get(driving_cache_key)
+        time = memcache.get(driving_cache_key)
 
-        if use_cache and time is not None:
+        if time is not None:
             if debug_cache:
                 logging.info('DRIVING CACHE HIT')
             raise tasklets.Return(time)
@@ -886,9 +869,9 @@ class GoogleDistanceSource (DrivingTimeDataSource):
                 try:
                     time = data['rows'][0]['elements'][0]['duration']['value']
                     # Cache data, not using traffic info, so data good indefinitely
-                    if use_cache and not memcache.set(driving_cache_key, time):
+                    if not memcache.set(driving_cache_key, time):
                         logging.error("Unable to cache driving time!")
-                    elif use_cache and debug_cache:
+                    elif debug_cache:
                         logging.info('DRIVING CACHE SET')
                     raise tasklets.Return(time)
                 except (KeyError, IndexError, TypeError):
@@ -920,22 +903,14 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
 
     @ndb.tasklet
     def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
-        """Implements driving_time method of DrivingTimeDataSource. Supports
-        additional kwargs:
-
-        - `no_cache` : Set to True to not use any caching.
-
-        """
-        use_cache = not kwargs.get('no_cache')
-        time = None
+        """Implements driving_time method of DrivingTimeDataSource."""
         driving_cache_key = BingMapsDistanceSource.driving_cache_key(origin_lat,
                                                                     origin_lon,
                                                                     dest_lat,
                                                                     dest_lon)
-        if use_cache:
-            time = memcache.get(driving_cache_key)
+        time = memcache.get(driving_cache_key)
 
-        if use_cache and time is not None:
+        if time is not None:
             if debug_cache:
                 logging.info('DRIVING CACHE HIT')
             raise tasklets.Return(time)
@@ -956,9 +931,9 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
             if status == 200:
                 try:
                     time = data['resourceSets'][0]['resources'][0]['travelDuration']
-                    if use_cache and not memcache.set(driving_cache_key, time, config['traffic_cache_time']):
+                    if not memcache.set(driving_cache_key, time, config['traffic_cache_time']):
                         logging.error("Unable to cache driving time!")
-                    elif use_cache and debug_cache:
+                    elif debug_cache:
                         logging.info('DRIVING CACHE SET')
                     raise tasklets.Return(time)
                 except (KeyError, IndexError, TypeError):
