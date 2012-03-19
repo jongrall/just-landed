@@ -17,7 +17,10 @@ from config import on_production, config
 from models import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert
 from api.v1.data_sources import FlightAwareSource
 from api.v1.datasource_exceptions import *
+
 import utils
+import reporting
+from reporting import prodeagle_counter
 from notifications import LeaveSoonAlert, LeaveNowAlert
 
 source = FlightAwareSource()
@@ -55,6 +58,7 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                                                 _scheme=url_scheme)
                     requests =[]
                     ctx = ndb.get_context()
+                    prodeagle_counter.incr(reporting.UNTRACKED_OLD_FLIGHT)
 
                     while (yield user_keys_tracking.has_next_async()):
                         u_key = user_keys_tracking.next()
@@ -121,6 +125,7 @@ class ClearOrphanedAlertsWorker(webapp.RequestHandler):
             alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
             if (alert and not alert.is_enabled) or not alert:
                 orphaned_alerts.append(alert_id)
+                prodeagle_counter.incr(reporting.DELETED_ORPHANED_ALERT)
 
         # Do the removal
         if orphaned_alerts:

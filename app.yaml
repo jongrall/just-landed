@@ -48,6 +48,10 @@ handlers:
   login: admin
   secure: always
 
+# ProdEagle stats collection handler
+- url: /prodeagle/
+  script: lib.prodeagle.harvest.application
+
 # Cron jobs
 - url: /cron/.*
   script: main.app

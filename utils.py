@@ -8,16 +8,22 @@ __email__ = "grall@alum.mit.edu"
 
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, tzinfo
 import re
 import math
 import hashlib, hmac
+from zlib import adler32
 
-from config import config, api_secret
+from config import config, api_secret, on_production
 from lib import ipaddr
+
+from google.appengine.api import mail
+from google.appengine.api import memcache
 
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
+ADMIN_EMAILS = ['webmaster@getjustlanded.com']
+SEND_EMAIL_AS = "Just Landed Server <server@just-landed.appspotmail.com>"
 
 ###############################################################################
 """Common Utilities"""
@@ -179,6 +185,15 @@ def flight_num_from_fa_flight_id(flight_id):
     if flight_id:
         return flight_id.split('-')[0]
 
+def too_close_or_far(orig_lat, orig_lon, dest_lat, dest_lon):
+    approx_dist = distance(orig_lat, orig_lon, dest_lat, dest_lon)
+    approx_dist = approx_dist / METERS_IN_MILE # In miles
+
+    if config['close_to_airport'] < approx_dist < config['far_from_airport']:
+        return False
+    else:
+        return True
+
 ###############################################################################
 """Date & Time Utilities"""
 ###############################################################################
@@ -226,14 +241,81 @@ def pretty_time_interval(num_secs, round_days=False):
     else:
         return ' '.join(pretty)
 
-def too_close_or_far(orig_lat, orig_lon, dest_lat, dest_lon):
-    approx_dist = distance(orig_lat, orig_lon, dest_lat, dest_lon)
-    approx_dist = approx_dist / METERS_IN_MILE # In miles
+ZERO = timedelta(0)
+HOUR = timedelta(hours=1)
 
-    if config['close_to_airport'] < approx_dist < config['far_from_airport']:
-        return False
-    else:
-        return True
+class UTC(tzinfo):
+    """UTC"""
+
+    def utcoffset(self, dt):
+        return ZERO
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO
+
+utc = UTC()
+
+# A complete implementation of current DST rules for major US time zones.
+def first_sunday_on_or_after(dt):
+    days_to_go = 6 - dt.weekday()
+    if days_to_go:
+        dt += timedelta(days_to_go)
+    return dt
+
+# In the US, DST starts at 2am (standard time) on the first Sunday in April.
+DSTSTART = datetime(1, 4, 1, 2)
+# and ends at 2am (DST time; 1am standard time) on the last Sunday of Oct.
+# which is the first Sunday on or after Oct 25.
+DSTEND = datetime(1, 10, 25, 1)
+
+
+class USTimeZone(tzinfo):
+
+    def __init__(self, hours, reprname, stdname, dstname):
+        self.stdoffset = timedelta(hours=hours)
+        self.reprname = reprname
+        self.stdname = stdname
+        self.dstname = dstname
+
+    def __repr__(self):
+        return self.reprname
+
+    def tzname(self, dt):
+        if self.dst(dt):
+            return self.dstname
+        else:
+            return self.stdname
+
+    def utcoffset(self, dt):
+        return self.stdoffset + self.dst(dt)
+
+    def dst(self, dt):
+        if dt is None or dt.tzinfo is None:
+            # An exception may be sensible here, in one or both cases.
+            # It depends on how you want to treat them.  The default
+            # fromutc() implementation (called by the default astimezone()
+            # implementation) passes a datetime with dt.tzinfo is self.
+            return ZERO
+        assert dt.tzinfo is self
+
+        # Find first Sunday in April & the last in October.
+        start = first_sunday_on_or_after(DSTSTART.replace(year=dt.year))
+        end = first_sunday_on_or_after(DSTEND.replace(year=dt.year))
+
+        # Can't compare naive to aware objects, so strip the timezone from
+        # dt first.
+        if start <= dt.replace(tzinfo=None) < end:
+            return HOUR
+        else:
+            return ZERO
+
+Eastern  = USTimeZone(-5, "Eastern",  "EST", "EDT")
+Central  = USTimeZone(-6, "Central",  "CST", "CDT")
+Mountain = USTimeZone(-7, "Mountain", "MST", "MDT")
+Pacific  = USTimeZone(-8, "Pacific",  "PST", "PDT")
 
 def leave_now_time(est_arrival_time, driving_time):
     # -60 fudge factor for cron delay
@@ -245,3 +327,24 @@ def leave_soon_time(est_arrival_time, driving_time):
     leave_soon_interval = config['leave_soon_seconds_before']
     leave_now = timestamp(leave_now_time(est_arrival_time, driving_time))
     return datetime.utcfromtimestamp(leave_now - leave_soon_interval)
+
+
+###############################################################################
+"""Email Utilities"""
+###############################################################################
+
+def email_admins(subject, body):
+    for address in ADMIN_EMAILS:
+        mail.send_mail(SEND_EMAIL_AS, address, subject, body)
+
+def report_exception(exception, traceback_as_string):
+  """Alert admins to 500 errors via email at most once every 30 mins for identical
+  exceptions."""
+  exception_memcache_key = 'exception_%s' % adler32(traceback_as_string)
+
+  if not on_production() and not memcache.get(exception_memcache_key):
+    memcache.set(exception_memcache_key, exception, time=1800)
+    email_admins("[%s] simplylisted-production 500 error: %s" %
+                    (datetime.now(Pacific).strftime('%T'),
+                     type(exception).__name__),
+                     '%s\n\n%s' % (str(exception), traceback_as_string))

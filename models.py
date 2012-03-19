@@ -19,6 +19,9 @@ import utils
 
 from config import config
 
+import reporting
+from reporting import prodeagle_counter
+
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
 debug_datastore = False
@@ -375,6 +378,7 @@ class iOSUser(_User):
             if not user:
                 user = cls(id=uuid,
                            push_settings=cls.default_settings())
+                prodeagle_counter.incr(reporting.NEW_USER)
                 if debug_datastore:
                     logging.info('CREATED NEW USER %s' % user)
             elif debug_datastore:
