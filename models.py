@@ -945,7 +945,8 @@ class Flight(object):
         self._data['leaveForAirportTime'] = value
 
     def set_driving_time(self, driving_time):
-        self.leave_for_airport_time = self.estimated_arrival_time - driving_time
+        self.leave_for_airport_time = (self.estimated_arrival_time +
+            config['touchdown_to_terminal'] - driving_time)
 
     def to_dict(self):
         info = utils.sub_dict_select(self._data, config['flight_fields'])

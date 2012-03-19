@@ -17,3 +17,5 @@ def appstats_should_record(env):
     if env.get('PATH_INFO').startswith('/_ah/admin'):
         return False
     return True
+
+appstats_MAX_STACK = 10

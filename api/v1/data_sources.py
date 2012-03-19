@@ -936,6 +936,7 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
                 'wp.1' : '%f,%f' % (dest_lat, dest_lon),
                 'optmz' : 'timeWithTraffic',
                 'du' : 'mi',
+                'rpo' : 'None',
             }
 
             data = yield self.conn.get_json('/Routes', args=params)
