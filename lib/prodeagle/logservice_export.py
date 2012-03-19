@@ -30,7 +30,7 @@ class LogServiceExport():
     if slot not in result[key]:
       result[key][slot] = 0
     result[key][slot] += value
-  
+
   def getErrorLogCounters(self, from_time, until_time):
     result = {}
     error_log_url = False
@@ -46,7 +46,7 @@ class LogServiceExport():
       end_time = datetime.datetime.fromtimestamp(int(log_entry.end_time))
       if end_time <= from_time or end_time > until_time:
         continue
-      name = "AppEngine.ErrorLog.HTTP." + str(log_entry.status) 
+      name = "AppEngine.ErrorLog.HTTP." + str(log_entry.status)
       self.append(end_time, name, 1, result)
       path_key = log_entry.resource
       if "?" in path_key:
@@ -54,7 +54,7 @@ class LogServiceExport():
       if error_log_url and error_log_url.match(path_key):
         self.append(end_time, name + "." + path_key, 1, result)
     return result
-  
+
   def getLogCounters(self, from_time, until_time):
     result = {}
     log_url = False
@@ -73,7 +73,7 @@ class LogServiceExport():
         continue
       first_entry = first_entry or log_entry
       last_entry =  log_entry
-      name = "AppEngine.Log.Sampled." 
+      name = "AppEngine.Log.Sampled."
       self.append(end_time, name + "Request", 1, result)
       if log_entry.pending_time:
         self.append(end_time, name + "PendingTimeMs",

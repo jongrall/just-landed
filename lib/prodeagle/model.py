@@ -17,14 +17,14 @@
 
 from google.appengine.ext import db
 
-class CountersLastHarvest(db.Model):  
+class CountersLastHarvest(db.Model):
   ts = db.DateTimeProperty()
 
 class CounterNamesShard(db.Model):
   names = db.StringListProperty(default=[], indexed=False)
   timestamp = db.DateTimeProperty(auto_now=True)
 
-class CountersSavedInBetween(db.Model):  
+class CountersSavedInBetween(db.Model):
   ms_of_data_lost = db.IntegerProperty()
   counters = db.TextProperty()
   all_data_inaccurate = db.BooleanProperty()

@@ -342,7 +342,7 @@ def report_exception(exception, traceback_as_string):
   exceptions."""
   exception_memcache_key = 'exception_%s' % adler32(traceback_as_string)
 
-  if not on_production() and not memcache.get(exception_memcache_key):
+  if on_production() and not memcache.get(exception_memcache_key):
     memcache.set(exception_memcache_key, exception, time=1800)
     email_admins("[%s] simplylisted-production 500 error: %s" %
                     (datetime.now(Pacific).strftime('%T'),

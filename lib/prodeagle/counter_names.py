@@ -30,7 +30,7 @@ from lib.prodeagle import config
 class CounterNamesManager(object):
   def __init__(self, namespace=config.NAMESPACE):
     self.known_counter_names_ = set([])
-    self.last_update_ = None 
+    self.last_update_ = None
     self.last_shard_ = None
     self.namespace = namespace
 
@@ -53,7 +53,7 @@ class CounterNamesManager(object):
       return self.known_counter_names_
     finally:
       namespace_manager.set_namespace(namespace)
-    
+
   def addIfNew(self, names):
     new_names = []
     fresh = None
@@ -62,9 +62,9 @@ class CounterNamesManager(object):
         if fresh == None:
           fresh = self.all()
           if name not in fresh:
-            new_names += [name] 
+            new_names += [name]
         else:
-          new_names += [name] 
+          new_names += [name]
     if new_names:
       namespace = namespace_manager.get_namespace()
       try:
@@ -88,7 +88,7 @@ class CounterNamesManager(object):
           except (RequestTooLargeError, ValueError):
             if len(names) == len(record.names):
               return ADD_FAIL
-            else:            
+            else:
               return ADD_FULL
         result = None
         try:
@@ -96,7 +96,7 @@ class CounterNamesManager(object):
               db.Key.from_path('CounterNamesShard', str(self.last_shard_)),
               new_names)
         except:
-          result = ADD_FAIL          
+          result = ADD_FAIL
         if result == ADD_FULL:
           CounterNamesShard.get_or_insert(str(self.last_shard_ + 1))
           self.addIfNew(names)
@@ -109,8 +109,8 @@ class CounterNamesManager(object):
               ",".join(new_names))
       finally:
         namespace_manager.set_namespace(namespace)
-    return (not not fresh, len(new_names))  
-  
+    return (not not fresh, len(new_names))
+
   def delete(self, regexp):
     # NOTE(andrin): When a counter is deleted and used again afterwards
     #               it will not be harvested in the following case:

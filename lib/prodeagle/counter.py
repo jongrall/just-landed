@@ -28,11 +28,11 @@ def incr(name, delta=1, save_stats=config.SAVE_PRODEAGLE_STATS):
 class Batch():
   def __init__(self):
     self.pending = {}
-  
+
   def incr(self, name, delta=1):
     if delta:
       self.pending[name] = self.pending.get(name, 0) + delta
-  
+
   def commit(self, save_stats=config.SAVE_PRODEAGLE_STATS):
     if self.pending:
       incrBatch(self.pending, save_stats)
@@ -80,4 +80,3 @@ def incrBatch(counters, save_stats=config.SAVE_PRODEAGLE_STATS):
   except:
     logging.warning("Couldn't increase the following counters: %s"
                     % ", ".join(counters.keys()))
-        

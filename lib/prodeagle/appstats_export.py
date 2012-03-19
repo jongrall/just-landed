@@ -29,7 +29,7 @@ class AppStatsExport():
     if slot not in result[key]:
       result[key][slot] = []
     result[key][slot] += [value]
-  
+
   def getCounters(self, from_time, until_time):
     result = {}
     summaries = recording.load_summary_protos()
@@ -41,7 +41,7 @@ class AppStatsExport():
                      (summary.start_timestamp_milliseconds() +
                       summary.duration_milliseconds()) / 1000)
       if end_time <= from_time or end_time > until_time:
-        continue 
+        continue
       path_key = summary.http_path()
       if config.APPSTATS_DIFFERENTIATE_BETWEEN_POST_AND_GET:
         path_key += "." + summary.http_method()
@@ -91,4 +91,3 @@ class AppStatsExport():
                 int(sum(result[key][slot][:len_percentile]) / len_percentile)
         result[key][slot] = sum(result[key][slot])
     return result
-  

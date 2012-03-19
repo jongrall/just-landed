@@ -22,7 +22,7 @@ from google.appengine.ext import db
 
 from lib.prodeagle import config
 
-class AuthKey(db.Model):  
+class AuthKey(db.Model):
   secret = db.StringProperty()
 
 def getKeySecret(handler, update_auth=None):
@@ -90,4 +90,3 @@ def addUser(handler, email):
                   (config.SECURE_HOST,
                    handler.request.headers["Host"],
                    secret, type, email))
-  
