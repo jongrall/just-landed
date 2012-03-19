@@ -46,8 +46,8 @@ import aircraft_types
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
-debug_cache = True
-debug_alerts = True
+debug_cache = False
+debug_alerts = False
 
 ###############################################################################
 """Flight Data Sources"""
@@ -294,6 +294,7 @@ class FlightAwareSource (FlightDataSource):
         if airport:
             raise tasklets.Return(airport.dict_for_client())
         elif utils.is_valid_icao(airport_code):
+            logging.info('NOT FOUND %s', airport_code)
             # Check FlightAware for the AiportInfo
             memcache_key = FlightAwareSource.airport_info_cache_key(airport_code)
 
@@ -374,72 +375,84 @@ class FlightAwareSource (FlightDataSource):
         airline_cache_key = FlightAwareSource.airline_info_cache_key(flight_id)
         sanitized_f_num = utils.sanitize_flight_number(flight_number)
 
+        result = memcache.get_multi([flight_cache_key, airline_cache_key])
+        to_fetch = []
+
         # Find the flight, try cache first
-        flight = memcache.get(flight_cache_key)
+        flight = result.get(flight_cache_key)
+        airline_info = result.get(airline_cache_key)
 
-        if flight and debug_cache:
-            logging.info('FLIGHT CACHE HIT')
-
-        # Cache miss
-        if flight is None:
+        if flight:
+            if debug_cache:
+                logging.info('FLIGHT CACHE HIT')
+        else:
             if debug_cache:
                 logging.info('FLIGHT CACHE MISS')
+            to_fetch.append(self.conn.get_json('/FlightInfoEx',
+                                                args={'ident': sanitized_f_num,
+                                                      'howMany': 15}))
 
-            # Find the flight
-            flight_data = yield self.conn.get_json('/FlightInfoEx',
-                                        args={'ident': sanitized_f_num,
-                                              'howMany': 15})
-
-            if flight_data.get('error'):
-                raise FlightNotFoundException(sanitized_f_num)
-            else:
-                flight_data = flight_data['FlightInfoExResult']['flights']
-
-                for data in flight_data:
-                    if data['faFlightID'] == flight_id:
-                        flight = yield self.raw_flight_data_to_flight(data, sanitized_f_num)
-
-                        if not memcache.set(flight_cache_key, flight,
-                            config['flightaware']['flight_cache_time']):
-                            logging.error("Unable to cache flight lookup!")
-                        elif debug_cache:
-                            logging.info('FLIGHT CACHE SET')
-
-                        break
-
-        # Missing flight indicates probably tracking an old flight
-        if not flight or flight.is_old_flight:
-            raise OldFlightException(flight_number=flight_number,
-                                     flight_id=flight_id)
-
-        # Get detailed terminal & gate information
-        airline_info = None
-
-        # Check cache
-        airline_info = memcache.get(airline_cache_key)
-        if (airline_info is not None) and debug_cache:
-            logging.info('AIRLINE INFO CACHE HIT')
-
-        if not airline_info:
+        if airline_info:
+            if debug_cache:
+                logging.info('AIRLINE INFO CACHE HIT')
+        else:
             if debug_cache:
                 logging.info('AIRLINE INFO CACHE MISS')
+            to_fetch.append(self.conn.get_json('/AirlineFlightInfo',
+                                                args={'faFlightID': flight_id}))
 
-            result = yield self.conn.get_json('/AirlineFlightInfo',
-                                             args={'faFlightID': flight_id})
+        flight_data = None
+        airline_data = None
 
-            if result.get('error'):
+        if not flight and not airline_info:
+            flight_data, airline_data = yield to_fetch
+        elif not flight:
+            flight_data = yield to_fetch
+        elif not airline_info:
+            airline_data = yield to_fetch
+
+        cache_to_set = {}
+
+        if flight_data:
+            if flight_data.get('error'):
+                raise FlightNotFoundException(sanitized_f_num)
+            flight_data = flight_data['FlightInfoExResult']['flights']
+            for data in flight_data:
+                if data['faFlightID'] == flight_id:
+                    flight = yield self.raw_flight_data_to_flight(data, sanitized_f_num)
+                    cache_to_set[flight_cache_key] = flight
+                    break
+
+        if airline_data:
+            if airline_data.get('error'):
                 raise TerminalsUnknownException(flight_id)
-
-            # Filter & map the result
             fields = config['flightaware']['airline_flight_info_fields']
-            airline_info = result['AirlineFlightInfoResult']
+            airline_info = airline_data['AirlineFlightInfoResult']
             airline_info = utils.sub_dict_strict(airline_info, fields)
             airline_info = utils.map_dict_keys(airline_info, self.api_key_mapping)
+            cache_to_set[airline_cache_key] = airline_info
 
-            if not memcache.set(airline_cache_key, airline_info):
-                logging.error("Unable to cache airline flight info!")
-            elif debug_cache:
-                logging.info('AIRLINE INFO CACHE SET')
+        if cache_to_set:
+            cache_keys = cache_to_set.keys()
+            not_set = memcache.set_multi(cache_to_set,
+                                time=config['flightaware']['flight_cache_time'])
+
+            if flight_cache_key in cache_keys:
+                if flight_cache_key in not_set:
+                    logging.error("Unable to cache flight lookup!")
+                elif debug_cache:
+                    logging.info('FLIGHT CACHE SET')
+
+            if airline_cache_key in cache_keys:
+                if airline_cache_key in not_set:
+                    logging.error("Unable to cache airline flight info!")
+                elif debug_cache:
+                    logging.info('AIRLINE INFO CACHE SET')
+
+        # Missing flight indicates probably tracking an old flight
+        if not flight or not airline_info or flight.is_old_flight:
+            raise OldFlightException(flight_number=flight_number,
+                                     flight_id=flight_id)
 
         # Add in the airline info and user-entered flight number
         flight.flight_number = utils.sanitize_flight_number(flight_number)
