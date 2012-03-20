@@ -731,18 +731,15 @@ class FlightAwareSource (FlightDataSource):
         user_latitude = kwargs.get('user_latitude')
         user_longitude = kwargs.get('user_longitude')
         driving_time = kwargs.get('driving_time')
-        alert_id = None
 
-        if push_token:
-            # Derive flight num from flight_id so we can use common flight_num for alerts
-            der_flight_num = utils.sanitize_flight_number(
-                                utils.flight_num_from_fa_flight_id(flight_id))
+        # Derive flight num from flight_id so we can use common flight_num for alerts
+        der_flight_num = utils.sanitize_flight_number(
+                            utils.flight_num_from_fa_flight_id(flight_id))
 
-            # See if the alert exists (according to our datastore) and is enabled
-            alert_id = yield FlightAwareAlert.existing_enabled_alert(der_flight_num)
-            if isinstance(alert_id, (int, long)) and alert_id > 0:
-                if debug_alerts:
-                    logging.info('EXISTING ALERT FOR %s' % der_flight_num)
+        # See if the alert exists (according to our datastore) and is enabled
+        alert_id = yield FlightAwareAlert.existing_enabled_alert(der_flight_num)
+        if debug_alerts and isinstance(alert_id, (int, long)) and alert_id > 0 :
+            logging.info('EXISTING ALERT FOR %s' % der_flight_num)
 
         @ndb.tasklet
         def track_txn(flight_id, flight_num, uuid, push_token, alert_id):
@@ -753,6 +750,10 @@ class FlightAwareSource (FlightDataSource):
                 alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
                 if not alert or not alert.is_enabled:
                     valid_alert_id = False # Trigger new alert creation
+
+            if not valid_alert_id:
+                # Only set an alert_id if we don't have one or it isn't enabled
+                alert_id = yield self.set_alert(flight_id=flight_id)
 
             # Mark the flight as being tracked
             existing_flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
@@ -768,9 +769,6 @@ class FlightAwareSource (FlightDataSource):
                 old_push_token = None
 
                 if push_token:
-                    if not valid_alert_id:
-                        # Only set an alert_id if we don't have one
-                        alert_id = yield self.set_alert(flight_id=flight_id)
                     existing_user = yield iOSUser.get_by_uuid(uuid)
                     old_push_token = existing_user and existing_user.push_token
 
@@ -788,10 +786,11 @@ class FlightAwareSource (FlightDataSource):
                     yield user.put_async()
 
                 # Tell UrbanAirship about push tokens
-                if push_token and (not old_push_token or (old_push_token != push_token)):
-                    register_token(push_token)
                 if old_push_token and push_token != old_push_token:
                     deregister_token(old_push_token)
+                if push_token:
+                    register_token(push_token) # Need to tell UA that token is still active
+
         # TRANSACTIONAL TRACKING!
         yield ndb.transaction_async(lambda: track_txn(flight_id, flight_num, uuid, push_token, alert_id), xg=True)
 

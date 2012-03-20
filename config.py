@@ -38,7 +38,7 @@ else:
 config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 
 # Buffer within which a flight is said to be "on time". Buffer is in seconds.
-config['on_time_buffer'] = 600
+config['on_time_buffer'] = 300
 
 # Hours after a flight lands when it becomes "old"
 config['flight_old_hours'] = 2
@@ -170,7 +170,7 @@ config['flightaware'] = {
 
     # Caching settings
     'flight_lookup_cache_time' : 10800,
-    'flight_cache_time' : 600,
+    'flight_cache_time' : 1800,
 
     # Alert endpoint
     'alert_endpoint' : fa_alert_url(),
