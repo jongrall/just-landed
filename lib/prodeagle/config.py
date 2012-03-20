@@ -97,7 +97,7 @@ MEMCACHE_EXPORT_ENABLE = True
 # incremented counters after SAVE_IN_BETWEEN seconds at the latest. This makes
 # sense if you see low accuracy in your dashboard (because your counters are
 # falling out of memcache before they can get collected).
-SAVE_IN_BETWEEN = 300
+SAVE_IN_BETWEEN = 0
 
 # Integer
 # How many seconds we should look back in time in case the ProdEagle export

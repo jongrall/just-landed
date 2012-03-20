@@ -536,10 +536,20 @@ class FlightAwareSource (FlightDataSource):
 
             # Get current flight information for the flight mentioned by the alert
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
-            alerted_flight = yield self.flight_info(flight_id=flight_id,
-                                                    flight_number=flight_num)
+            alerted_flight, stored_flight = yield (self.flight_info(flight_id=flight_id, flight_number=flight_num),
+                                                    FlightAwareTrackedFlight.get_flight_by_id(flight_id))
 
-            if alerted_flight:
+            if alerted_flight and stored_flight:
+                # Reconstruct the flight from the datastore
+                orig_flight = Flight.from_dict(stored_flight.last_flight_data)
+                orig_flight.scheduled_flight_duration = stored_flight.orig_flight_duration
+                orig_flight.scheduled_departure_time = stored_flight.orig_departure_time
+                alerted_flight.scheduled_flight_duration = stored_flight.orig_flight_duration
+                alerted_flight.scheduled_departure_time = stored_flight.orig_departure_time
+
+                terminal_changed = (alerted_flight.destination.terminal and (alerted_flight.destination.terminal !=
+                                    orig_flight.destination.terminal))
+
                 # Send out push notifications
                 push_types = config['push_types']
                 ctx = ndb.get_context()
@@ -567,29 +577,35 @@ class FlightAwareSource (FlightDataSource):
                     device_token = u.push_token
 
                     # Send notifications to each user, only if they want that notification type
-                    # Filed
-                    if event_code == 'filed' and u.wants_notification_type(push_types.FILED):
-                        FlightFiledAlert(device_token, alerted_flight, user_flight_num).push()
-
                     # Early / delayed / on time
-                    elif event_code == 'change' and u.wants_notification_type(push_types.CHANGED):
-                        FlightPlanChangeAlert(device_token, alerted_flight, user_flight_num).push()
+                    if ((event_code == 'change' or event_code == 'minutes_out') and
+                        u.wants_notification_type(push_types.CHANGED)):
+                        if terminal_changed:
+                            TerminalChangeAlert(device_token, alerted_flight, user_flight_num).push()
+                            prodeagle_counter.incr(reporting.SENT_CHANGE_NOTIFICATION)
+                        else:
+                            FlightPlanChangeAlert(device_token, alerted_flight, user_flight_num).push()
+                            prodeagle_counter.incr(reporting.SENT_CHANGE_NOTIFICATION)
 
                     # Take off
                     elif event_code == 'departure' and u.wants_notification_type(push_types.DEPARTED):
                         FlightDepartedAlert(device_token, alerted_flight, user_flight_num).push()
+                        prodeagle_counter.incr(reporting.SENT_TAKEOFF_NOTIFICATION)
 
                     # Arrival
                     elif event_code == 'arrival' and u.wants_notification_type(push_types.ARRIVED):
                         FlightArrivedAlert(device_token, alerted_flight, user_flight_num).push()
+                        prodeagle_counter.incr(reporting.SENT_LANDED_NOTIFICATION)
 
                     # Diverted
                     elif event_code == 'diverted' and u.wants_notification_type(push_types.DIVERTED):
                         FlightDivertedAlert(device_token, alerted_flight, user_flight_num).push()
+                        prodeagle_counter.incr(reporting.SENT_DIVERTED_NOTIFICATION)
 
                     # Canceled
                     elif event_code == 'cancelled' and u.wants_notification_type(push_types.CANCELED):
                         FlightCanceledAlert(device_token, alerted_flight, user_flight_num).push()
+                        prodeagle_counter.incr(reporting.SENT_CANCELED_NOTIFICATION)
 
                     else:
                         logging.error('Unknown eventcode.')

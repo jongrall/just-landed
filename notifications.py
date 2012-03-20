@@ -9,6 +9,7 @@ __email__ = "grall@alum.mit.edu"
 import os
 import pickle
 import logging
+from datetime import datetime
 
 from google.appengine.api import taskqueue
 from google.appengine.ext import webapp
@@ -192,10 +193,6 @@ class _GenericAlert(_Alert):
 
 class FlightDivertedAlert(_FlightAlert):
     """A push notification indicating a flight has been diverted."""
-    def push(self, **kwargs):
-        super(FlightDivertedAlert, self).push(**kwargs)
-        prodeagle_counter.incr(reporting.SENT_DIVERTED_NOTIFICATION)
-    
     @property
     def message(self):
         return 'Flight %s from %s has been diverted to another airport.' % (
@@ -209,10 +206,6 @@ class FlightDivertedAlert(_FlightAlert):
 
 class FlightCanceledAlert(_FlightAlert):
     """A push notification indicating a flight has been canceled."""
-    def push(self, **kwargs):
-        super(FlightCanceledAlert, self).push(**kwargs)
-        prodeagle_counter.incr(reporting.SENT_CANCELED_NOTIFICATION)
-    
     @property
     def message(self):
         return 'Flight %s from %s has been canceled.' % (
@@ -226,10 +219,6 @@ class FlightCanceledAlert(_FlightAlert):
 
 class FlightDepartedAlert(_FlightAlert):
     """A push notification indicating a flight has departed."""
-    def push(self, **kwargs):
-        super(FlightDepartedAlert, self).push(**kwargs)
-        prodeagle_counter.incr(reporting.SENT_TAKEOFF_NOTIFICATION)
-    
     @property
     def message(self):
         return 'Flight %s to %s just took off from %s.' % (
@@ -248,10 +237,6 @@ class FlightDepartedAlert(_FlightAlert):
 
 class FlightArrivedAlert(_FlightAlert):
     """A push notification indicating a flight has arrived."""
-    def push(self, **kwargs):
-        super(FlightArrivedAlert, self).push(**kwargs)
-        prodeagle_counter.incr(reporting.SENT_LANDED_NOTIFICATION)
-
     @property
     def message(self):
         # Show terminal info if we have it
@@ -285,10 +270,6 @@ class FlightArrivedAlert(_FlightAlert):
 
 class FlightPlanChangeAlert(_FlightAlert):
     """A push notification indicating a flight plan has changed."""
-    def push(self, **kwargs):
-        super(FlightPlanChangeAlert, self).push(**kwargs)
-        prodeagle_counter.incr(reporting.SENT_CHANGE_NOTIFICATION)
-
     @property
     def message(self):
         flight_status = self._flight.status
@@ -316,6 +297,29 @@ class FlightPlanChangeAlert(_FlightAlert):
         return push_types.CHANGED
 
 
+class TerminalChangeAlert(FlightPlanChangeAlert):
+    """A push notification indicating a flight plan has changed."""
+    @property
+    def message(self):
+        terminal = self._flight.destination.terminal
+        time_diff = self._flight.estimated_arrival_time - utils.timestamp(date=datetime.utcnow())
+        pretty_interval = utils.pretty_time_interval(time_diff, round_days=True)
+
+        if terminal and terminal == 'I':
+            return 'Flight %s from %s will land at %s international terminal in %s.' % (
+                self._user_flight_num,
+                self._origin_city_or_airport,
+                self._flight.destination.best_name,
+                pretty_interval)
+        elif terminal:
+            return 'Flight %s from %s will land at %s terminal %s in %s.' % (
+                self._user_flight_num,
+                self._origin_city_or_airport,
+                self._flight.destination.best_name,
+                terminal,
+                pretty_interval)
+
+
 class FlightFiledAlert(FlightPlanChangeAlert):
     """A push notification indicating a flight plan has been filed."""
     @property
@@ -325,10 +329,6 @@ class FlightFiledAlert(FlightPlanChangeAlert):
 
 class LeaveSoonAlert(_GenericAlert):
     """A push notification indicating that the user should leave soon for the airport."""
-    def push(self, **kwargs):
-        super(LeaveSoonAlert, self).push(**kwargs)
-        prodeagle_counter.incr(reporting.SENT_LEAVE_SOON_NOTIFICATION)
-
     @property
     def notification_type(self):
         return push_types.LEAVE_SOON
@@ -336,10 +336,6 @@ class LeaveSoonAlert(_GenericAlert):
 
 class LeaveNowAlert(_GenericAlert):
     """A push notification indicating that the user should leave now for the airport."""
-    def push(self, **kwargs):
-        super(LeaveNowAlert, self).push(**kwargs)
-        prodeagle_counter.incr(reporting.SENT_LEAVE_NOW_NOTIFICATION)
-
     @property
     def notification_type(self):
         return push_types.LEAVE_NOW

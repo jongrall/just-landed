@@ -762,7 +762,7 @@ class Flight(object):
         assert isinstance(flight_dict, dict)
         f = cls(flight_dict)
         f.origin = Origin(flight_dict.get('origin'))
-        f.destination = Origin(flight_dict.get('destination'))
+        f.destination = Destination(flight_dict.get('destination'))
         return f
 
     @property

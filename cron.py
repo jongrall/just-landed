@@ -105,6 +105,10 @@ class SendRemindersWorker(webapp.RequestHandler):
                     yield user.put_async()
                     for r in outbox:
                         r.push(_transactional=True)
+                        if isinstance(r, LeaveSoonAlert):
+                            prodeagle_counter.incr(reporting.SENT_LEAVE_SOON_NOTIFICATION)
+                        else:
+                            prodeagle_counter.incr(reporting.SENT_LEAVE_NOW_NOTIFICATION)
 
             yield ndb.transaction_async(send_txn)
 
