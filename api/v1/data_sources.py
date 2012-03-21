@@ -413,9 +413,9 @@ class FlightAwareSource (FlightDataSource):
         if not flight and not airline_info:
             flight_data, airline_data = yield to_fetch
         elif not flight:
-            flight_data = yield to_fetch
+            flight_data = yield to_fetch[0]
         elif not airline_info:
-            airline_data = yield to_fetch
+            airline_data = yield to_fetch[0]
 
         cache_to_set = {}
 
