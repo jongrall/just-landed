@@ -6,7 +6,7 @@
 #
 # appcfg.py upload_data --config_file=airport_loader.yaml
 # --filename=airports.csv --kind=Airport --application=s~just-landed
-# --url=http://just-landed.appspot.com/_ah/remote_api
+# --url=https://just-landed.appspot.com/_ah/remote_api
 
 python_preamble:
 - import: base64

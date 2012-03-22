@@ -34,7 +34,7 @@ def get_airship():
 
     return urbanairship.Airship(**ua_creds)
 
-debug_push = True
+debug_push = False
 _UA = get_airship()
 push_types = config['push_types']
 FLIGHT_STATES = config['flight_states']
@@ -287,8 +287,7 @@ class FlightPlanChangeAlert(_FlightAlert):
                     self._origin_city_or_airport,
                     pretty_time_diff)
         elif flight_status == FLIGHT_STATES.ON_TIME:
-            # FIXME: Maybe this isn't needed
-            return 'Flight %s from %s is now on time.' % (
+            return 'Flight %s from %s is en route and on time.' % (
                     self._user_flight_num,
                     self._origin_city_or_airport)
 

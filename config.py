@@ -169,7 +169,7 @@ config['flightaware'] = {
     ],
 
     # Caching settings
-    'flight_lookup_cache_time' : 10800,
+    'flight_lookup_cache_time' : 3600,
     'flight_cache_time' : 1800,
 
     # Alert endpoint

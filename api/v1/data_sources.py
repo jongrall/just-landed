@@ -193,7 +193,7 @@ class FlightAwareSource (FlightDataSource):
                     [flight_cache_key, airline_cache_key])
 
     @classmethod
-    def  clear_flight_lookup_cache(cls, flight_numbers=[]):
+    def clear_flight_lookup_cache(cls, flight_numbers=[]):
         # De-dupe
         flight_numbers = set(flight_numbers)
         cache_keys = [cls.lookup_flights_cache_key(f_num) for f_num in flight_numbers]
@@ -205,7 +205,7 @@ class FlightAwareSource (FlightDataSource):
 
     @property
     def base_url(self):
-        return "http://flightxml.flightaware.com/json/FlightXML2"
+        return "https://flightxml.flightaware.com/json/FlightXML2"
 
     @property
     def api_key_mapping(self):
@@ -829,16 +829,19 @@ class FlightAwareSource (FlightDataSource):
                 if alert.num_users_with_alert == 0:
                     yield self.delete_alert(alert_id)
 
+            # If there are no more users tracking the flight, clear the cache
+            # since we won't get any alerts in the meantime that would invalidate the cache
+            flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
+            if not flight or not flight.is_tracking:
+                FlightAwareSource.clear_flight_info_cache(flight_id)
+
         yield ndb.transaction_async(lambda: untrack_txn(flight_id, flight_num, uuid, alert_id), xg=True)
 
     def authenticate_remote_request(self, request):
         """Returns True if the incoming request is in fact from the trusted
         3rd party datasource, False otherwise."""
-        # FIXME: Maybe don't check user agent
-        user_agent = request.environ.get('HTTP_USER_AGENT')
         remote_addr = request.remote_addr
-        return (user_agent == config['flightaware']['remote_user_agent'] and
-                utils.is_trusted_flightaware_host(remote_addr))
+        return utils.is_trusted_flightaware_host(remote_addr)
 
 
 ###############################################################################
