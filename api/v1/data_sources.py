@@ -788,6 +788,7 @@ class FlightAwareSource (FlightDataSource):
                 if old_push_token and push_token != old_push_token:
                     deregister_token(old_push_token)
                 if push_token:
+                    logging.info(push_token)
                     register_token(push_token) # Need to tell UA that token is still active
 
         # TRANSACTIONAL TRACKING!

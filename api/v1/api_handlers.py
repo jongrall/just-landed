@@ -267,8 +267,8 @@ class TrackHandler(AuthenticatedAPIHandler):
         # Track the flight (deferred)
         task = taskqueue.Task(params={
             'flight' : json.dumps(flight.to_dict()),
-            'uuid' : uuid,
-            'push_token' : push_token,
+            'uuid' : uuid or '',
+            'push_token' : push_token or '',
             'user_latitude' : (utils.is_float(latitude) and latitude) or '',
             'user_longitude' : (utils.is_float(longitude) and longitude) or '',
             'driving_time' : (utils.is_int(driving_time) and int(driving_time)) or '',
