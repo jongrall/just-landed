@@ -578,8 +578,7 @@ class FlightAwareSource (FlightDataSource):
 
                     # Send notifications to each user, only if they want that notification type
                     # Early / delayed / on time
-                    if ((event_code == 'change' or event_code == 'minutes_out') and
-                        u.wants_notification_type(push_types.CHANGED)):
+                    if event_code == 'change' and u.wants_notification_type(push_types.CHANGED)):
                         if terminal_changed:
                             TerminalChangeAlert(device_token, alerted_flight, user_flight_num).push()
                             prodeagle_counter.incr(reporting.SENT_CHANGE_NOTIFICATION)
