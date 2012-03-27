@@ -10,4 +10,4 @@ cron:
 
   - description: clear orphaned flightaware alerts
     url: /cron/clear_orphaned_alerts
-    schedule: every 24 hours
+    schedule: every 12 hours
