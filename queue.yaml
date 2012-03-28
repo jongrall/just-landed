@@ -17,10 +17,6 @@ queue:
   bucket_size: 5
   rate: 5/s
 
-- name: default
-  bucket_size: 100
-  rate: 500/s
-
 - name: process-alert
   bucket_size: 20
   rate: 40/s
