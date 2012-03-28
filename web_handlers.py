@@ -70,3 +70,8 @@ class StaticHandler(BaseHandler):
         # Add in the version context
         context.update(template_context)
         self.response.write(template.render(template_path, context))
+
+class iPhoneFAQHandler(StaticHandler):
+    """Generic handler for static pages on the website."""
+    def get(self):
+        super(iPhoneFAQHandler, self).get(page_name='iphonefaq.html')

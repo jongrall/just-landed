@@ -11,14 +11,6 @@ threadsafe: true
 inbound_services:
 - warmup
 
-# Adds memcache and console admin pages to the admin dashboard
-admin_console:
-  pages:
-  - name: Console
-    url: /gae-admin/interactive
-  - name: Memcache
-    url: /gae-admin/memcache
-
 handlers:
 # robots.txt and favicon.ico
 - url: /(robots\.txt|favicon\.ico)
@@ -30,11 +22,6 @@ handlers:
 - url: /static
   expiration: "14d"
   static_dir: static
-
-# Additional admin functionality
-- url: /gae-admin/.*
-  script: google.appengine.ext.admin.application
-  login: admin
 
 # Admin methods that require admin credentials
 - url: /admin/.*

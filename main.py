@@ -56,7 +56,8 @@ routes = [
         Route('/queue/clear-alerts', handler='admin.admin_handlers.ClearAlertsWorker'),
         Route('/warmup', handler='warmup.WarmupWorker'),
     ]),
-    Route('/', 'web_handlers.StaticHandler'),
+    Route('/', handler='web_handlers.StaticHandler'),
+    Route('/iphonefaq', handler='web_handlers.iPhoneFAQHandler'),
 ]
 
 # Instantiate the app.

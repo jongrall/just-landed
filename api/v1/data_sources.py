@@ -607,7 +607,7 @@ class FlightAwareSource (FlightDataSource):
                         prodeagle_counter.incr(reporting.SENT_CANCELED_NOTIFICATION)
 
                     else:
-                        logging.error('Unknown eventcode.')
+                        logging.error('Unknown eventcode: %s' % event_code)
 
                     # Fire off a /track for the user, which will update their reminders
                     track_requests.append(self.do_track(request, u, flight_id))
