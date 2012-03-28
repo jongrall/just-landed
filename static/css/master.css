@@ -1,1 +1,22 @@
-/*CSS GOES HERE*/
+/* Reset
+------------------------------------------------------------ */
+
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,input{font-size:100%;vertical-align:baseline;border:0;outline:0;background:transparent;margin:0;padding:0}ol,ul{list-style:none}blockquote,q{quotes:none}:focus{outline:0}table{border-collapse:collapse;border-spacing:0}
+
+/* Base Styles
+------------------------------------------------------------ */
+
+body {
+    background: #afc9d0;
+    font: 15px / 22px 'Lucida Grande', 'Lucida Sans Unicode', Helvetica, Arial, Verdana, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: #2d2d2d;
+}
+
+.clear:after {
+    content: '.';
+    display: block;
+    height: 0;
+    clear: both;
+    visibility: hidden;
+}

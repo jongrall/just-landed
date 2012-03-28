@@ -1,54 +1,40 @@
 <!doctype html>
 <html>
 <head>
-  <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
-  <title>&gt; just landed app / {% block page_title %}{% endblock %}</title>
+    <title>Just Landed &nbsp; &#9992; &nbsp; Getting you there on time</title>
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+    
+    <!-- !CSS -->
+    <link rel="stylesheet" href="/static/css/master.css?v={{ version }}" />
+    {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
 
-  {% block extra_head %}{% endblock %}
-
-  <!-- !CSS -->
-  <link rel="stylesheet" href="/static/css/master.css?v={{ version }}" />
-
-  {% block extra_css %}{% endblock %}
-
-  <!--[if IE 9]><link rel="stylesheet" href="/static/css/ie9.css?v={{ version }}" /><![endif]-->
-  <!--[if lt IE 9]><link rel="stylesheet" href="/static/css/ie.css?v={{ version }}" /><![endif]-->
-
-  <!-- !JS -->
-  <script type="text/javascript">Rot13={map:null,convert:function(a){Rot13.init();var b="";for(i=0;i<a.length;i++){var c=a.charAt(i);b+=c>="A"&&c<="Z"||c>="a"&&c<="z"?Rot13.map[c]:c}return b},init:function(){if(Rot13.map!=null)return;var a=new Array;var b="abcdefghijklmnopqrstuvwxyz";for(i=0;i<b.length;i++)a[b.charAt(i)]=b.charAt((i+13)%26);for(i=0;i<b.length;i++)a[b.charAt(i).toUpperCase()]=b.charAt((i+13)%26).toUpperCase();Rot13.map=a},write:function(a){document.write(Rot13.convert(a))}}</script>
-
-  <script type="text/javascript">
-
-    var _gaq = _gaq || [];
-    _gaq.push(['_setAccount', 'UA-28832531-1']);
-    _gaq.push(['_trackPageview']);
-
-    (function() {
-      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-    })();
-
-  </script>
-
-  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-
-  {% block extra_js_head %}{% endblock %}
+    <!-- !JAVASCRIPT -->
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script type="text/javascript">Rot13={map:null,convert:function(a){Rot13.init();var b="";for(i=0;i<a.length;i++){var c=a.charAt(i);b+=c>="A"&&c<="Z"||c>="a"&&c<="z"?Rot13.map[c]:c}return b},init:function(){if(Rot13.map!=null)return;var a=new Array;var b="abcdefghijklmnopqrstuvwxyz";for(i=0;i<b.length;i++)a[b.charAt(i)]=b.charAt((i+13)%26);for(i=0;i<b.length;i++)a[b.charAt(i).toUpperCase()]=b.charAt((i+13)%26).toUpperCase();Rot13.map=a},write:function(a){document.write(Rot13.convert(a))}}</script>
+    <script type="text/javascript">
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-28832531-1']);
+        _gaq.push(['_trackPageview']);
+    
+        (function() {
+            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+        })();
+    </script>
+    {% block extra_js_head %}{% endblock %}
 </head>
 <body>
+    <div id="content">
+        <!-- !PAGE HEADLINE -->
+        {% block page_headline %}{% endblock %}
 
-<div id="content">
-
-<!-- !PAGE HEADLINE -->
-{% block page_headline %}{% endblock %}
-
-<!-- !PAGE CONTENT -->
-{% block page_content %}{% endblock %}
-
-</div>
+        <!-- !PAGE CONTENT -->
+        {% block page_content %}{% endblock %}
+    </div>
 
 {% block footer %}{% endblock %}
-
 {% block extra_js %}{% endblock %}
 </body>
 </html>
