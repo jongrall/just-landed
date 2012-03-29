@@ -127,7 +127,7 @@ class ClearOrphanedAlertsWorker(webapp.RequestHandler):
         orphaned_alerts = []
         for alert_id in valid_alert_ids:
             alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
-            if (alert and not alert.is_enabled) or not alert:
+            if not alert or not alert.is_enabled:
                 orphaned_alerts.append(alert_id)
                 prodeagle_counter.incr(reporting.DELETED_ORPHANED_ALERT)
 

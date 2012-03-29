@@ -29,9 +29,13 @@ class FlightAwareAdminHandler(StaticHandler):
         tracking_count = yield FlightAwareTrackedFlight.count_tracked_flights()
         users_tracking_count = yield iOSUser.count_users_tracking()
 
+        # Database invariant under one flight per user
+        consistent = alert_count <= tracking_count <= users_tracking_count
+
         context = dict(alert_count=alert_count,
                        flights_tracking_count=tracking_count,
-                       users_tracking_count=users_tracking_count)
+                       users_tracking_count=users_tracking_count,
+                       db_consistent=consistent)
         super(FlightAwareAdminHandler, self).get(page_name="fa_admin.html",
                                                  context=context)
 

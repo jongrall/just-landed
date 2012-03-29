@@ -102,6 +102,9 @@ config['leave_soon_seconds_before'] = 300
 # Reminder freshness requirement (don't send reminders that are older than than this)
 config['max_reminder_age'] = 120
 
+# Push token freshness requirement (don't tell urban airship about tokens that we've seen as recently as this)
+config['max_push_token_age'] = 14400
+
 def on_production():
   """Returns true if the app is running in production"""
   return config['app']['mode'] == 'production'
