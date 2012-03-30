@@ -40,7 +40,7 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
             flight = Flight.from_dict(f.last_flight_data)
 
-            if flight.has_landed or flight.is_old_flight(): # Optimization prevents overzealous checking
+            if flight.has_landed or flight.is_old_flight: # Optimization prevents overzealous checking
                 # Make sure the flight is old
                 try:
                     yield source.flight_info(flight_id=flight_id,
