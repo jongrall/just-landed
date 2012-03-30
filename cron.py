@@ -14,7 +14,7 @@ from google.appengine.ext import webapp
 from google.appengine.api import urlfetch
 
 from config import on_production, config
-from models import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert
+from models import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert, Flight
 from api.v1.data_sources import FlightAwareSource
 from api.v1.datasource_exceptions import *
 
@@ -32,46 +32,48 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
     @ndb.toplevel
     def get(self):
         # Get all flights that are currently tracking
-        flight_keys = yield FlightAwareTrackedFlight.tracked_flights()
+        flights = yield FlightAwareTrackedFlight.tracked_flights()
 
-        while (yield flight_keys.has_next_async()):
-            f_key = flight_keys.next()
-            flight_id = f_key.string_id()
+        while (yield flights.has_next_async()):
+            f = flights.next()
+            flight_id = f.key.string_id()
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
+            flight = Flight.from_dict(f.last_flight_data)
 
-            # Find out if the flight is old
-            try:
-                flight = yield source.flight_info(flight_id=flight_id,
-                                                flight_number=flight_num)
-            except Exception as e:
-                if isinstance(e, OldFlightException): # Only care about old flights
-                    # We should untrack this flight for each user who was tracking it
-                    user_keys_tracking = yield iOSUser.users_tracking_flight(flight_id)
+            if flight.has_landed or flight.is_old_flight(): # Optimization prevents overzealous checking
+                # Make sure the flight is old
+                try:
+                    yield source.flight_info(flight_id=flight_id,
+                                             flight_number=flight_num)
+                except Exception as e:
+                    if isinstance(e, OldFlightException): # Only care about old flights
+                        # We should untrack this flight for each user who was tracking it
+                        user_keys_tracking = yield iOSUser.users_tracking_flight(flight_id)
 
-                    # Generate the URL and API signature
-                    url_scheme = (on_production() and 'https') or 'http'
-                    to_sign = self.uri_for('untrack', flight_id=flight_id)
-                    sig = utils.api_query_signature(to_sign, client='Server')
-                    untrack_url = self.uri_for('untrack',
-                                                flight_id=flight_id,
-                                                _full=True,
-                                                _scheme=url_scheme)
-                    requests =[]
-                    ctx = ndb.get_context()
-                    prodeagle_counter.incr(reporting.UNTRACKED_OLD_FLIGHT)
+                        # Generate the URL and API signature
+                        url_scheme = (on_production() and 'https') or 'http'
+                        to_sign = self.uri_for('untrack', flight_id=flight_id)
+                        sig = utils.api_query_signature(to_sign, client='Server')
+                        untrack_url = self.uri_for('untrack',
+                                                    flight_id=flight_id,
+                                                    _full=True,
+                                                    _scheme=url_scheme)
+                        requests =[]
+                        ctx = ndb.get_context()
+                        prodeagle_counter.incr(reporting.UNTRACKED_OLD_FLIGHT)
 
-                    while (yield user_keys_tracking.has_next_async()):
-                        u_key = user_keys_tracking.next()
-                        headers = {'X-Just-Landed-UUID' : u_key.string_id(),
-                                   'X-Just-Landed-Signature' : sig}
+                        while (yield user_keys_tracking.has_next_async()):
+                            u_key = user_keys_tracking.next()
+                            headers = {'X-Just-Landed-UUID' : u_key.string_id(),
+                                       'X-Just-Landed-Signature' : sig}
 
-                        req_fut = ctx.urlfetch(untrack_url,
-                                                headers=headers,
-                                                deadline=120,
-                                                validate_certificate=on_production())
-                        requests.append(req_fut)
+                            req_fut = ctx.urlfetch(untrack_url,
+                                                    headers=headers,
+                                                    deadline=120,
+                                                    validate_certificate=on_production())
+                            requests.append(req_fut)
 
-                    yield requests # Parallel yield of all requests
+                        yield requests # Parallel yield of all requests
 
 
 class SendRemindersWorker(webapp.RequestHandler):
@@ -102,7 +104,7 @@ class SendRemindersWorker(webapp.RequestHandler):
                             else:
                                 outbox.append(LeaveNowAlert(user.push_token, r.body))
                 if outbox:
-                    yield user.put_async()
+                    yield user.put_async() # Save the changes to reminders
                     for r in outbox:
                         r.push(_transactional=True)
                         if isinstance(r, LeaveSoonAlert):

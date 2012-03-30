@@ -273,23 +273,27 @@ class FlightPlanChangeAlert(_FlightAlert):
     @property
     def message(self):
         flight_status = self._flight.status
-        time_diff = self._flight.est_arrival_diff_from_schedule
-        pretty_time_diff = utils.pretty_time_interval(time_diff, round_days=True)
+        time_diff = self._flight.estimated_arrival_time - utils.timestamp(date=datetime.utcnow())
+        pretty_interval = utils.pretty_time_interval(time_diff, round_days=True)
 
         if flight_status == FLIGHT_STATES.DELAYED:
-            return 'Flight %s from %s is %s late.' % (
+            return 'Flight %s from %s is delayed. Estimated to arrive at %s in %s.' % (
                     self._user_flight_num,
                     self._origin_city_or_airport,
-                    pretty_time_diff)
+                    self._flight.destination.best_name,
+                    pretty_interval)
         elif flight_status == FLIGHT_STATES.EARLY:
-            return 'Flight %s from %s is %s early.' % (
+            return 'Flight %s from %s is early. Estimated to arrive at %s in %s.' % (
                     self._user_flight_num,
                     self._origin_city_or_airport,
-                    pretty_time_diff)
+                    self._flight.destination.best_name,
+                    pretty_interval)
         elif flight_status == FLIGHT_STATES.ON_TIME:
-            return 'Flight %s from %s is en route and on time.' % (
+            return 'Flight %s from %s is on time. Estimated to arrive at %s in %s.' % (
                     self._user_flight_num,
-                    self._origin_city_or_airport)
+                    self._origin_city_or_airport,
+                    self._flight.destination.best_name,
+                    pretty_interval)
 
     @property
     def notification_type(self):

@@ -20,6 +20,8 @@ standardized in config.py so that switching to new data sources in the future
 will not break clients that are expecting a specific API from the JustLanded
 server.
 
+TODO: Document request & response formats.
+
 """
 
 __author__ = "Jon Grall"
@@ -262,6 +264,7 @@ class FlightAwareSource (FlightDataSource):
             # Map the response dict keys
             data = utils.map_dict_keys(data, self.api_key_mapping)
 
+            # FIXME : CACHING HERE
             origin_code = data['origin']
             destination_code = data['destination']
             origin_info, destination_info = yield self.airport_info(origin_code), self.airport_info(destination_code)
@@ -424,6 +427,7 @@ class FlightAwareSource (FlightDataSource):
                 raise FlightNotFoundException(sanitized_f_num)
             flight_data = flight_data['FlightInfoExResult']['flights']
             for data in flight_data:
+                # Find the matching flight
                 if data['faFlightID'] == flight_id:
                     flight = yield self.raw_flight_data_to_flight(data, sanitized_f_num)
                     cache_to_set[flight_cache_key] = flight
@@ -461,7 +465,7 @@ class FlightAwareSource (FlightDataSource):
                                      flight_id=flight_id)
 
         # Add in the airline info and user-entered flight number
-        flight.flight_number = utils.sanitize_flight_number(flight_number)
+        flight.flight_number = sanitized_f_num
         flight.origin.terminal = airline_info['originTerminal']
         flight.destination.terminal = airline_info['destinationTerminal']
         flight.destination.bag_claim = airline_info['bagClaim']
@@ -495,26 +499,37 @@ class FlightAwareSource (FlightDataSource):
 
             if flight_data.get('error'):
                 raise FlightNotFoundException(sanitized_f_num)
-            else:
-                flight_data = flight_data['FlightInfoExResult']['flights']
 
-                # Convert raw flight data to instances of Flight
-                yield_flights = []
+            flight_data = flight_data['FlightInfoExResult']['flights']
 
-                for data in flight_data:
-                    flight_fut = self.raw_flight_data_to_flight(data, sanitized_f_num)
-                    yield_flights.append(flight_fut)
+            # Convert raw flight data to instances of Flight
+            yield_flights = []
 
-                flights_tup = yield yield_flights
-                flights = list(flights_tup)
+            for data in flight_data:
+                flight_fut = self.raw_flight_data_to_flight(data, sanitized_f_num)
+                yield_flights.append(flight_fut)
 
-                # Filter out old flights & sort by departure date (earliest first)
-                flights = [f for f in flights if not f.is_old_flight]
-                flights.sort(key=lambda f: f.scheduled_departure_time)
+            flights = yield yield_flights
+
+            # Optimization: cache flight info so /track doesn't have cache miss on selecting a flight
+            flights_to_cache = {}
+            for f in flights:
+                cache_key = FlightAwareSource.flight_info_cache_key(f.flight_id)
+                flights_to_cache[cache_key] = f
+
+            if memcache.set_multi(flights_to_cache,
+                                  time=config['flightaware']['flight_cache_time']):
+                logging.error('Unable to cache some flight info on lookup.')
+            elif debug_cache:
+                logging.info('CACHED FLIGHTS FROM LOOKUP')
+
+            # Filter out old flights & sort by departure date (earliest first)
+            flights = [f for f in flights if not f.is_old_flight]
+            flights.sort(key=lambda f: f.scheduled_departure_time)
 
             if not memcache.set(lookup_cache_key, flights,
                                 config['flightaware']['flight_lookup_cache_time']):
-                logging.error("Unable to cache lookup response!")
+                logging.error('Unable to cache lookup response!')
             elif debug_cache:
                 logging.info('LOOKUP CACHE SET')
 

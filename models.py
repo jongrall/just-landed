@@ -137,7 +137,7 @@ class FlightAwareTrackedFlight(TrackedFlight):
     @ndb.tasklet
     def tracked_flights(cls):
         q = cls.query(cls.is_tracking == True)
-        raise tasklets.Return(q.iter(keys_only=True))
+        raise tasklets.Return(q.iter())
 
     @classmethod
     @ndb.tasklet
