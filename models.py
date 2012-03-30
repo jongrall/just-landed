@@ -347,7 +347,7 @@ class iOSUser(_User):
 
     @classmethod
     @ndb.tasklet
-    def track_flight(cls, uuid, tracked_flight, user_flight_num,
+    def track_flight(cls, uuid, flight, tracked_flight, user_flight_num,
                      user_latitude=None, user_longitude=None, driving_time=None,
                      push_token=None, alert=None, source=DATA_SOURCES.FlightAware):
         assert isinstance(uuid, basestring) and len(uuid)

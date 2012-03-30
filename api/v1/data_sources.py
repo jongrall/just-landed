@@ -602,7 +602,7 @@ class FlightAwareSource (FlightDataSource):
 
                     # Send notifications to each user, only if they want that notification type
                     # Early / delayed / on time
-                    if event_code == 'change' and u.wants_notification_type(push_types.CHANGED):
+                    if (event_code == 'change' or event_code == 'minutes_out') and u.wants_notification_type(push_types.CHANGED):
                         if terminal_changed:
                             TerminalChangeAlert(device_token, alerted_flight, user_flight_num).push()
                             prodeagle_counter.incr(reporting.SENT_CHANGE_NOTIFICATION)
@@ -779,9 +779,10 @@ class FlightAwareSource (FlightDataSource):
                     existing_user = yield iOSUser.get_by_uuid(uuid)
                     old_push_token = existing_user and existing_user.push_token
 
-                yield iOSUser.track_flight(uuid=uuid,
-                                           tracked_flight=tracked_flight,
-                                           user_flight_num=flight.flight_number,
+                yield iOSUser.track_flight(uuid,
+                                           flight,
+                                           tracked_flight,
+                                           flight.flight_number,
                                            user_latitude=user_latitude,
                                            user_longitude=user_longitude,
                                            driving_time=driving_time,
