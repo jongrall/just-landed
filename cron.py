@@ -112,6 +112,7 @@ class SendRemindersWorker(webapp.RequestHandler):
                         else:
                             prodeagle_counter.incr(reporting.SENT_LEAVE_NOW_NOTIFICATION)
 
+            # TRANSACTIONAL REMINDER SENDING PER USER - ENSURE DUPE REMINDERS NOT SENT
             yield ndb.transaction_async(send_txn)
 
 

@@ -172,8 +172,9 @@ config['flightaware'] = {
     ],
 
     # Caching settings
-    'flight_lookup_cache_time' : 3600,
-    'flight_cache_time' : 1800,
+    'flight_lookup_cache_time' : 3600, # Flight data from /search
+    'flight_from_lookup_cache_time' : 120, # Cached from /search to save when /track right after
+    'flight_cache_time' : 3600, # Cached /track
 
     # Alert endpoint
     'alert_endpoint' : fa_alert_url(),

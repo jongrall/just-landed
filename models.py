@@ -95,6 +95,8 @@ class TrackedFlight(ndb.Model):
     """
     created = ndb.DateTimeProperty(auto_now_add=True)
     updated = ndb.DateTimeProperty(auto_now=True)
+    num_users_tracking = ndb.IntegerProperty('num_u', default=0)
+    is_tracking = ndb.ComputedProperty(lambda f: f.num_users_tracking > 0)
 
 
 class FlightAwareTrackedFlight(TrackedFlight):
@@ -108,9 +110,7 @@ class FlightAwareTrackedFlight(TrackedFlight):
     - `orig_departure_time` : The original departure time as far as we know.
     - `orig_flight_duration` : The original flight duration as far as we know.
     """
-    num_users_tracking = ndb.IntegerProperty('num_u', default=0)
     flight_number = ndb.ComputedProperty(lambda f: utils.flight_num_from_fa_flight_id(f.key.string_id()), 'f_num')
-    is_tracking = ndb.ComputedProperty(lambda f: f.num_users_tracking > 0)
     last_flight_data = ndb.JsonProperty(required=True)
     orig_departure_time = ndb.IntegerProperty(required=True)
     orig_flight_duration = ndb.IntegerProperty(required=True)
@@ -146,12 +146,11 @@ class FlightAwareTrackedFlight(TrackedFlight):
         count = yield q.count_async(keys_only=True)
         raise tasklets.Return(count)
 
+    @ndb.tasklet
     def update_last_flight_data(self, flight_data):
-        @ndb.tasklet
-        def update():
-            self.last_flight_data = flight_data
-            yield self.put_async()
-        yield update()
+        self.last_flight_data = flight_data
+        yield self.put_async()
+        raise tasklets.Return(self)
 
 
 class FlightAlert(ndb.Model):
@@ -348,19 +347,17 @@ class iOSUser(_User):
 
     @classmethod
     @ndb.tasklet
-    def track_flight(cls, uuid, flight, user_latitude=None, user_longitude=None,
-                     driving_time=None, push_token=None, alert=None,
-                     source=DATA_SOURCES.FlightAware):
+    def track_flight(cls, uuid, tracked_flight, user_flight_num,
+                     user_latitude=None, user_longitude=None, driving_time=None,
+                     push_token=None, alert=None, source=DATA_SOURCES.FlightAware):
         assert isinstance(uuid, basestring) and len(uuid)
-        assert isinstance(flight, Flight)
-        flight_id = flight.flight_id
-        flight_num = flight.flight_number
-        flight_key = None
+        assert utils.valid_flight_number(user_flight_num)
+        assert isinstance(tracked_flight, ndb.Model)
 
         if source == DATA_SOURCES.FlightAware:
-            flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
+            assert isinstance(tracked_flight, FlightAwareTrackedFlight)
 
-        assert flight_key
+        flight_id = tracked_flight.key.string_id()
 
         # See if the user exists
         existing_user = yield cls.get_by_uuid(uuid)
@@ -381,22 +378,21 @@ class iOSUser(_User):
                            push_settings=cls.default_settings())
                 prodeagle_counter.incr(reporting.NEW_USER)
                 if debug_datastore:
-                    logging.info('CREATED NEW USER %s' % user)
+                    logging.info('CREATED NEW USER %s' % uuid)
             elif debug_datastore:
-                logging.info('UPDATING EXISTING USER %s' % user)
+                logging.info('UPDATING EXISTING USER %s' % uuid)
 
             # Update the user's location
             if user_latitude and user_longitude:
                 user.last_known_location = ndb.GeoPt(user_latitude, lon=user_longitude)
 
             if not user.is_tracking_flight(flight_id):
-                user.add_tracked_flight(flight_id, flight_num, source=source)
-                tracked_flight = yield flight_key.get_async()
+                user.add_tracked_flight(flight_id, user_flight_num, source=source)
                 tracked_flight.num_users_tracking += 1
                 to_put.append(tracked_flight.put_async())
 
                 if debug_datastore:
-                    logging.info('USER STARTED TRACKING FLIGHT %s' % flight_key)
+                    logging.info('USER STARTED TRACKING FLIGHT %s' % flight_id)
 
             if alert and alert.key not in user.alerts:
                 user.alerts.append(alert.key)
@@ -417,7 +413,6 @@ class iOSUser(_User):
             to_put.append(user.put_async())
             yield to_put # Parallel yield
             raise tasklets.Return(user)
-
 
     @classmethod
     @ndb.tasklet
@@ -440,14 +435,16 @@ class iOSUser(_User):
         assert isinstance(uuid, basestring) and len(uuid)
         assert isinstance(flight_id, basestring) and len(flight_id)
 
-        user = yield cls.get_by_uuid(uuid)
+        flight_fut = None
 
-        if user:
-            flight = None
+        if source == DATA_SOURCES.FlightAware:
+            flight_fut = FlightAwareTrackedFlight.get_flight_by_id(flight_id)
+
+        # Parallel yield
+        user, flight = yield cls.get_by_uuid(uuid), flight_fut
+
+        if user and flight:
             to_put = []
-
-            if source == DATA_SOURCES.FlightAware:
-                flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
 
             # Remove the tracked flight
             if user.is_tracking_flight(flight_id):
@@ -479,10 +476,9 @@ class iOSUser(_User):
             # Remove reminders
             user.remove_flight_reminders(flight_id, source=source)
             to_put.append(user.put_async())
+            yield to_put # Parallel yield
 
-            # Parallel yield
-            yield to_put
-            raise tasklets.Return((flight, alert))
+        raise tasklets.Return((flight, alert))
 
     @classmethod
     @ndb.tasklet
