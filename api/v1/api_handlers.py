@@ -65,8 +65,8 @@ class BaseAPIHandler(webapp.RequestHandler):
                 utils.report_exception(exception, traceback_as_string)
                 prodeagle_counter.incr(reporting.ERROR_500)
             else:
-                # Log others as errors
-                logging.error(exception.message)
+                # Log others as warnings
+                logging.warning(exception.message)
 
                 # Report certain errors to admin
                 if isinstance(exception, (TerminalsUnknownException,
