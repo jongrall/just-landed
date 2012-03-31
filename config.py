@@ -270,3 +270,12 @@ config['urbanairship'] = {
     'secret': 'Z6c6j5gCRpOseuOjcIpeGQ',
   },
 }
+
+###############################################################################
+"""Campaign Monitor Settings & API Keys"""
+###############################################################################
+
+config['campaignmonitor'] = {
+    'username' : 'justlanded',
+    'key' : '5bd221f998c1e9712f209eed6a7ce5dc'
+}
