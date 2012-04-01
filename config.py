@@ -7,6 +7,10 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 import os
+from google.appengine.api import app_identity
+
+# Figure out if we're on local, staging or production environments
+app_id = app_identity.get_application_id()
 
 config = {}
 
@@ -31,8 +35,24 @@ config['app'] = {}
 # Figure out if we're on local, staging or production environments
 if os.environ.get('SERVER_SOFTWARE', '').startswith('Dev'):
   config['app']['mode'] = 'local'
-else:
+
+elif app_id == 'just-landed':
   config['app']['mode'] = 'production'
+
+elif app_id == 'just-landed-staging':
+  config['app']['mode'] = 'staging'
+
+def on_production():
+  """Returns true if the app is running in production"""
+  return config['app']['mode'] == 'production'
+
+def on_staging():
+  """Returns true if the app is running on staging"""
+  return config['app']['mode'] == 'staging'
+
+def on_local():
+  """Returns true if the app is running on the local devserver."""
+  return config['app']['mode'] == 'local'
 
 # The directory where templates are found
 config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
@@ -93,7 +113,7 @@ config['flight_states'] = Enum([
     'CANCELED',
     'DIVERTED',
     'LANDED',
-    'EARLY'
+    'EARLY',
 ])
 
 # Number of seconds that we should set a 'leave soon' reminder before they should leave for the airport
@@ -105,17 +125,10 @@ config['max_reminder_age'] = 120
 # Push token freshness requirement (don't tell urban airship about tokens that we've seen as recently as this)
 config['max_push_token_age'] = 14400
 
-def on_production():
-  """Returns true if the app is running in production"""
-  return config['app']['mode'] == 'production'
-
-def on_local():
-  """Returns true if the app is running on the local devserver."""
-  return config['app']['mode'] == 'local'
 
 if on_local():
     config['server_url'] = 'http://c-98-207-175-25.hsd1.ca.comcast.net'
-    config['api_credentials'] = {
+    config['api_credentials'] = { # For signing requests
         'iOS' : {
             'username' : 'iOS-Development',
             'secret' : 'd90816f7e6ea93001a2aa62cd8dd8f0e830a93d1',
@@ -125,9 +138,21 @@ if on_local():
             'secret' : '8f131377dba9f8c0fe7a9ae9a865842acd153fb0',
         },
     }
+elif on_staging():
+    config['server_url'] = 'https://just-landed-staging.appspot.com/'
+    config['api_credentials'] = { # For signing requests
+        'iOS' : {
+            'username' : 'iOS-Staging',
+            'secret' : '55ca8681039e129bb985991014f61774de31fe1e',
+        },
+        'Server' : {
+            'username' : 'JustLanded-Staging',
+            'secret' : 'ecbfb931b4bde2404285923e80a3b3a72d04531a',
+        },
+    }
 else:
     config['server_url'] = 'https://just-landed.appspot.com/'
-    config['api_credentials'] = {
+    config['api_credentials'] = { # For signing requests
         'iOS' : {
             'username' : 'iOS-Production',
             'secret' : '4399d9ce77acf522799543f13c926c0a41e2ea3f',
@@ -156,6 +181,11 @@ config['flightaware'] = {
     'development' : {
         'username' : 'airportpickupapp',
         'key' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
+    },
+
+    'staging' : {
+        'username' : 'justlandedstaging',
+        'key' : 'd4ef7d1927d30a205366bb6e7aed929ac11f4d55',
     },
 
     'production' : {
@@ -232,7 +262,7 @@ config['flightaware'] = {
         'ident',
         'origin',
         'originCity',
-        'originName'
+        'originName',
     ],
 }
 
@@ -249,7 +279,7 @@ config['far_from_airport'] = 200.0
 # Amount of time to cache driving time for when using real-time traffic
 config['traffic_cache_time'] = 3600
 
-# Bing Maps Credentials
+# Bing Maps Credentials (used for all versions)
 config['bing_maps'] = {
     'key' : 'AjUZ_rECu8dsAMwFNtVRXALPksPaXALYysv-pZ8FSFCWpyhcBkJRb82LEWgECEgZ',
 }
@@ -265,6 +295,11 @@ config['urbanairship'] = {
     'secret': 'Ok15UGaPRJqWfTUdmcn7sA',
   },
 
+  'staging': { # Staging uses production push cert & creds
+    'key': 'WZR0ix1mRCeTBmIaLUIi8g',
+    'secret': 'Z6c6j5gCRpOseuOjcIpeGQ',
+  },
+
   'production': {
     'key': 'WZR0ix1mRCeTBmIaLUIi8g',
     'secret': 'Z6c6j5gCRpOseuOjcIpeGQ',
@@ -276,6 +311,17 @@ config['urbanairship'] = {
 ###############################################################################
 
 config['campaignmonitor'] = {
-    'username' : 'justlanded',
-    'key' : '5bd221f998c1e9712f209eed6a7ce5dc'
+    'key' : '5bd221f998c1e9712f209eed6a7ce5dc',
+
+    'local' : {
+      'subscriber_list_id' : 'e0df0058fb3d482a890ef41ba4adfbeb',
+    },
+
+    'staging' : {
+      'subscriber_list_id' : '488414d044f6cff3d98fd5d822147599',
+    },
+
+    'production' : {
+      'subscriber_list_id' : '768e47891d6f304673e16c299fdf1f91',
+    },
 }

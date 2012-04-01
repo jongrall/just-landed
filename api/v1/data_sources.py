@@ -37,7 +37,7 @@ from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 from google.appengine.ext.ndb import tasklets
 
-from config import config, on_local
+from config import config, on_local, on_staging
 from models import (Airport, FlightAwareTrackedFlight, FlightAwareAlert, iOSUser,
     Origin, Destination, Flight)
 from datasource_exceptions import *
@@ -218,6 +218,12 @@ class FlightAwareSource (FlightDataSource):
             self.conn = Connection(self.base_url,
                 username=config['flightaware']['development']['username'],
                 password=config['flightaware']['development']['key'])
+
+        elif on_staging():
+            self.conn = Connection(self.base_url,
+                username=config['flightaware']['staging']['username'],
+                password=config['flightaware']['staging']['key'])
+
         else:
             self.conn = Connection(self.base_url,
                 username=config['flightaware']['production']['username'],

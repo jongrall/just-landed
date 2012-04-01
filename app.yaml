@@ -1,12 +1,12 @@
 application: just-landed
-version: 1-0
+version: 0-6
 runtime: python27
 api_version: 1
 threadsafe: true
 
-#builtins:
-# - remote_api: on
-# - appstats: on
+builtins:
+ - remote_api: on
+ - appstats: on
 
 inbound_services:
 - warmup

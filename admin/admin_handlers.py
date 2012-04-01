@@ -16,7 +16,7 @@ from api.v1.api_handlers import BaseAPIHandler
 from api.v1.data_sources import FlightAwareSource
 
 from models import FlightAwareTrackedFlight, iOSUser
-from config import config, on_local
+from config import config
 
 source = FlightAwareSource()
 

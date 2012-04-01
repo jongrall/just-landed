@@ -14,7 +14,7 @@ import math
 import hashlib, hmac
 from zlib import adler32
 
-from config import config, api_secret, on_production
+from config import config, api_secret, on_local
 from lib import ipaddr
 
 from google.appengine.api import mail
@@ -342,7 +342,7 @@ def report_exception(exception, traceback_as_string):
   exceptions."""
   exception_memcache_key = 'exception_%s' % adler32(traceback_as_string)
 
-  if on_production() and not memcache.get(exception_memcache_key):
+  if not on_local() and not memcache.get(exception_memcache_key):
     memcache.set(exception_memcache_key, exception, time=1800)
     email_admins("[%s] simplylisted-production 500 error: %s" %
                     (datetime.now(Pacific).strftime('%T'),

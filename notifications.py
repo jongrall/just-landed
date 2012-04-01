@@ -16,7 +16,7 @@ from google.appengine.ext import webapp
 
 from lib import urbanairship
 
-from config import config, on_local
+from config import config, on_local, on_staging
 import utils
 
 import reporting
@@ -27,10 +27,12 @@ def get_airship():
     or development credentials.
 
     """
-    if not on_local():
-        ua_creds = config['urbanairship']['production']
-    else:
+    if on_local():
         ua_creds = config['urbanairship']['development']
+    elif on_staging():
+        ua_creds = config['urbanairship']['staging']
+    else:
+        ua_creds = config['urbanairship']['production']
 
     return urbanairship.Airship(**ua_creds)
 

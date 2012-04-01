@@ -13,7 +13,7 @@ from google.appengine.ext import ndb
 from google.appengine.ext import webapp
 from google.appengine.api import urlfetch
 
-from config import on_production, config
+from config import on_local, config
 from models import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert, Flight
 from api.v1.data_sources import FlightAwareSource
 from api.v1.datasource_exceptions import *
@@ -51,7 +51,7 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                         user_keys_tracking = yield iOSUser.users_tracking_flight(flight_id)
 
                         # Generate the URL and API signature
-                        url_scheme = (on_production() and 'https') or 'http'
+                        url_scheme = (not on_local() and 'https') or 'http'
                         to_sign = self.uri_for('untrack', flight_id=flight_id)
                         sig = utils.api_query_signature(to_sign, client='Server')
                         untrack_url = self.uri_for('untrack',
@@ -70,7 +70,7 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                             req_fut = ctx.urlfetch(untrack_url,
                                                     headers=headers,
                                                     deadline=120,
-                                                    validate_certificate=on_production())
+                                                    validate_certificate=not on_local())
                             requests.append(req_fut)
 
                         yield requests # Parallel yield of all requests
