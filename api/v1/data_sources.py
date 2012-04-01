@@ -51,8 +51,8 @@ from reporting import prodeagle_counter
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
-debug_cache = False
-debug_alerts = False
+debug_cache = on_local() and False
+debug_alerts = on_local() and False
 
 ###############################################################################
 """Flight Data Sources"""
@@ -522,7 +522,7 @@ class FlightAwareSource (FlightDataSource):
                 cache_key = FlightAwareSource.flight_info_cache_key(f.flight_id)
                 flights_to_cache[cache_key] = f
 
-            if memcache.set_multi(flights_to_cache,
+            if memcache.add_multi(flights_to_cache, # Using add so we don't squash keys for flights being tracked
                                   time=config['flightaware']['flight_from_lookup_cache_time']):
                 logging.error('Unable to cache some flight info on lookup.')
             elif debug_cache:
@@ -772,6 +772,9 @@ class FlightAwareSource (FlightDataSource):
             tracked_flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
             if not tracked_flight:
                 prodeagle_counter.incr(reporting.NEW_FLIGHT)
+                # Need to re-cache flight since lookup has 2-min timeout
+                flight_cache_key = FlightAwareSource.flight_info_cache_key(flight_id)
+                memcache.set(flight_cache_key, flight, config['flightaware']['flight_lookup_cache_time'])
                 tracked_flight = yield FlightAwareTrackedFlight.create_flight(flight)
             else:
                 flight_data = flight.to_dict()

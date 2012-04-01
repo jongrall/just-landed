@@ -14,7 +14,7 @@ import math
 import hashlib, hmac
 from zlib import adler32
 
-from config import config, api_secret, on_local
+from config import config, api_secret, on_local, on_production
 from lib import ipaddr
 
 from google.appengine.api import mail
@@ -23,7 +23,8 @@ from google.appengine.api import memcache
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
 ADMIN_EMAILS = ['webmaster@getjustlanded.com']
-SEND_EMAIL_AS = "Just Landed Server <server@just-landed.appspotmail.com>"
+SEND_EMAIL_AS = ((on_production() and "Just Landed Server <server@just-landed.appspotmail.com>") or
+                "Just Landed Server <server@just-landed-staging.appspotmail.com>")
 
 ###############################################################################
 """Common Utilities"""

@@ -36,7 +36,7 @@ def get_airship():
 
     return urbanairship.Airship(**ua_creds)
 
-debug_push = False
+debug_push = on_local() and False
 _UA = get_airship()
 push_types = config['push_types']
 FLIGHT_STATES = config['flight_states']

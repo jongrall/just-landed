@@ -17,14 +17,14 @@ from google.appengine.ext import ndb
 from google.appengine.ext.ndb import tasklets
 import utils
 
-from config import config
+from config import config, on_local
 
 import reporting
 from reporting import prodeagle_counter
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
-debug_datastore = False
+debug_datastore = on_local() and False
 reminder_types = config['reminder_types']
 
 class Airport(ndb.Model):
@@ -127,10 +127,11 @@ class FlightAwareTrackedFlight(TrackedFlight):
     @ndb.tasklet
     def create_flight(cls, flight):
         assert isinstance(flight, Flight)
-        new_flight = yield cls(id=flight.flight_id,
+        new_flight = cls(id=flight.flight_id,
                                orig_departure_time=flight.scheduled_departure_time,
                                orig_flight_duration=flight.scheduled_flight_duration,
-                               last_flight_data=flight.to_dict()).put_async()
+                               last_flight_data=flight.to_dict())
+        yield new_flight.put_async()
         raise tasklets.Return(new_flight)
 
     @classmethod

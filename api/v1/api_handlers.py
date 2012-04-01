@@ -288,6 +288,7 @@ class TrackHandler(AuthenticatedAPIHandler):
             # Check again at leave soon minus 1 min
             second_check_time = utils.leave_soon_time(flight.estimated_arrival_time, driving_time + 60)
 
+            # TODO: Might no longer be necessary since process-alert will already pickup any changes
             if first_check_time > now:
                 delayed_task = taskqueue.Task(params={
                                                 'flight_id' : flight_id,
