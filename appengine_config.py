@@ -7,8 +7,12 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 import logging
+from config import on_production
 
 def webapp_add_wsgi_middleware(app):
+    if on_production(): # No appstats on production (too slow)
+        return app
+
     from google.appengine.ext.appstats import recording
     app = recording.appstats_wsgi_middleware(app)
     return app
