@@ -58,6 +58,7 @@ routes = [
     ]),
     Route('/', handler='web_handlers.StaticHandler'),
     Route('/iphonefaq', handler='web_handlers.iPhoneFAQHandler'),
+    Route('/mu-ddc4496d-5d1fac34-63470606-c5358264', handler='web_handlers.BlitzHandler'),
 ]
 
 # Instantiate the app.
