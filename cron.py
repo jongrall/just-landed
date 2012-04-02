@@ -40,40 +40,50 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
             flight = Flight.from_dict(f.last_flight_data)
 
-            if flight.has_landed or flight.is_old_flight: # Optimization prevents overzealous checking
-                # Make sure the flight is old
-                try:
-                    yield source.flight_info(flight_id=flight_id,
-                                             flight_number=flight_num)
-                except Exception as e:
-                    if isinstance(e, OldFlightException): # Only care about old flights
-                        # We should untrack this flight for each user who was tracking it
-                        user_keys_tracking = yield iOSUser.users_tracking_flight(flight_id)
+            try:
+                # Optimization prevents overzealous checking
+                if flight.has_landed and flight.is_old_flight:
+                    # We are certain it is old
+                    raise OldFlightException(flight_number=flight_num,
+                                             flight_id=flight_id)
+                elif flight.is_old_flight:
+                  # Probably old, just make sure (flight_info will yield OldFlightException)
+                  yield source.flight_info(flight_id=flight_id,
+                                           flight_number=flight_num)
 
-                        # Generate the URL and API signature
-                        url_scheme = (not on_local() and 'https') or 'http'
-                        to_sign = self.uri_for('untrack', flight_id=flight_id)
-                        sig = utils.api_query_signature(to_sign, client='Server')
-                        untrack_url = self.uri_for('untrack',
-                                                    flight_id=flight_id,
-                                                    _full=True,
-                                                    _scheme=url_scheme)
-                        requests =[]
-                        ctx = ndb.get_context()
-                        prodeagle_counter.incr(reporting.UNTRACKED_OLD_FLIGHT)
+                else:
+                    # Do nothing for flights that aren't old or landed
+                    continue
 
-                        while (yield user_keys_tracking.has_next_async()):
-                            u_key = user_keys_tracking.next()
-                            headers = {'X-Just-Landed-UUID' : u_key.string_id(),
-                                       'X-Just-Landed-Signature' : sig}
+            except Exception as e:
+                if isinstance(e, OldFlightException): # Only care about old flights
+                    # We should untrack this flight for each user who was tracking it
+                    user_keys_tracking = yield iOSUser.users_tracking_flight(flight_id)
 
-                            req_fut = ctx.urlfetch(untrack_url,
-                                                    headers=headers,
-                                                    deadline=120,
-                                                    validate_certificate=not on_local())
-                            requests.append(req_fut)
+                    # Generate the URL and API signature
+                    url_scheme = (not on_local() and 'https') or 'http'
+                    to_sign = self.uri_for('untrack', flight_id=flight_id)
+                    sig = utils.api_query_signature(to_sign, client='Server')
+                    untrack_url = self.uri_for('untrack',
+                                                flight_id=flight_id,
+                                                _full=True,
+                                                _scheme=url_scheme)
+                    requests =[]
+                    ctx = ndb.get_context()
+                    prodeagle_counter.incr(reporting.UNTRACKED_OLD_FLIGHT)
 
-                        yield requests # Parallel yield of all requests
+                    while (yield user_keys_tracking.has_next_async()):
+                        u_key = user_keys_tracking.next()
+                        headers = {'X-Just-Landed-UUID' : u_key.string_id(),
+                                   'X-Just-Landed-Signature' : sig}
+
+                        req_fut = ctx.urlfetch(untrack_url,
+                                                headers=headers,
+                                                deadline=120,
+                                                validate_certificate=not on_local())
+                        requests.append(req_fut)
+
+                    yield requests # Parallel yield of all requests
 
 
 class SendRemindersWorker(webapp.RequestHandler):

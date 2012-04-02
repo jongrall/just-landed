@@ -772,9 +772,11 @@ class FlightAwareSource (FlightDataSource):
             tracked_flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
             if not tracked_flight:
                 prodeagle_counter.incr(reporting.NEW_FLIGHT)
+
                 # Need to re-cache flight since lookup has 2-min timeout
                 flight_cache_key = FlightAwareSource.flight_info_cache_key(flight_id)
-                memcache.set(flight_cache_key, flight, config['flightaware']['flight_lookup_cache_time'])
+                memcache.set(flight_cache_key, flight, config['flightaware']['flight_cache_time'])
+
                 tracked_flight = yield FlightAwareTrackedFlight.create_flight(flight)
             else:
                 flight_data = flight.to_dict()
@@ -824,8 +826,9 @@ class FlightAwareSource (FlightDataSource):
         assert isinstance(uuid, basestring) and len(uuid)
         user = yield iOSUser.get_by_uuid(uuid)
 
+        # NOT NECESSARY - DATA WILL BE FRESH THANKS TO FLIGHT ALERTS
         # Clear the cache (we want fresh data)
-        FlightAwareSource.clear_flight_info_cache(flight_id)
+        # FlightAwareSource.clear_flight_info_cache(flight_id)
 
         if user.is_tracking_flight(flight_id) and user.push_enabled and user.has_unsent_reminders:
             yield self.do_track(request, user, flight_id, delayed=True)

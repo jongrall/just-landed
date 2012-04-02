@@ -314,6 +314,7 @@ class iOSUser(_User):
     - `push_token` : The push token associated with this user.
     - `push_settings` : The push notification settings for this user.
     - `push_enabled` : Whether this user accepts push notifications.
+    - `lifetime_flights_tracked` : The number of flights this user has ever tracked.
 
     """
     last_known_location = ndb.GeoPtProperty('last_loc')
@@ -328,6 +329,7 @@ class iOSUser(_User):
     push_token = ndb.TextProperty()
     push_settings = ndb.StructuredProperty(PushNotificationSetting, repeated=True)
     push_enabled = ndb.ComputedProperty(lambda u: bool(len(u.push_token)))
+    lifetime_flights_tracked = ndb.IntegerProperty('lifetime_tracks', default=0)
 
     @classmethod
     @ndb.tasklet
@@ -359,61 +361,54 @@ class iOSUser(_User):
             assert isinstance(tracked_flight, FlightAwareTrackedFlight)
 
         flight_id = tracked_flight.key.string_id()
+        to_put = []
 
-        # See if the user exists
-        existing_user = yield cls.get_by_uuid(uuid)
-
-        # Return the user key if it's already up-to-date
-        if (existing_user and existing_user.is_tracking_flight(flight_id) and
-            existing_user.location_is_current(user_latitude, user_longitude) and
-            existing_user.push_token == push_token and
-            (alert is None or alert.key in existing_user.alerts)):
+        # See if the user exists, create if necessary
+        user = yield cls.get_by_uuid(uuid)
+        if not user:
+            user = cls(id=uuid,
+                       push_settings=cls.default_settings())
+            prodeagle_counter.incr(reporting.NEW_USER)
             if debug_datastore:
-                logging.info('USER ALREADY TRACKING %s' % existing_user)
-            raise tasklets.Return(existing_user)
-        else:
-            to_put = []
-            user = existing_user
-            if not user:
-                user = cls(id=uuid,
-                           push_settings=cls.default_settings())
-                prodeagle_counter.incr(reporting.NEW_USER)
-                if debug_datastore:
-                    logging.info('CREATED NEW USER %s' % uuid)
-            elif debug_datastore:
-                logging.info('UPDATING EXISTING USER %s' % uuid)
+                logging.info('CREATED NEW USER %s' % uuid)
+        elif debug_datastore:
+            logging.info('UPDATING EXISTING USER %s' % uuid)
 
-            # Update the user's location
-            if user_latitude and user_longitude:
-                user.last_known_location = ndb.GeoPt(user_latitude, lon=user_longitude)
+        # Update the user's location (if needed)
+        if user_latitude and user_longitude and not user.location_is_current(user_latitude, user_longitude):
+            user.last_known_location = ndb.GeoPt(user_latitude, lon=user_longitude)
 
-            if not user.is_tracking_flight(flight_id):
-                user.add_tracked_flight(flight_id, user_flight_num, source=source)
-                tracked_flight.num_users_tracking += 1
-                to_put.append(tracked_flight.put_async())
+        # Track the flight if they weren't tracking it yet
+        if not user.is_tracking_flight(flight_id):
+            user.add_tracked_flight(flight_id, user_flight_num, source=source)
+            tracked_flight.num_users_tracking += 1
+            to_put.append(tracked_flight.put_async())
 
-                if debug_datastore:
-                    logging.info('USER STARTED TRACKING FLIGHT %s' % flight_id)
+            if debug_datastore:
+                logging.info('USER STARTED TRACKING FLIGHT %s' % flight_id)
 
-            if alert and alert.key not in user.alerts:
-                user.alerts.append(alert.key)
-                alert.num_users_with_alert += 1
-                to_put.append(alert.put_async())
-                if debug_datastore:
-                    logging.info('USER SUBSCRIBED TO ALERT %s' % alert.alert_id)
+        # Add the alert if they didn't have it yet
+        if alert and alert.key not in user.alerts:
+            user.alerts.append(alert.key)
+            alert.num_users_with_alert += 1
+            to_put.append(alert.put_async())
+            if debug_datastore:
+                logging.info('USER SUBSCRIBED TO ALERT %s' % alert.alert_id)
 
-            if debug_datastore and push_token != user.push_token:
-                logging.info('USER PUSH TOKEN UPDATED')
+        if debug_datastore and push_token != user.push_token:
+            logging.info('USER PUSH TOKEN UPDATED')
 
-            # Only update the push token if we have a new one
-            user.push_token = push_token or user.push_token
+        # Only update the push token if we have a new one
+        user.push_token = push_token or user.push_token
 
-            if driving_time is not None:
-                user.set_or_update_flight_reminders(flight, driving_time, source=source)
+        # If we have driving time, update their reminders
+        if driving_time is not None:
+            user.set_or_update_flight_reminders(flight, driving_time, source=source)
 
-            to_put.append(user.put_async())
-            yield to_put # Parallel yield
-            raise tasklets.Return(user)
+        # Currently writes user every time, could optimize later
+        to_put.append(user.put_async())
+        yield to_put
+        raise tasklets.Return(user)
 
     @classmethod
     @ndb.tasklet
@@ -441,9 +436,9 @@ class iOSUser(_User):
         if source == DATA_SOURCES.FlightAware:
             flight_fut = FlightAwareTrackedFlight.get_flight_by_id(flight_id)
 
-        # Parallel yield
         user, flight = yield cls.get_by_uuid(uuid), flight_fut
 
+        # We need a matching user & flight
         if user and flight:
             to_put = []
 
@@ -454,6 +449,7 @@ class iOSUser(_User):
                     flight.num_users_tracking -= 1
                     to_put.append(flight.put_async())
 
+            # Remove the alert (if appropriate)
             if alert and alert.key in user.alerts:
                 # EDGE CASE: User could be tracking several different flights with same ident
                 # => Remove alert from the user only if no other flight they are tracking needs it
@@ -476,8 +472,10 @@ class iOSUser(_User):
 
             # Remove reminders
             user.remove_flight_reminders(flight_id, source=source)
+
+            # Write the result
             to_put.append(user.put_async())
-            yield to_put # Parallel yield
+            yield to_put
 
         raise tasklets.Return((flight, alert))
 
@@ -553,6 +551,7 @@ class iOSUser(_User):
                                        flight_id=flight_id,
                                        user_flight_num=flight_num)
         self.tracked_flights.append(new_flight)
+        self.lifetime_flights_tracked += 1 # Count towards lifetime tracks
 
     def remove_tracked_flight(self, flight_id):
         to_remove = []
@@ -578,7 +577,7 @@ class iOSUser(_User):
         loc = self.last_known_location
         if loc is None and latitude is None and longitude is None:
             return True
-        elif loc is None and latitude is not None:
+        elif loc is None and latitude is not None and longitude is not None:
             return False
         else:
             return loc.lat == latitude and loc.lon == longitude
