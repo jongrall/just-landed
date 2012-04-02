@@ -21,7 +21,7 @@ from google.appengine.ext import ndb
 from data_sources import FlightAwareSource, GoogleDistanceSource, BingMapsDistanceSource
 
 from datasource_exceptions import *
-from config import on_local, config
+from config import on_local, on_staging, config
 import utils
 
 import reporting
@@ -65,8 +65,8 @@ class BaseAPIHandler(webapp.RequestHandler):
                 utils.report_exception(exception, traceback_as_string)
                 prodeagle_counter.incr(reporting.ERROR_500)
             else:
-                # Log others as errors
-                logging.error(exception.message)
+                # Log others as warnings
+                logging.warning(exception.message)
 
                 # Report certain errors to admin
                 if isinstance(exception, (TerminalsUnknownException,
@@ -110,7 +110,7 @@ class AuthenticatedAPIHandler(BaseAPIHandler):
     def dispatch(self):
         is_server = self.request.headers.get('User-Agent').startswith('AppEngine')
         self.client = (is_server and 'Server') or 'iOS'
-        if on_local() or utils.authenticate_api_request(self.request, client=self.client):
+        if on_local() or on_staging() or utils.authenticate_api_request(self.request, client=self.client):
             # Parent class will call the method to be dispatched
             # -- get() or post() or etc.
             super(AuthenticatedAPIHandler, self).dispatch()

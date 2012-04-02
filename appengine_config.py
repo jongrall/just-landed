@@ -7,8 +7,12 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 import logging
+from config import on_local
 
 def webapp_add_wsgi_middleware(app):
+    if not on_local(): # Appstats on local only
+        return app
+
     from google.appengine.ext.appstats import recording
     app = recording.appstats_wsgi_middleware(app)
     return app
@@ -17,5 +21,3 @@ def appstats_should_record(env):
     if env.get('PATH_INFO').startswith('/_ah/admin'):
         return False
     return True
-
-appstats_MAX_STACK = 10

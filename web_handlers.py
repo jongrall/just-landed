@@ -75,3 +75,8 @@ class iPhoneFAQHandler(StaticHandler):
     """Generic handler for static pages on the website."""
     def get(self):
         super(iPhoneFAQHandler, self).get(page_name='iphonefaq.html')
+
+class BlitzHandler(StaticHandler):
+    """Verification handler to enable Blitz.io performance testing."""
+    def get(self):
+        self.response.write('42')

@@ -16,7 +16,7 @@ from api.v1.api_handlers import BaseAPIHandler
 from api.v1.data_sources import FlightAwareSource
 
 from models import FlightAwareTrackedFlight, iOSUser
-from config import config, on_local
+from config import config, on_local, on_staging
 
 source = FlightAwareSource()
 
@@ -29,9 +29,16 @@ class FlightAwareAdminHandler(StaticHandler):
         tracking_count = yield FlightAwareTrackedFlight.count_tracked_flights()
         users_tracking_count = yield iOSUser.count_users_tracking()
 
+        # Database invariant under one flight per user
+        consistent = alert_count <= tracking_count <= users_tracking_count
+
+        version_name = (on_local() and 'Development') or (on_staging() and 'Staging') or 'Production'
+
         context = dict(alert_count=alert_count,
+                       version_name=version_name,
                        flights_tracking_count=tracking_count,
-                       users_tracking_count=users_tracking_count)
+                       users_tracking_count=users_tracking_count,
+                       db_consistent=consistent)
         super(FlightAwareAdminHandler, self).get(page_name="fa_admin.html",
                                                  context=context)
 

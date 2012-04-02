@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block page_content %}
-<h1>Just Landed - Flight Aware Admin</h1>
+<h1>Just Landed {{ version_name }} - Flight Aware Admin</h1>
 
 <h3>Alert Endpoint</h3>
   <button id="set-endpoint">Set Endpoint</button>
@@ -36,6 +36,13 @@
     <td>flights being tracked</td>
   </tr>
 </table>
+<br />
+{% if db_consistent %}
+The database is <span style="color:green">CONSISTENT</span> assuming 1 flight tracked per iOS user at a time.
+{% else %}
+The database is <span style="color:red">INCONSISTENT</span> assuming 1 flight tracked per iOS user at a time.<br />
+NOTE: users could be tracking flights that will later be garbage collected if /untrack wasn't called by their device (due to no reception) before /track was called for a different flight. Check back later to see if consistency is restored.
+{% endif %}
 
 {% endblock %}
 {% block extra_js %}

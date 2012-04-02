@@ -1,12 +1,6 @@
 # airport_loader.yaml defines a data transformation operation when uploading
 # static airport data (locations, airport codes etc.) to the GAE datastore.
 # This should only be needed once or when migrating to a new application.
-#
-# Run the bulk upload to production with:
-#
-# appcfg.py upload_data --config_file=airport_loader.yaml
-# --filename=airports.csv --kind=Airport --application=s~just-landed
-# --url=https://just-landed.appspot.com/_ah/remote_api
 
 python_preamble:
 - import: base64

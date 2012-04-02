@@ -20,6 +20,8 @@ standardized in config.py so that switching to new data sources in the future
 will not break clients that are expecting a specific API from the JustLanded
 server.
 
+TODO: Document request & response formats.
+
 """
 
 __author__ = "Jon Grall"
@@ -35,7 +37,7 @@ from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 from google.appengine.ext.ndb import tasklets
 
-from config import config, on_local
+from config import config, on_local, on_staging
 from models import (Airport, FlightAwareTrackedFlight, FlightAwareAlert, iOSUser,
     Origin, Destination, Flight)
 from datasource_exceptions import *
@@ -49,8 +51,8 @@ from reporting import prodeagle_counter
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
-debug_cache = False
-debug_alerts = False
+debug_cache = on_local() and False
+debug_alerts = on_local() and False
 
 ###############################################################################
 """Flight Data Sources"""
@@ -216,6 +218,12 @@ class FlightAwareSource (FlightDataSource):
             self.conn = Connection(self.base_url,
                 username=config['flightaware']['development']['username'],
                 password=config['flightaware']['development']['key'])
+
+        elif on_staging():
+            self.conn = Connection(self.base_url,
+                username=config['flightaware']['staging']['username'],
+                password=config['flightaware']['staging']['key'])
+
         else:
             self.conn = Connection(self.base_url,
                 username=config['flightaware']['production']['username'],
@@ -424,6 +432,7 @@ class FlightAwareSource (FlightDataSource):
                 raise FlightNotFoundException(sanitized_f_num)
             flight_data = flight_data['FlightInfoExResult']['flights']
             for data in flight_data:
+                # Find the matching flight
                 if data['faFlightID'] == flight_id:
                     flight = yield self.raw_flight_data_to_flight(data, sanitized_f_num)
                     cache_to_set[flight_cache_key] = flight
@@ -461,7 +470,7 @@ class FlightAwareSource (FlightDataSource):
                                      flight_id=flight_id)
 
         # Add in the airline info and user-entered flight number
-        flight.flight_number = utils.sanitize_flight_number(flight_number)
+        flight.flight_number = sanitized_f_num
         flight.origin.terminal = airline_info['originTerminal']
         flight.destination.terminal = airline_info['destinationTerminal']
         flight.destination.bag_claim = airline_info['bagClaim']
@@ -495,26 +504,37 @@ class FlightAwareSource (FlightDataSource):
 
             if flight_data.get('error'):
                 raise FlightNotFoundException(sanitized_f_num)
-            else:
-                flight_data = flight_data['FlightInfoExResult']['flights']
 
-                # Convert raw flight data to instances of Flight
-                yield_flights = []
+            flight_data = flight_data['FlightInfoExResult']['flights']
 
-                for data in flight_data:
-                    flight_fut = self.raw_flight_data_to_flight(data, sanitized_f_num)
-                    yield_flights.append(flight_fut)
+            # Convert raw flight data to instances of Flight
+            yield_flights = []
 
-                flights_tup = yield yield_flights
-                flights = list(flights_tup)
+            for data in flight_data:
+                flight_fut = self.raw_flight_data_to_flight(data, sanitized_f_num)
+                yield_flights.append(flight_fut)
 
-                # Filter out old flights & sort by departure date (earliest first)
-                flights = [f for f in flights if not f.is_old_flight]
-                flights.sort(key=lambda f: f.scheduled_departure_time)
+            flights = yield yield_flights
+
+            # Optimization: cache flight info so /track doesn't have cache miss on selecting a flight
+            flights_to_cache = {}
+            for f in flights:
+                cache_key = FlightAwareSource.flight_info_cache_key(f.flight_id)
+                flights_to_cache[cache_key] = f
+
+            if memcache.add_multi(flights_to_cache, # Using add so we don't squash keys for flights being tracked
+                                  time=config['flightaware']['flight_from_lookup_cache_time']):
+                logging.error('Unable to cache some flight info on lookup.')
+            elif debug_cache:
+                logging.info('CACHED FLIGHTS FROM LOOKUP')
+
+            # Filter out old flights & sort by departure date (earliest first)
+            flights = [f for f in flights if not f.is_old_flight]
+            flights.sort(key=lambda f: f.scheduled_departure_time)
 
             if not memcache.set(lookup_cache_key, flights,
                                 config['flightaware']['flight_lookup_cache_time']):
-                logging.error("Unable to cache lookup response!")
+                logging.error('Unable to cache lookup response!')
             elif debug_cache:
                 logging.info('LOOKUP CACHE SET')
 
@@ -530,9 +550,19 @@ class FlightAwareSource (FlightDataSource):
         origin = flight_data.get('origin')
         destination = flight_data.get('destination')
 
-        if alert_id and event_code and flight_id and origin and destination:
-            # Clear memcache keys for flight & airline info
-            FlightAwareSource.clear_flight_info_cache(flight_id)
+        assert isinstance(flight_id, basestring) and len(flight_id)
+        assert isinstance(event_code, basestring) and len(event_code)
+        assert origin
+        assert destination
+
+        # Cache freshness: clear memcache keys for flight & airline info
+        FlightAwareSource.clear_flight_info_cache(flight_id)
+
+        # Lookup the alert
+        alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
+
+        # Only process the alert if we still care about it and we have the necessary data
+        if alert and alert.is_enabled:
 
             # Get current flight information for the flight mentioned by the alert
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
@@ -540,7 +570,7 @@ class FlightAwareSource (FlightDataSource):
                                                     FlightAwareTrackedFlight.get_flight_by_id(flight_id))
 
             if alerted_flight and stored_flight:
-                # Reconstruct the flight from the datastore
+                # Reconstruct the flight from the datastore so we can compare before/after alert
                 orig_flight = Flight.from_dict(stored_flight.last_flight_data)
                 orig_flight.scheduled_flight_duration = stored_flight.orig_flight_duration
                 orig_flight.scheduled_departure_time = stored_flight.orig_departure_time
@@ -557,7 +587,7 @@ class FlightAwareSource (FlightDataSource):
                 track_requests = []
 
                 # Reporting
-                if event_code == 'change':
+                if event_code == 'change' or event_code == 'minutes_out':
                     prodeagle_counter.incr(reporting.FLIGHT_CHANGE)
                 elif event_code == 'departure':
                     prodeagle_counter.incr(reporting.FLIGHT_TAKEOFF)
@@ -569,7 +599,7 @@ class FlightAwareSource (FlightDataSource):
                     prodeagle_counter.incr(reporting.FLIGHT_CANCELED)
 
                 # FIXME: Assume iOS user
-                users_to_notify = yield iOSUser.users_to_notify(alert_id, flight_id, source=DATA_SOURCES.FlightAware)
+                users_to_notify = yield iOSUser.users_to_notify(alert, flight_id, source=DATA_SOURCES.FlightAware)
                 while (yield users_to_notify.has_next_async()):
                     u = users_to_notify.next()
                     user_flight_num = u.flight_num_for_flight_id(flight_id) or flight_num
@@ -578,7 +608,8 @@ class FlightAwareSource (FlightDataSource):
 
                     # Send notifications to each user, only if they want that notification type
                     # Early / delayed / on time
-                    if event_code == 'change' and u.wants_notification_type(push_types.CHANGED):
+                    if ((event_code == 'change' or event_code == 'minutes_out') and
+                        u.wants_notification_type(push_types.CHANGED)):
                         if terminal_changed:
                             TerminalChangeAlert(device_token, alerted_flight, user_flight_num).push()
                             prodeagle_counter.incr(reporting.SENT_CHANGE_NOTIFICATION)
@@ -612,7 +643,7 @@ class FlightAwareSource (FlightDataSource):
                     # Fire off a /track for the user, which will update their reminders
                     track_requests.append(self.do_track(request, u, flight_id))
 
-                # Clear memcache keys for lookup
+                # Cache freshness: clear memcache keys for lookup
                 FlightAwareSource.clear_flight_lookup_cache(flight_numbers)
 
                 # Parallel yield track requests
@@ -622,13 +653,13 @@ class FlightAwareSource (FlightDataSource):
     def set_alert(self, **kwargs):
         flight_id = kwargs.get('flight_id')
         assert isinstance(flight_id, basestring) and len(flight_id)
-        # Derive flight num from flight_id so we can use common flight_num for alerts
-        flight_num = utils.sanitize_flight_number(
-                        utils.flight_num_from_fa_flight_id(flight_id))
+        flight_num = utils.flight_num_from_fa_flight_id(flight_id)
+        assert utils.valid_flight_number(flight_num)
 
         # Set the alert with FlightAware and keep a record of it in our system
-        # Only set if the alert wasn't already there
-        alert_id = yield self.alert_already_set(flight_num) # Checks FA, not DB
+        # Check FA to make sure this isn't already set
+        alert_id = yield self.alert_already_set(flight_num)
+
         if not alert_id:
             channels = "{16 e_filed e_departure e_arrival e_diverted e_cancelled}"
             result = yield self.conn.get_json('/SetAlert',
@@ -645,10 +676,11 @@ class FlightAwareSource (FlightDataSource):
 
         if debug_alerts:
             logging.info('REGISTERED NEW ALERT')
+
         # Store the alert so we don't recreate it
-        created = yield FlightAwareAlert.create_or_reuse_alert(alert_id, flight_num)
-        if created:
-            raise tasklets.Return(alert_id)
+        alert = yield FlightAwareAlert.create_or_reuse_alert(flight_id, alert_id)
+        if alert:
+            raise tasklets.Return(alert)
         else:
             raise UnableToSetAlertException(reason='Bad Alert Id')
 
@@ -686,21 +718,20 @@ class FlightAwareSource (FlightDataSource):
         if not error and success == 1:
             if debug_alerts:
                 logging.info('DELETED ALERT %d' % alert_id)
-
-            # Disable the alert in the datastore
-            yield FlightAwareAlert.disable_alert(alert_id)
             raise tasklets.Return(True)
         raise UnableToDeleteAlertException(alert_id)
 
     @ndb.tasklet
     def delete_alerts(self, alert_ids):
-        # Can't be run in a transaction - there could easily be too many alerts & users
-        # Delete the alerts from FlightAware & users
+        # Note: can't be run in a transaction - there could easily be too many alerts & users per alert
         for alert_id in alert_ids:
-            del_fut = self.delete_alert(alert_id)
-            clear_fut = iOSUser.clear_alert_from_users(alert_id,
-                                                source=DATA_SOURCES.FlightAware)
-            yield del_fut, clear_fut
+            # See if the alert exists
+            alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
+            if alert:
+                disable_fut = alert.disable()
+                clear_fut = iOSUser.clear_alert_from_users(alert) # This is transactional per user
+                yield disable_fut, clear_fut
+            yield self.delete_alert(alert_id)
 
     @ndb.tasklet
     def clear_all_alerts(self):
@@ -720,48 +751,37 @@ class FlightAwareSource (FlightDataSource):
     @ndb.tasklet
     def track_flight(self, flight_data, **kwargs):
         flight = Flight.from_dict(flight_data)
-        flight_id = flight.flight_id
-        flight_num = flight.flight_number
-        assert isinstance(flight_id, basestring) and len(flight_id)
-        assert utils.valid_flight_number(flight_num)
-
         uuid = kwargs.get('uuid')
         push_token = kwargs.get('push_token')
         user_latitude = kwargs.get('user_latitude')
         user_longitude = kwargs.get('user_longitude')
         driving_time = kwargs.get('driving_time')
 
-        # Derive flight num from flight_id so we can use common flight_num for alerts
-        der_flight_num = utils.sanitize_flight_number(
-                            utils.flight_num_from_fa_flight_id(flight_id))
-
-        # See if the alert exists (according to our datastore) and is enabled
-        alert_id = yield FlightAwareAlert.existing_enabled_alert(der_flight_num)
-        if debug_alerts and isinstance(alert_id, (int, long)) and alert_id > 0 :
-            logging.info('EXISTING ALERT FOR %s' % der_flight_num)
-
         @ndb.tasklet
-        def track_txn(flight_id, flight_num, uuid, push_token, alert_id):
-            valid_alert_id = isinstance(alert_id, (int, long)) and alert_id > 0
+        def track_txn(flight, uuid, push_token, user_latitude, user_longitude, driving_time):
+            flight_id = flight.flight_id
 
-            # Check the alert is still good and enabled
-            if valid_alert_id:
-                alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
-                if not alert or not alert.is_enabled:
-                    valid_alert_id = False # Trigger new alert creation
+            # See if an alert is already set for this flight
+            alert = yield FlightAwareAlert.get_by_flight_id(flight_id)
 
-            if not valid_alert_id:
-                # Only set an alert_id if we don't have one or it isn't enabled
-                alert_id = yield self.set_alert(flight_id=flight_id)
+            # Only set an alert_id if we don't have one or it isn't enabled
+            if not alert or not alert.is_enabled:
+                alert = yield self.set_alert(flight_id=flight_id)
 
             # Mark the flight as being tracked
-            existing_flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
-            if not existing_flight:
+            tracked_flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
+            if not tracked_flight:
                 prodeagle_counter.incr(reporting.NEW_FLIGHT)
-                yield FlightAwareTrackedFlight.create_flight(flight)
+
+                # Need to re-cache flight since lookup has 2-min timeout
+                flight_cache_key = FlightAwareSource.flight_info_cache_key(flight_id)
+                memcache.set(flight_cache_key, flight, config['flightaware']['flight_cache_time'])
+
+                tracked_flight = yield FlightAwareTrackedFlight.create_flight(flight)
             else:
-                existing_flight.last_flight_data = flight.to_dict()
-                yield existing_flight.put_async()
+                flight_data = flight.to_dict()
+                if flight_data != tracked_flight.last_flight_data: # Optimization
+                    tracked_flight = yield tracked_flight.update_last_flight_data(flight_data)
 
             # Save the user's tracking activity if we have a uuid
             if uuid:
@@ -771,28 +791,32 @@ class FlightAwareSource (FlightDataSource):
                     existing_user = yield iOSUser.get_by_uuid(uuid)
                     old_push_token = existing_user and existing_user.push_token
 
-                user = yield iOSUser.track_flight(uuid=uuid,
-                                                  flight_id=flight_id,
-                                                  flight_num=flight_num,
-                                                  user_latitude=user_latitude,
-                                                  user_longitude=user_longitude,
-                                                  push_token=push_token,
-                                                  alert_id=alert_id,
-                                                  source=DATA_SOURCES.FlightAware)
+                yield iOSUser.track_flight(uuid,
+                                           flight,
+                                           tracked_flight,
+                                           flight.flight_number,
+                                           user_latitude=user_latitude,
+                                           user_longitude=user_longitude,
+                                           driving_time=driving_time,
+                                           push_token=push_token,
+                                           alert=alert,
+                                           source=DATA_SOURCES.FlightAware)
 
-                if driving_time is not None:
-                    user.set_or_update_flight_reminders(flight, driving_time, source=DATA_SOURCES.FlightAware)
-                    yield user.put_async()
-
-                # Tell UrbanAirship about push tokens
+                # Tell UrbanAirship about push tokens if needed
                 if old_push_token and push_token != old_push_token:
                     deregister_token(old_push_token)
-                if push_token:
-                    logging.info(push_token)
-                    register_token(push_token) # Need to tell UA that token is still active
+
+                # If the token isn't in the cache, we haven't seen it in a while
+                # (or ever) and should tell UA about it
+                if not memcache.get(push_token):
+                    register_token(push_token)
+                    if not memcache.set(push_token, True, config['max_push_token_age']):
+                        logging.info('Unable to cache push token: %s' % push_token)
 
         # TRANSACTIONAL TRACKING!
-        yield ndb.transaction_async(lambda: track_txn(flight_id, flight_num, uuid, push_token, alert_id), xg=True)
+        yield ndb.transaction_async(lambda: track_txn(flight, uuid, push_token,
+                                                      user_latitude, user_longitude,
+                                                      driving_time), xg=True)
 
     @ndb.tasklet
     def delayed_track(self, request, flight_id, uuid):
@@ -801,41 +825,44 @@ class FlightAwareSource (FlightDataSource):
         assert isinstance(flight_id, basestring) and len(flight_id)
         assert isinstance(uuid, basestring) and len(uuid)
         user = yield iOSUser.get_by_uuid(uuid)
+
+        # NOT NECESSARY - DATA WILL BE FRESH THANKS TO FLIGHT ALERTS
+        # Clear the cache (we want fresh data)
+        # FlightAwareSource.clear_flight_info_cache(flight_id)
+
         if user.is_tracking_flight(flight_id) and user.push_enabled and user.has_unsent_reminders:
-            # Clear the cache (we want fresh data)
-            FlightAwareSource.clear_flight_info_cache(flight_id)
             yield self.do_track(request, user, flight_id, delayed=True)
 
     @ndb.tasklet
     def stop_tracking_flight(self, flight_id, **kwargs):
         uuid = kwargs.get('uuid')
-        flight_num = utils.flight_num_from_fa_flight_id(flight_id)
-
-        # Lookup any existing alert by flight number
-        alert_id = yield FlightAwareAlert.existing_enabled_alert(flight_num)
 
         @ndb.tasklet
-        def untrack_txn(flight_id, flight_num, uuid, alert_id):
+        def untrack_txn(flight_id, uuid):
+            # Lookup any existing alert by flight number
+            alert = yield FlightAwareAlert.get_by_flight_id(flight_id)
+            flight = None
+
             # Mark the user as no longer tracking the flight or the alert
             if uuid:
-                yield iOSUser.untrack_flight(uuid,
-                                            flight_id,
-                                            alert_id=alert_id,
-                                            source=DATA_SOURCES.FlightAware)
+                flight, alert = yield iOSUser.untrack_flight(uuid,
+                                                            flight_id,
+                                                            alert=alert,
+                                                            source=DATA_SOURCES.FlightAware)
 
             # If there are no more users tracking the alert, delete it
-            if alert_id:
-                alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
-                if alert.num_users_with_alert == 0:
-                    yield self.delete_alert(alert_id)
+            if alert and alert.num_users_with_alert == 0:
+                yield self.delete_alert(alert.alert_id)
 
-            # If there are no more users tracking the flight, clear the cache
+            # Cache freshness: If there are no more users tracking the flight, clear the cache
             # since we won't get any alerts in the meantime that would invalidate the cache
-            flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
             if not flight or not flight.is_tracking:
                 FlightAwareSource.clear_flight_info_cache(flight_id)
 
-        yield ndb.transaction_async(lambda: untrack_txn(flight_id, flight_num, uuid, alert_id), xg=True)
+        # TRANSACTIONAL UNTRACKING!
+        yield ndb.transaction_async(lambda: untrack_txn(flight_id, uuid), xg=True)
+
+        # FIXME: Maybe clear_lookup_cache here in the future if nobody is tracking flight ident anymore
 
     def authenticate_remote_request(self, request):
         """Returns True if the incoming request is in fact from the trusted
