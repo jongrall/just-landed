@@ -1,5 +1,20 @@
 {% extends "base.html" %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="/static/css/landing.css?v={{ version }}" />
+{% endblock %}
+
 {% block page_content %}
-    <p>Awesome flight tracking coming soon!</p>
+    <h1 id="logo">Just Landed</h1>
+    
+    <form id="email-signup">
+        <div class="position-relative">
+            <!-- <label for="email" class="infield">Your email</label> -->
+            <input id="email" type="text" value="partlysean@gmail.com" />
+            <input type="submit" value="Let Me Know!" />
+        </div>
+    </form>
+{% endblock %}
+
+{% block extra_js %}
 {% endblock %}
