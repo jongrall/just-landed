@@ -19,6 +19,7 @@ from api.v1.data_sources import FlightAwareSource
 from api.v1.datasource_exceptions import *
 
 import utils
+import reporting
 from reporting import report_event, report_event_transactionally
 from notifications import LeaveSoonAlert, LeaveNowAlert
 

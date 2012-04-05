@@ -81,17 +81,18 @@ class MixpanelService(ReportingService):
         self._report_url = 'https://api.mixpanel.com/track/?data='
 
         if on_local():
-            self._token = config['mixpanel']['development']
+            self._token = config['mixpanel']['development']['token']
         elif on_staging():
-            self._token = config['mixpanel']['staging']
+            self._token = config['mixpanel']['staging']['token']
         else:
-            self._token = config['mixpanel']['production']
+            self._token = config['mixpanel']['production']['token']
 
     def report(self, event_name, **properties):
         assert isinstance(event_name, basestring) and len(event_name)
 
         # Add in the token
         properties['token'] = self._token
+        properties['distinct_id'] = 'GAE Server'
 
         params = {
             'event' : event_name,
@@ -103,8 +104,9 @@ class MixpanelService(ReportingService):
         result = urlfetch.fetch(url=url, validate_certificate=True)
 
         if result.status_code != 200:
-            raise TrackEventFailedException(status_code=result.status_code,
-                                            event_name=event_name)
+            # TODO: Catch exception
+            raise ReportEventFailedException(status_code=result.status_code,
+                                             event_name=event_name)
 
 ###############################################################################
 """Report Helper Methods"""
@@ -115,7 +117,7 @@ def _defer_report(event_name, transactional, **properties):
     properties['event_name'] = event_name
     report_task = taskqueue.Task(params=properties,
                                  retry_options=retry_options)
-    taskqueue.Queue('report-event').add(delayed_task, transactional=transactional)
+    taskqueue.Queue('report-event').add(report_task, transactional=transactional)
 
 
 def report_event(event_name, **properties):
@@ -138,6 +140,9 @@ class ReportWorker(webapp.RequestHandler):
         event_name = params.get('event_name')
 
         assert isinstance(event_name, basestring) and len(event_name)
-        del(params['event_name'])
+        properties = {}
+        for k in params.keys():
+            if k != 'event_name':
+                properties[k] = params[k]
 
-        service.report(event_name, **params)
+        service.report(event_name, **properties)

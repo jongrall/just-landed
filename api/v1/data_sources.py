@@ -46,6 +46,7 @@ from connections import Connection, build_url
 import utils
 import aircraft_types
 
+import reporting
 from reporting import report_event, report_event_transactionally
 
 FLIGHT_STATES = config['flight_states']
