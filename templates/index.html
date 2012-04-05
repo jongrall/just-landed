@@ -1,6 +1,83 @@
 {% extends "base.html" %}
-{% block page_title %}home{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="/static/css/landing.css?v={{ version }}" />
+{% endblock %}
 
 {% block page_content %}
-<p>Awesome flight tracking coming soon!</p>
+    <h1 id="logo">Just Landed</h1>
+    
+    <form id="email-signup">
+        <div class="position-relative">
+            <label for="email" class="infield">Enter your email to get notified</label>
+            <input id="email" type="text" />
+            <input type="submit" value="Let Me Know!" disabled="disabled" class="disabled" />
+        </div>
+    </form>
+{% endblock %}
+
+{% block extra_js %}
+<script type="text/javascript">
+    /***********************************************************************************
+    Email signup form submission
+    ***********************************************************************************/
+
+    // Check if submission is valid
+    function checkEmailSignupValid(event) {
+        var emailField = $(event.data.emailField);
+        var submitButton = $(event.data.submitButton);
+
+        var emailAddress = emailField.val();
+    
+        if (emailAddress && emailAddress.length > 0 && emailRegExp.test(emailAddress)) {
+            // Enable the submit button
+            if (submitButton) {
+                submitButton.removeAttr('disabled').removeClass('disabled');
+            }
+
+            return true;
+        }
+        else {            
+            // Disable submit button
+            if (submitButton) {
+                submitButton.attr('disabled', 'disabled').addClass('disabled');
+            }
+
+            return false;
+        }
+    }
+
+    // Send send request
+    function submitEmailSignup(event) {
+        // Prevent default form submission
+        event.preventDefault();
+
+        var emailField = $(event.data.emailField);
+        var successHandler = event.data.successHandler;
+
+        if (!successHandler) {
+            successHandler = null;
+        }
+
+        if (checkEmailSignupValid(event)) {
+            // Get value of input field
+            var emailAddress = emailField.val();
+
+            // Send request
+            var request = { email: emailAddress }
+            callRemoteMethodWithCallbacks('/rpc/earlyservice', 'get_early_access', request, null, successHandler, null);
+        }
+    }
+    
+    // Email form events
+    $('form#email-signup input[type="text"]').keyup({
+        emailField : $('form#email-signup input[type="text"]'),
+        submitButton : $('form#email-signup input[type="submit"]'),
+    }, checkEmailSignupValid);
+
+    $('form#email-signup').submit({
+        emailField : $('form#email-signup input[type="text"]'),
+        submitButton : $('form#email-signup input[type="submit"]')
+    }, submitEmailSignup);
+</script>
 {% endblock %}
