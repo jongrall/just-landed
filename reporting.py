@@ -1,27 +1,35 @@
-from lib.prodeagle import counter
+#!/usr/bin/python
 
-prodeagle_counter = counter
+"""reporting.py: This module defines functions for doing deferred server-side
+event tracking and reporting to any 3rd party HTTP/REST based reporting service.
+Currently it supports reporting events to Mixpanel. Supports basic counters as well
+as arbitrary keywords / params supported by the third party.
 
-###############################################################################
-"""User Counters"""
-###############################################################################
+Event reporting work is deferred to a reporting taskqueue so the impact to the running
+app is minimal. A future version could perhaps use memcache to store events and then
+harvest them on a cron periodically to batch events to the 3rd party. This isn't
+necessary at small scale however.
 
-NEW_USER = 'User.Created'
-LOOKUP_FLIGHT = 'User.LookupFlight'
-TRACK_FLIGHT = 'User.TrackFlight'
-UNTRACK_FLIGHT = 'User.UntrackFlight'
+"""
+
+__author__ = "Jon Grall"
+__copyright__ = "Copyright 2012, Just Landed"
+__email__ = "grall@alum.mit.edu"
+
+import base64
+import json
+
+from google.appengine.ext import webapp
+from google.appengine.api import taskqueue
+from google.appengine.api import urlfetch
+
+from config import config, on_local, on_staging
 
 ###############################################################################
 """Flight Counters"""
 ###############################################################################
 
 NEW_FLIGHT = 'Flight.NewFlight'
-DELAYED_TRACK = 'Flight.DelayedTrack'
-DELAYED_UNTRACK = 'Flight.DelayedUntrack'
-UNTRACKED_OLD_FLIGHT = 'Flight.UntrackedOld'
-GOT_FLIGHT_ALERT_CALLBACK = 'Flight.GotAlertCallback'
-FLIGHT_NOT_FOUND = 'Flight.NotFound'
-FLIGHT_NUMBER_INVALID = 'Flight.InvalidFlightNumber'
 FLIGHT_TAKEOFF = 'Flight.Takeoff'
 FLIGHT_LANDED = 'Flight.Landed'
 FLIGHT_CANCELED = 'Flight.Canceled'
@@ -29,24 +37,107 @@ FLIGHT_DIVERTED = 'Flight.Diverted'
 FLIGHT_CHANGE = 'Flight.Change'
 
 ###############################################################################
-"""System Counters"""
+"""Cron Counters"""
 ###############################################################################
 
-ERROR_500 = 'System.Error500'
-SENT_LEAVE_SOON_NOTIFICATION = 'System.SentLeaveSoon'
-SENT_LEAVE_NOW_NOTIFICATION = 'System.SentLeaveNow'
-SENT_CHANGE_NOTIFICATION = 'System.SentChangeNotification'
-SENT_TAKEOFF_NOTIFICATION = 'System.SentTakeoffNotification'
-SENT_LANDED_NOTIFICATION = 'System.SentLandedNotification'
-SENT_CANCELED_NOTIFICATION = 'System.SentCanceledNotification'
-SENT_DIVERTED_NOTIFICATION = 'System.SentDivertedNotification'
-SENT_PUSH_NOTIFICATION = 'System.SentPushNotification'
-DELETED_ORPHANED_ALERT = 'System.DeletedOrphanedAlert'
-FETCH_AIRPORT_INFO = 'System.FetchAirportInfo'
-FETCH_AIRLINE_FLIGHT_INFO = 'System.FetchAirlineFlightInfo'
-FETCH_FLIGHT_INFO = 'System.FetchFlightInfo'
-SET_ALERT = 'System.SetAlert'
-FETCH_ALERTS = 'System.FetchAlerts'
-DELETED_ALERT = 'System.DeletedAlert'
-FETCH_DRIVING_TIME = 'System.FetchDrivingTime'
-CANT_FETCH_DRIVING_TIME = 'System.CantFetchDrivingTime'
+UNTRACKED_OLD_FLIGHT = 'Cron.UntrackedOldFlight'
+SENT_LEAVE_SOON_NOTIFICATION = 'Cron.SentLeaveSoon'
+SENT_LEAVE_NOW_NOTIFICATION = 'Cron.SentLeaveNow'
+DELETED_ORPHANED_ALERT = 'Cron.DeletedOrphanedAlert'
+
+###############################################################################
+"""3rd Party API Usage Counters"""
+###############################################################################
+
+FA_AIRPORT_INFO = 'FlightAware.AirportInfo'
+FA_AIRLINE_FLIGHT_INFO = 'FlightAware.AirlineFlightInfo'
+FA_FLIGHT_INFO_EX = 'FlightAware.FlightInfoEx'
+FA_SET_ALERT = 'FlightAware.SetAlert'
+FA_GET_ALERTS = 'FlightAware.GetAlerts'
+FA_DELETED_ALERT = 'FlightAware.DeletedAlert'
+FA_FLIGHT_ALERT_CALLBACK = 'FlightAware.AlertCallback'
+GOOG_FETCH_DRIVING_TIME = 'Google.DrivingTime'
+BING_FETCH_DRIVING_TIME = 'Bing.DrivingTime'
+
+###############################################################################
+"""Reporting Service"""
+###############################################################################
+
+class ReportEventFailedException (Exception):
+    def __init__(self, status_code=403, event_name=''):
+        self.message = 'Unable to report event: %s' % event_name
+        self.code = status_code
+
+
+class ReportingService(object):
+    """Defines a 3rd party event reporting service."""
+    def report(self, event_name, **properties):
+        """Report a single event with optional properties."""
+        pass
+
+
+class MixpanelService(ReportingService):
+    def __init__(self):
+        self._report_url = 'https://api.mixpanel.com/track/?data='
+
+        if on_local():
+            self._token = config['mixpanel']['development']
+        elif on_staging():
+            self._token = config['mixpanel']['staging']
+        else:
+            self._token = config['mixpanel']['production']
+
+    def report(self, event_name, **properties):
+        assert isinstance(event_name, basestring) and len(event_name)
+
+        # Add in the token
+        properties['token'] = self._token
+
+        params = {
+            'event' : event_name,
+            'properties' : properties,
+        }
+
+        data = base64.b64encode(json.dumps(params))
+        url = self._report_url + data
+        result = urlfetch.fetch(url=url, validate_certificate=True)
+
+        if result.status_code != 200:
+            raise TrackEventFailedException(status_code=result.status_code,
+                                            event_name=event_name)
+
+###############################################################################
+"""Report Helper Methods"""
+###############################################################################
+
+def _defer_report(event_name, transactional, **properties):
+    retry_options = taskqueue.TaskRetryOptions(task_retry_limit=0) # No more than 1 try
+    properties['event_name'] = event_name
+    report_task = taskqueue.Task(params=properties,
+                                 retry_options=retry_options)
+    taskqueue.Queue('report-event').add(delayed_task, transactional=transactional)
+
+
+def report_event(event_name, **properties):
+    _defer_report(event_name, False, **properties)
+
+
+def report_event_transactionally(event_name, **properties):
+    _defer_report(event_name, True, **properties)
+
+###############################################################################
+"""Reporting Handler"""
+###############################################################################
+
+service = MixpanelService()
+
+class ReportWorker(webapp.RequestHandler):
+    """Deferred work when reporting an event."""
+    def post(self):
+        params = self.request.params
+        event_name = params.get('event_name')
+
+        assert isinstance(event_name, basestring) and len(event_name)
+        del(params['event_name'])
+
+        service.report(event_name, **params)

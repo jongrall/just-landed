@@ -46,8 +46,7 @@ from connections import Connection, build_url
 import utils
 import aircraft_types
 
-import reporting
-from reporting import prodeagle_counter
+from reporting import report_event, report_event_transactionally
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
@@ -320,7 +319,7 @@ class FlightAwareSource (FlightDataSource):
                     logging.info('AIRPORT INFO CACHE MISS')
                 result = yield self.conn.get_json('/AirportInfo',
                                                 args={'airportCode':airport_code})
-                prodeagle_counter.incr(reporting.FETCH_AIRPORT_INFO)
+                report_event(reporting.FA_AIRPORT_INFO)
 
                 if result.get('error'):
                     raise AirportNotFoundException(airport_code)
@@ -400,10 +399,10 @@ class FlightAwareSource (FlightDataSource):
         else:
             if debug_cache:
                 logging.info('FLIGHT CACHE MISS')
+            # New filter API - get by flight_id, limited to 1 result
             to_fetch.append(self.conn.get_json('/FlightInfoEx',
-                                                args={'ident': sanitized_f_num,
-                                                      'howMany': 15}))
-            prodeagle_counter.incr(reporting.FETCH_FLIGHT_INFO)
+                                                args={'ident': flight_id}))
+            report_event(reporting.FA_FLIGHT_INFO_EX)
 
         if airline_info:
             if debug_cache:
@@ -413,7 +412,7 @@ class FlightAwareSource (FlightDataSource):
                 logging.info('AIRLINE INFO CACHE MISS')
             to_fetch.append(self.conn.get_json('/AirlineFlightInfo',
                                                 args={'faFlightID': flight_id}))
-            prodeagle_counter.incr(reporting.FETCH_AIRLINE_FLIGHT_INFO)
+            report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
 
         flight_data = None
         airline_data = None
@@ -430,13 +429,10 @@ class FlightAwareSource (FlightDataSource):
         if flight_data:
             if flight_data.get('error'):
                 raise FlightNotFoundException(sanitized_f_num)
-            flight_data = flight_data['FlightInfoExResult']['flights']
-            for data in flight_data:
-                # Find the matching flight
-                if data['faFlightID'] == flight_id:
-                    flight = yield self.raw_flight_data_to_flight(data, sanitized_f_num)
-                    cache_to_set[flight_cache_key] = flight
-                    break
+            # First flight returned is the match
+            flight_data = flight_data['FlightInfoExResult']['flights'][0]
+            flight = yield self.raw_flight_data_to_flight(flight_data, sanitized_f_num)
+            cache_to_set[flight_cache_key] = flight
 
         if airline_data:
             if airline_data.get('error'):
@@ -500,7 +496,7 @@ class FlightAwareSource (FlightDataSource):
             flight_data = yield self.conn.get_json('/FlightInfoEx',
                                         args={'ident': sanitized_f_num,
                                               'howMany': 15})
-            prodeagle_counter.incr(reporting.FETCH_FLIGHT_INFO)
+            report_event(reporting.FA_FLIGHT_INFO_EX)
 
             if flight_data.get('error'):
                 raise FlightNotFoundException(sanitized_f_num)
@@ -555,6 +551,8 @@ class FlightAwareSource (FlightDataSource):
         assert origin
         assert destination
 
+        report_event(reporting.FA_FLIGHT_ALERT_CALLBACK)
+
         # Cache freshness: clear memcache keys for flight & airline info
         FlightAwareSource.clear_flight_info_cache(flight_id)
 
@@ -588,15 +586,15 @@ class FlightAwareSource (FlightDataSource):
 
                 # Reporting
                 if event_code == 'change' or event_code == 'minutes_out':
-                    prodeagle_counter.incr(reporting.FLIGHT_CHANGE)
+                    report_event(reporting.FLIGHT_CHANGE)
                 elif event_code == 'departure':
-                    prodeagle_counter.incr(reporting.FLIGHT_TAKEOFF)
+                    report_event(reporting.FLIGHT_TAKEOFF)
                 elif event_code == 'arrival':
-                    prodeagle_counter.incr(reporting.FLIGHT_LANDED)
+                    report_event(reporting.FLIGHT_LANDED)
                 elif event_code == 'diverted':
-                    prodeagle_counter.incr(reporting.FLIGHT_DIVERTED)
+                    report_event(reporting.FLIGHT_DIVERTED)
                 elif event_code == 'cancelled':
-                    prodeagle_counter.incr(reporting.FLIGHT_CANCELED)
+                    report_event(reporting.FLIGHT_CANCELED)
 
                 # FIXME: Assume iOS user
                 users_to_notify = yield iOSUser.users_to_notify(alert, flight_id, source=DATA_SOURCES.FlightAware)
@@ -612,30 +610,24 @@ class FlightAwareSource (FlightDataSource):
                         u.wants_notification_type(push_types.CHANGED)):
                         if terminal_changed:
                             TerminalChangeAlert(device_token, alerted_flight, user_flight_num).push()
-                            prodeagle_counter.incr(reporting.SENT_CHANGE_NOTIFICATION)
                         else:
                             FlightPlanChangeAlert(device_token, alerted_flight, user_flight_num).push()
-                            prodeagle_counter.incr(reporting.SENT_CHANGE_NOTIFICATION)
 
                     # Take off
                     elif event_code == 'departure' and u.wants_notification_type(push_types.DEPARTED):
                         FlightDepartedAlert(device_token, alerted_flight, user_flight_num).push()
-                        prodeagle_counter.incr(reporting.SENT_TAKEOFF_NOTIFICATION)
 
                     # Arrival
                     elif event_code == 'arrival' and u.wants_notification_type(push_types.ARRIVED):
                         FlightArrivedAlert(device_token, alerted_flight, user_flight_num).push()
-                        prodeagle_counter.incr(reporting.SENT_LANDED_NOTIFICATION)
 
                     # Diverted
                     elif event_code == 'diverted' and u.wants_notification_type(push_types.DIVERTED):
                         FlightDivertedAlert(device_token, alerted_flight, user_flight_num).push()
-                        prodeagle_counter.incr(reporting.SENT_DIVERTED_NOTIFICATION)
 
                     # Canceled
                     elif event_code == 'cancelled' and u.wants_notification_type(push_types.CANCELED):
                         FlightCanceledAlert(device_token, alerted_flight, user_flight_num).push()
-                        prodeagle_counter.incr(reporting.SENT_CANCELED_NOTIFICATION)
 
                     else:
                         logging.error('Unknown eventcode: %s' % event_code)
@@ -667,7 +659,7 @@ class FlightAwareSource (FlightDataSource):
                                     'ident': flight_num,
                                     'channels': channels,
                                     'max_weekly': 1000})
-            prodeagle_counter.incr(reporting.SET_ALERT)
+            report_event(reporting.FA_SET_ALERT)
 
             error = result.get('error')
             alert_id = result.get('SetAlertResult')
@@ -694,7 +686,7 @@ class FlightAwareSource (FlightDataSource):
     @ndb.tasklet
     def get_all_alerts(self):
         result = yield self.conn.get_json('/GetAlerts', args={})
-        prodeagle_counter.incr(reporting.FETCH_ALERTS)
+        report_event(reporting.FA_GET_ALERTS)
 
         error = result.get('error')
         alert_info = result.get('GetAlertsResult')
@@ -711,7 +703,7 @@ class FlightAwareSource (FlightDataSource):
     def delete_alert(self, alert_id):
         result = yield self.conn.get_json('/DeleteAlert',
                                         args={'alert_id':alert_id})
-        prodeagle_counter.incr(reporting.DELETED_ALERT)
+        report_event(reporting.FA_DELETED_ALERT)
         error = result.get('error')
         success = result.get('DeleteAlertResult')
 
@@ -771,13 +763,11 @@ class FlightAwareSource (FlightDataSource):
             # Mark the flight as being tracked
             tracked_flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
             if not tracked_flight:
-                prodeagle_counter.incr(reporting.NEW_FLIGHT)
-
                 # Need to re-cache flight since lookup has 2-min timeout
                 flight_cache_key = FlightAwareSource.flight_info_cache_key(flight_id)
                 memcache.set(flight_cache_key, flight, config['flightaware']['flight_cache_time'])
-
                 tracked_flight = yield FlightAwareTrackedFlight.create_flight(flight)
+                report_event_transactionally(reporting.NEW_FLIGHT)
             else:
                 flight_data = flight.to_dict()
                 if flight_data != tracked_flight.last_flight_data: # Optimization
@@ -945,7 +935,7 @@ class GoogleDistanceSource (DrivingTimeDataSource):
             )
 
             data = yield self.conn.get_json('/json', args=params)
-            prodeagle_counter.incr(reporting.FETCH_DRIVING_TIME)
+            report_event(reporting.GOOG_FETCH_DRIVING_TIME)
             status = data.get('status')
 
             if status == 'OK':
@@ -1010,7 +1000,7 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
             }
 
             data = yield self.conn.get_json('/Routes', args=params)
-            prodeagle_counter.incr(reporting.FETCH_DRIVING_TIME)
+            report_event(reporting.BING_FETCH_DRIVING_TIME)
             status = data.get('statusCode')
 
             if status == 200:

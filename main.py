@@ -54,6 +54,7 @@ routes = [
         Route('/queue/process-alert', handler='api.v1.api_handlers.AlertWorker'),
         Route('/queue/mobile-push', handler='notifications.PushWorker'),
         Route('/queue/clear-alerts', handler='admin.admin_handlers.ClearAlertsWorker'),
+        Route('/queue/report-event', handler='reporting.ReportWorker'),
         Route('/warmup', handler='warmup.WarmupWorker'),
     ]),
     Route('/', handler='web_handlers.StaticHandler'),

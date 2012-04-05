@@ -19,8 +19,7 @@ from api.v1.data_sources import FlightAwareSource
 from api.v1.datasource_exceptions import *
 
 import utils
-import reporting
-from reporting import prodeagle_counter
+from reporting import report_event, report_event_transactionally
 from notifications import LeaveSoonAlert, LeaveNowAlert
 
 source = FlightAwareSource()
@@ -42,11 +41,11 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
 
             try:
                 # Optimization prevents overzealous checking
-                if flight.has_landed and flight.is_old_flight:
+                if flight.is_old_flight:
                     # We are certain it is old
                     raise OldFlightException(flight_number=flight_num,
                                              flight_id=flight_id)
-                elif flight.is_old_flight:
+                elif flight.is_probably_old: # Based on est_arrival_time
                   # Probably old, just make sure (flight_info will yield OldFlightException)
                   yield source.flight_info(flight_id=flight_id,
                                            flight_number=flight_num)
@@ -70,7 +69,7 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                                                 _scheme=url_scheme)
                     requests =[]
                     ctx = ndb.get_context()
-                    prodeagle_counter.incr(reporting.UNTRACKED_OLD_FLIGHT)
+                    report_event(reporting.UNTRACKED_OLD_FLIGHT)
 
                     while (yield user_keys_tracking.has_next_async()):
                         u_key = user_keys_tracking.next()
@@ -105,7 +104,8 @@ class SendRemindersWorker(webapp.RequestHandler):
                 max_age = now - timedelta(seconds=config['max_reminder_age'])
 
                 for r in unsent_reminders:
-                    if max_age < r.fire_time <= now:
+                    if ((max_age < r.fire_time <= now) or
+                        (r.reminder_type == reminder_types.LEAVE_NOW and r.fire_time <= now)):
                         # Max 5 transactional tasks per txn
                         if len(outbox) < 6 and user.wants_notification_type(r.reminder_type):
                             r.sent = True # Mark sent
@@ -118,9 +118,9 @@ class SendRemindersWorker(webapp.RequestHandler):
                     for r in outbox:
                         r.push(_transactional=True)
                         if isinstance(r, LeaveSoonAlert):
-                            prodeagle_counter.incr(reporting.SENT_LEAVE_SOON_NOTIFICATION)
+                            report_event_transactionally(reporting.SENT_LEAVE_SOON_NOTIFICATION)
                         else:
-                            prodeagle_counter.incr(reporting.SENT_LEAVE_NOW_NOTIFICATION)
+                            report_event_transactionally(reporting.SENT_LEAVE_NOW_NOTIFICATION)
 
             # TRANSACTIONAL REMINDER SENDING PER USER - ENSURE DUPE REMINDERS NOT SENT
             yield ndb.transaction_async(send_txn)
@@ -142,7 +142,7 @@ class ClearOrphanedAlertsWorker(webapp.RequestHandler):
             alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
             if not alert or not alert.is_enabled:
                 orphaned_alerts.append(alert_id)
-                prodeagle_counter.incr(reporting.DELETED_ORPHANED_ALERT)
+                report_event(reporting.DELETED_ORPHANED_ALERT) # TODO: Move after completion
 
         # Do the removal
         if orphaned_alerts:

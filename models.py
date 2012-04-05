@@ -19,9 +19,6 @@ import utils
 
 from config import config, on_local
 
-import reporting
-from reporting import prodeagle_counter
-
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
 debug_datastore = on_local() and False
@@ -368,7 +365,6 @@ class iOSUser(_User):
         if not user:
             user = cls(id=uuid,
                        push_settings=cls.default_settings())
-            prodeagle_counter.incr(reporting.NEW_USER)
             if debug_datastore:
                 logging.info('CREATED NEW USER %s' % uuid)
         elif debug_datastore:
@@ -936,12 +932,23 @@ class Flight(object):
 
     @property
     def is_old_flight(self):
-        arrival_timestamp = self.actual_arrival_time
-        arrival_time = datetime.utcfromtimestamp(arrival_timestamp)
-        est_arrival_time = datetime.utcfromtimestamp(self.estimated_arrival_time)
-        hours_ago = datetime.utcnow() - timedelta(hours=config['flight_old_hours'])
-        return ((arrival_timestamp > 0 and arrival_time < hours_ago) or
-                est_arrival_time < hours_ago)
+        if self.has_landed:
+            arrival_timestamp = self.actual_arrival_time
+            arrival_time = datetime.utcfromtimestamp(arrival_timestamp)
+            hours_ago = datetime.utcnow() - timedelta(hours=config['flight_old_hours'])
+            return arrival_time < hours_ago
+        else:
+            return False
+
+    @property
+    def is_probably_old(self):
+        est_arrival_timestamp = self.estimated_arrival_time
+        if utils.is_int(est_arrival_timestamp) and est_arrival_timestamp > 0:
+            est_arrival_time = datetime.utcfromtimestamp(est_arrival_timestamp)
+            hours_ago = datetime.utcnow() - timedelta(hours=config['flight_old_hours'])
+            return est_arrival_time < hours_ago
+        else:
+            return False
 
     @property
     def is_in_flight(self):

@@ -20,6 +20,8 @@ from lib import ipaddr
 from google.appengine.api import mail
 from google.appengine.api import memcache
 
+from reporting import report_event
+
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
 ADMIN_EMAILS = ['webmaster@getjustlanded.com']
@@ -344,7 +346,7 @@ def report_exception(exception, traceback_as_string):
   exception_memcache_key = 'exception_%s' % adler32(traceback_as_string)
 
   if not on_local() and not memcache.get(exception_memcache_key):
-    memcache.set(exception_memcache_key, exception, time=1800)
+    memcache.set(exception_memcache_key, exception, time=config['exception_cache_time'])
     email_admins("[%s] simplylisted-production 500 error: %s" %
                     (datetime.now(Pacific).strftime('%T'),
                      type(exception).__name__),

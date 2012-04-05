@@ -24,9 +24,6 @@ from datasource_exceptions import *
 from config import on_local, on_staging, config
 import utils
 
-import reporting
-from reporting import prodeagle_counter
-
 # Currently using FlightAware and Google Distance APIs
 source = FlightAwareSource()
 #distance_source = GoogleDistanceSource()
@@ -46,24 +43,11 @@ class BaseAPIHandler(webapp.RequestHandler):
         self.respond({'error' : exception.message or 'An error occurred.'})
         traceback_as_string = traceback.format_exc()
 
-        if isinstance(exception, FlightNotFoundException):
-            prodeagle_counter.incr(reporting.FLIGHT_NOT_FOUND)
-
-        elif isinstance(exception, (UnknownDrivingTimeException,
-                                    MalformedDrivingDataException,
-                                    DrivingAPIQuotaException,
-                                    DrivingDistanceDeniedException)):
-            prodeagle_counter.incr(reporting.CANT_FETCH_DRIVING_TIME)
-
-        elif isinstance(exception, InvalidFlightNumberException):
-            prodeagle_counter.incr(reporting.FLIGHT_NUMBER_INVALID)
-
         if hasattr(exception, 'code'):
             if exception.code == 500:
                 # Only log 500s as exceptions
                 logging.exception(exception)
                 utils.report_exception(exception, traceback_as_string)
-                prodeagle_counter.incr(reporting.ERROR_500)
             else:
                 # Log others as warnings
                 logging.warning(exception.message)
@@ -84,7 +68,6 @@ class BaseAPIHandler(webapp.RequestHandler):
         else:
             logging.exception(exception)
             utils.report_exception(exception, traceback_as_string)
-            prodeagle_counter.incr(reporting.ERROR_500)
             self.response.set_status(500)
 
     def respond(self, response_data, debug=False):
@@ -132,8 +115,6 @@ class SearchHandler(AuthenticatedAPIHandler):
         This handler responds to the client using JSON.
 
         """
-        if self.client != 'Server':
-            prodeagle_counter.incr(reporting.LOOKUP_FLIGHT)
 
         if not utils.valid_flight_number(flight_number):
             raise InvalidFlightNumberException(flight_number)
@@ -218,11 +199,6 @@ class TrackHandler(AuthenticatedAPIHandler):
         reading in the browser.
 
         """
-        if self.client != 'Server':
-            prodeagle_counter.incr(reporting.TRACK_FLIGHT)
-        else:
-            prodeagle_counter.incr(reporting.DELAYED_TRACK)
-
         # Get the current flight information
         flight_fut = source.flight_info(flight_id=flight_id,
                                         flight_number=flight_number)
@@ -329,11 +305,6 @@ class UntrackHandler(AuthenticatedAPIHandler):
         if not flight_id or not isinstance(flight_id, basestring):
             raise FlightNotFoundException(flight_id)
 
-        if self.client != 'Server':
-            prodeagle_counter.incr(reporting.UNTRACK_FLIGHT)
-        else:
-            prodeagle_counter.incr(reporting.DELAYED_UNTRACK)
-
         # FIXME: Assume iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
         self.respond({'untracked' : flight_id})
@@ -367,8 +338,6 @@ class AlertHandler(BaseAPIHandler):
     def post(self):
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
-            prodeagle_counter.incr(reporting.GOT_FLIGHT_ALERT_CALLBACK)
-
             # Process the alert (deferred)
             retry_opts = taskqueue.TaskRetryOptions(task_retry_limit=0) # Can't risk a flood of push notifications
             task = taskqueue.Task(payload=self.request.body,

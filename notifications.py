@@ -19,8 +19,7 @@ from lib import urbanairship
 from config import config, on_local, on_staging
 import utils
 
-import reporting
-from reporting import prodeagle_counter
+from reporting import report_event
 
 def get_airship():
     """Returns an Urban Airship instance initialized with the correct production
@@ -104,7 +103,6 @@ class PushWorker(webapp.RequestHandler):
                 # FIXME: Assumes iOS
                 data = args[0]
                 message = data['aps']['alert']
-                prodeagle_counter.incr(reporting.SENT_PUSH_NOTIFICATION)
                 logging.info('PUSHING MESSAGE TO %s: \n%s' % (token, message))
 
         # Check that urban airship supports the method we want to call

@@ -101,6 +101,9 @@ config['push_types'] = Enum([
     'LEAVE_NOW',
 ])
 
+# The amount of time to cache exceptions for so that they don't trigger flood of reports
+config['exception_cache_time'] = 3600,
+
 config['reminder_types'] = Enum([
    config['push_types'].LEAVE_SOON,
    config['push_types'].LEAVE_NOW,
@@ -124,7 +127,6 @@ config['max_reminder_age'] = 120
 
 # Push token freshness requirement (don't tell urban airship about tokens that we've seen as recently as this)
 config['max_push_token_age'] = 14400
-
 
 if on_local():
     config['server_url'] = 'http://c-98-207-175-25.hsd1.ca.comcast.net'
@@ -180,17 +182,17 @@ config['flightaware'] = {
     # Credentials
     'development' : {
         'username' : 'airportpickupapp',
-        'key' : 'e9ff7563419763e3936a2d5412112abc12a54c14',
+        'key' : 'e1d15375192f9fb75a5c15752e76807226f18e71',
     },
 
     'staging' : {
         'username' : 'justlandedstaging',
-        'key' : 'd4ef7d1927d30a205366bb6e7aed929ac11f4d55',
+        'key' : 'd414fc0fdd2a2de14705bdca777263b1af4803bd',
     },
 
     'production' : {
         'username' : 'justlanded',
-        'key' : '45f9a85894cf77112df78289ba594013393108d8',
+        'key' : 'e1c5aec44a409bb94742fbba5548946721c7d855',
     },
 
     'remote_user_agent': 'FlightXML/2.0 (mc_chan_flightxml)',
@@ -282,6 +284,22 @@ config['traffic_cache_time'] = 3600
 # Bing Maps Credentials (used for all versions)
 config['bing_maps'] = {
     'key' : 'AjUZ_rECu8dsAMwFNtVRXALPksPaXALYysv-pZ8FSFCWpyhcBkJRb82LEWgECEgZ',
+}
+
+###############################################################################
+"""Mixpanel API Tokens for Server-Side Event Tracking"""
+###############################################################################
+
+config['mixpanel'] = {
+    'development': {
+        'token' : '8e09212ccbbf47f17b73b4b8a4b7f574',
+    },
+    'staging' : {
+        'token' : '1b4f24a49a9ddc08bf3623c5411f4e0d',
+    },
+    'production' : {
+        'token' : 'd45dd2321bba446a177ed0febc97bf69',
+    },
 }
 
 ###############################################################################

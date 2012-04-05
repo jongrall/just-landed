@@ -39,8 +39,10 @@ def handle_exception(request, response, exception, code=500):
     response.write(template.render(path, template_context))
     response.set_status(code)
 
+
 def handle_404(request, response, exception):
     handle_exception(request, response, exception, code=404)
+
 
 class BaseHandler(webapp.RequestHandler):
     """Base handler that handles exceptions for the website."""
@@ -50,6 +52,7 @@ class BaseHandler(webapp.RequestHandler):
         else:
             logging.exception(exception)
             self.response.set_status(500)
+
 
 class StaticHandler(BaseHandler):
     """Generic handler for static pages on the website."""
@@ -71,10 +74,12 @@ class StaticHandler(BaseHandler):
         context.update(template_context)
         self.response.write(template.render(template_path, context))
 
+
 class iPhoneFAQHandler(StaticHandler):
     """Generic handler for static pages on the website."""
     def get(self):
         super(iPhoneFAQHandler, self).get(page_name='iphonefaq.html')
+
 
 class BlitzHandler(StaticHandler):
     """Verification handler to enable Blitz.io performance testing."""
