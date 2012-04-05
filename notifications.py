@@ -19,8 +19,6 @@ from lib import urbanairship
 from config import config, on_local, on_staging
 import utils
 
-from reporting import report_event
-
 def get_airship():
     """Returns an Urban Airship instance initialized with the correct production
     or development credentials.

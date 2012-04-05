@@ -20,8 +20,6 @@ from lib import ipaddr
 from google.appengine.api import mail
 from google.appengine.api import memcache
 
-from reporting import report_event
-
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
 ADMIN_EMAILS = ['webmaster@getjustlanded.com']
