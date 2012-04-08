@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-"""datasource_exceptions.py: This module defines all the exceptions thrown by
-the various data sources used by the Just Landed app.
+"""exceptions.py: This module defines all the exceptions thrown by the Just
+Landed app.
 
 """
 

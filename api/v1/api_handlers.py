@@ -11,94 +11,19 @@ __email__ = "grall@alum.mit.edu"
 
 import logging
 import json
-import traceback
-from datetime import timedelta, datetime
+from datetime import datetime
 
-from google.appengine.ext import webapp
 from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 
-from data_sources import FlightAwareSource, GoogleDistanceSource, BingMapsDistanceSource
-
-from datasource_exceptions import *
-from config import on_local, on_staging, config
+from main import BaseHandler, BaseAPIHandler, AuthenticatedAPIHandler
+from data_sources import FlightAwareSource, BingMapsDistanceSource
+from exceptions import *
 import utils
 
 # Currently using FlightAware and Google Distance APIs
 source = FlightAwareSource()
-#distance_source = GoogleDistanceSource()
 distance_source = BingMapsDistanceSource()
-
-###############################################################################
-"""Base Handlers"""
-###############################################################################
-
-class BaseAPIHandler(webapp.RequestHandler):
-    """Base API handler that other handlers inherit from. This base class
-    provides basic exception handling and methods for creating JSON responses."""
-    def handle_exception(self, exception, debug):
-        """Override standard webapp exception handling and do our own logging.
-        Clients get a generic error and status code corresponding to the type
-        of problem encountered."""
-        self.respond({'error' : exception.message or 'An error occurred.'})
-        traceback_as_string = traceback.format_exc()
-
-        if hasattr(exception, 'code'):
-            if exception.code == 500:
-                # Only log 500s as exceptions
-                logging.exception(exception)
-                utils.report_exception(exception, traceback_as_string)
-            else:
-                # Log others as warnings
-                logging.warning(exception.message)
-
-                # Report certain errors to admin
-                if isinstance(exception, (TerminalsUnknownException,
-                                          AirportNotFoundException,
-                                          UnableToSetAlertException,
-                                          UnableToSetEndpointException,
-                                          UnableToGetAlertsException,
-                                          UnableToDeleteAlertException,
-                                          MalformedDrivingDataException,
-                                          DrivingAPIQuotaException,
-                                          DrivingDistanceDeniedException)):
-                    utils.report_exception(exception, traceback_as_string)
-
-            self.response.set_status(exception.code)
-        else:
-            logging.exception(exception)
-            utils.report_exception(exception, traceback_as_string)
-            self.response.set_status(500)
-
-    def respond(self, response_data, debug=False):
-        """Takes a dictionary or list as input and responds to the client using
-        JSON.
-
-        If 'debug' is set to true, the output is nicely formatted and indented
-        for reading in the browser.
-        """
-        if debug or self.request.GET.get('debug'):
-            # Pretty print JSON to be read as HTML
-            self.response.content_type = 'text/html'
-            formatted_resp = json.dumps(response_data, sort_keys=True, indent=4)
-            self.response.write(utils.text_to_html(formatted_resp))
-        else:
-            # Set response content type to JSON
-            self.response.content_type = 'application/json'
-            self.response.write(json.dumps(response_data))
-
-
-class AuthenticatedAPIHandler(BaseAPIHandler):
-    """An API handler that also authenticates incoming API requests."""
-    def dispatch(self):
-        is_server = self.request.headers.get('User-Agent').startswith('AppEngine')
-        self.client = (is_server and 'Server') or 'iOS'
-        if on_local() or on_staging() or utils.authenticate_api_request(self.request, client=self.client):
-            # Parent class will call the method to be dispatched
-            # -- get() or post() or etc.
-            super(AuthenticatedAPIHandler, self).dispatch()
-        else:
-            self.abort(403)
 
 ###############################################################################
 """Search / Lookup"""
@@ -115,16 +40,11 @@ class SearchHandler(AuthenticatedAPIHandler):
         This handler responds to the client using JSON.
 
         """
-
         if not utils.valid_flight_number(flight_number):
             raise InvalidFlightNumberException(flight_number)
 
         flights = yield source.lookup_flights(flight_number)
-        flight_data = []
-
-        for f in flights:
-            flight_data.append(f.dict_for_client())
-
+        flight_data = [f.dict_for_client() for f in flights]
         self.respond(flight_data)
 
 ###############################################################################
@@ -132,7 +52,7 @@ class SearchHandler(AuthenticatedAPIHandler):
 ###############################################################################
 
 
-class TrackWorker(BaseAPIHandler):
+class TrackWorker(BaseHandler):
     """Deferred work when tracking a flight."""
     @ndb.toplevel
     def post(self):
@@ -164,11 +84,15 @@ class TrackWorker(BaseAPIHandler):
                                   driving_time=driving_time)
 
 
-class DelayedTrackWorker(BaseAPIHandler):
+class DelayedTrackWorker(BaseHandler):
     """Delayed track worker - used when updating reminders for latest traffic
     conditions."""
     @ndb.toplevel
     def post(self):
+        # Disable retries
+        if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
+            return
+
         params = self.request.params
         uuid = params.get('uuid')
         flight_id = params.get('flight_id')
@@ -200,8 +124,8 @@ class TrackHandler(AuthenticatedAPIHandler):
 
         """
         # Get the current flight information
-        flight_fut = source.flight_info(flight_id=flight_id,
-                                        flight_number=flight_number)
+        flight = yield source.flight_info(flight_id=flight_id,
+                                          flight_number=flight_number)
 
         # FIXME: Assume iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
@@ -218,7 +142,6 @@ class TrackHandler(AuthenticatedAPIHandler):
         longitude = self.request.params.get('longitude')
         longitude = utils.is_float(longitude) and float(longitude)
 
-        flight = yield flight_fut
         dest_latitude = flight.destination.latitude
         dest_longitude = flight.destination.longitude
 
@@ -257,7 +180,6 @@ class TrackHandler(AuthenticatedAPIHandler):
         if not server_scheduled and utils.is_int(driving_time) and uuid and flight.is_in_flight :
             driving_time = int(driving_time)
             now = datetime.utcnow()
-            retry_options = taskqueue.TaskRetryOptions(task_retry_limit=0) # No more than 1 try
 
             # Allow for 50% fluctuation in driving time, 1 min cron delay
             first_check_time = utils.leave_now_time(flight.estimated_arrival_time, (driving_time * 1.5) + 60)
@@ -269,8 +191,7 @@ class TrackHandler(AuthenticatedAPIHandler):
                                                 'flight_id' : flight_id,
                                                 'uuid' : uuid,
                                                 },
-                                                eta=first_check_time,
-                                                retry_options=retry_options)
+                                                eta=first_check_time)
                 taskqueue.Queue('delayed-track').add(delayed_task)
 
             if second_check_time > now:
@@ -278,12 +199,11 @@ class TrackHandler(AuthenticatedAPIHandler):
                                                 'flight_id' : flight_id,
                                                 'uuid' : uuid,
                                                 },
-                                                eta=second_check_time,
-                                                retry_options=retry_options)
+                                                eta=second_check_time)
                 taskqueue.Queue('delayed-track').add(delayed_task)
 
 
-class UntrackWorker(BaseAPIHandler):
+class UntrackWorker(BaseHandler):
     """Deferred work when untracking a flight."""
     @ndb.toplevel
     def post(self):
@@ -320,10 +240,14 @@ class UntrackHandler(AuthenticatedAPIHandler):
 """Processing Alerts"""
 ###############################################################################
 
-class AlertWorker(BaseAPIHandler):
+class AlertWorker(BaseHandler):
     """Deferred work when handling an alert."""
     @ndb.toplevel
     def post(self):
+        # Disable retries, can't risk a flood of alerts
+        if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
+            return
+
         alert_body = json.loads(self.request.body)
         assert isinstance(alert_body, dict)
         yield source.process_alert(alert_body, self)
@@ -338,10 +262,7 @@ class AlertHandler(BaseAPIHandler):
     def post(self):
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
-            # Process the alert (deferred)
-            retry_opts = taskqueue.TaskRetryOptions(task_retry_limit=0) # Can't risk a flood of push notifications
-            task = taskqueue.Task(payload=self.request.body,
-                                  retry_options=retry_opts)
+            task = taskqueue.Task(payload=self.request.body)
             taskqueue.Queue('process-alert').add(task)
         else:
             logging.error('Unknown user-agent or host posting alert: (%s, %s)' %

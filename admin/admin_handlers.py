@@ -10,13 +10,11 @@ import logging
 
 from google.appengine.ext import ndb
 
-from web_handlers import StaticHandler
-from google.appengine.ext import webapp
-from api.v1.api_handlers import BaseAPIHandler
 from api.v1.data_sources import FlightAwareSource
 
+from main import StaticHandler, BaseHandler, BaseAPIHandler
 from models import FlightAwareTrackedFlight, iOSUser
-from config import config, on_local, on_staging
+from config import on_local, on_staging
 
 source = FlightAwareSource()
 
@@ -60,9 +58,13 @@ class FlightAwareAdminAPIHandler(BaseAPIHandler):
         self.respond(result)
 
 
-class ClearAlertsWorker(webapp.RequestHandler):
+class ClearAlertsWorker(BaseHandler):
     @ndb.toplevel
     def post(self):
+        # Disable retries
+        if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
+            return
+
         alert_list = self.request.body
         if alert_list:
             alert_ids = alert_list.split(',')

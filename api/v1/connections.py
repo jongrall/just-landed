@@ -8,7 +8,6 @@ __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
-import logging
 import json
 import urllib
 
@@ -55,4 +54,3 @@ class Connection(object):
                         deadline=deadline)
         parsed_json = json.loads(result.content)
         raise tasklets.Return(parsed_json)
-

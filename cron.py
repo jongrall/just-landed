@@ -10,13 +10,12 @@ import logging
 from datetime import datetime, timedelta
 
 from google.appengine.ext import ndb
-from google.appengine.ext import webapp
-from google.appengine.api import urlfetch
 
+from main import BaseHandler
 from config import on_local, config
 from models import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert, Flight
 from api.v1.data_sources import FlightAwareSource
-from api.v1.datasource_exceptions import *
+from exceptions import *
 
 import utils
 import reporting
@@ -27,7 +26,7 @@ source = FlightAwareSource()
 reminder_types = config['reminder_types']
 
 
-class UntrackOldFlightsWorker(webapp.RequestHandler):
+class UntrackOldFlightsWorker(BaseHandler):
     """Cron worker for untracking old flights."""
     @ndb.toplevel
     def get(self):
@@ -68,7 +67,6 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                                                 flight_id=flight_id,
                                                 _full=True,
                                                 _scheme=url_scheme)
-                    requests =[]
                     ctx = ndb.get_context()
                     report_event(reporting.UNTRACKED_OLD_FLIGHT)
 
@@ -77,16 +75,13 @@ class UntrackOldFlightsWorker(webapp.RequestHandler):
                         headers = {'X-Just-Landed-UUID' : u_key.string_id(),
                                    'X-Just-Landed-Signature' : sig}
 
-                        req_fut = ctx.urlfetch(untrack_url,
-                                                headers=headers,
-                                                deadline=120,
-                                                validate_certificate=not on_local())
-                        requests.append(req_fut)
-
-                    yield requests # Parallel yield of all requests
+                        yield ctx.urlfetch(untrack_url,
+                                           headers=headers,
+                                           deadline=120,
+                                           validate_certificate=not on_local())
 
 
-class SendRemindersWorker(webapp.RequestHandler):
+class SendRemindersWorker(BaseHandler):
     """Cron worker for sending unsent reminders."""
     @ndb.toplevel
     def get(self):
@@ -127,7 +122,7 @@ class SendRemindersWorker(webapp.RequestHandler):
             yield ndb.transaction_async(send_txn)
 
 
-class ClearOrphanedAlertsWorker(webapp.RequestHandler):
+class ClearOrphanedAlertsWorker(BaseHandler):
     """Cron worker for clearing orphaned FlightAware alerts."""
     @ndb.toplevel
     def get(self):
@@ -143,9 +138,8 @@ class ClearOrphanedAlertsWorker(webapp.RequestHandler):
             alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
             if not alert or not alert.is_enabled:
                 orphaned_alerts.append(alert_id)
-                report_event(reporting.DELETED_ORPHANED_ALERT) # TODO: Move after completion
 
         # Do the removal
         if orphaned_alerts:
             logging.info('DELETING %d ORPHANED ALERTS' % len(orphaned_alerts))
-            yield source.delete_alerts(valid_alert_ids)
+            yield source.delete_alerts(valid_alert_ids, orphaned=True)

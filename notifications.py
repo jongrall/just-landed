@@ -12,10 +12,10 @@ import logging
 from datetime import datetime
 
 from google.appengine.api import taskqueue
-from google.appengine.ext import webapp
 
 from lib import urbanairship
 
+from main import BaseHandler
 from config import config, on_local, on_staging
 import utils
 
@@ -46,8 +46,7 @@ def _defer(method, *args, **kwargs):
     """Adds a method to the push notification queue for later execution."""
     transactional = kwargs.get('_transactional') or False
     payload = pickle.dumps((method, args, kwargs))
-    task = taskqueue.Task(payload=payload,
-                          retry_options=taskqueue.TaskRetryOptions(task_retry_limit=0)) # No more than 1 try
+    task = taskqueue.Task(payload=payload)
     taskqueue.Queue('mobile-push').add(task, transactional=transactional)
 
 
@@ -80,9 +79,13 @@ def push(cls, payload, **kwargs):
 """Request Handler for Push Notification Taskqueue Callback"""
 ###############################################################################
 
-class PushWorker(webapp.RequestHandler):
+class PushWorker(BaseHandler):
     """Taskqueue worker for sending our push notifications."""
     def post(self):
+        # Disable retries
+        if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
+            return
+
         # Find out what we were supposed to do
         method, args, kwds = pickle.loads(self.request.body)
         if '_transactional' in kwds.keys():

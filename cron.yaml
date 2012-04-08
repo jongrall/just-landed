@@ -1,6 +1,6 @@
 # Just Landed cron jobs
 cron:
-  # Cost of task: $$$ (one flight_info call for every tracked flight, /untrack for each old flight)
+  # Cost of task: $$ (/untrack for each old flight, some calls to /track to verify)
   # Stops unnecessary tracking of old flights w/ unwanted alerts and push notifications
   - description: stop tracking old flights
     url: /cron/untrack_old_flights

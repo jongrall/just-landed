@@ -141,6 +141,22 @@ def is_trusted_flightaware_host(host_ip):
             return True
     return False
 
+def is_old_fa_flight(raw_fa_flight_data):
+    arrival_timestamp = raw_fa_flight_data['actualarrivaltime']
+    departure_timestamp = raw_fa_flight_data['actualdeparturetime']
+    hours_ago = datetime.utcnow() - timedelta(hours=config['flight_old_hours'])
+
+    if arrival_timestamp and is_int(arrival_timestamp) and arrival_timestamp > 0:
+        arrival_time = datetime.utcfromtimestamp(arrival_timestamp)
+        return arrival_time < hours_ago
+    elif departure_timestamp == -1: # Flight was cancelled, see if it is old cancellation
+        flight_duration = raw_fa_flight_data['filed_ete'].split(':')
+        duration_secs = (int(flight_duration[0]) * 3600) + (int(flight_duration[1]) * 60)
+        sched_arrival = datetime.utcfromtimestamp(departure_timestamp + duration_secs)
+        return sched_arrival < hours_ago
+    else:
+        return False
+
 ###############################################################################
 """Flight Utilities"""
 ###############################################################################

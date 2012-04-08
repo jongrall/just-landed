@@ -19,10 +19,10 @@ __email__ = "grall@alum.mit.edu"
 import base64
 import json
 
-from google.appengine.ext import webapp
 from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
 
+from main import BaseHandler
 from config import config, on_local, on_staging
 
 ###############################################################################
@@ -60,7 +60,7 @@ GOOG_FETCH_DRIVING_TIME = 'Google.DrivingTime'
 BING_FETCH_DRIVING_TIME = 'Bing.DrivingTime'
 
 ###############################################################################
-"""Reporting Service"""
+"""Reporting Exceptions"""
 ###############################################################################
 
 class ReportEventFailedException (Exception):
@@ -68,6 +68,9 @@ class ReportEventFailedException (Exception):
         self.message = 'Unable to report event: %s' % event_name
         self.code = status_code
 
+###############################################################################
+"""Reporting Service"""
+###############################################################################
 
 class ReportingService(object):
     """Defines a 3rd party event reporting service."""
@@ -113,10 +116,8 @@ class MixpanelService(ReportingService):
 ###############################################################################
 
 def _defer_report(event_name, transactional, **properties):
-    retry_options = taskqueue.TaskRetryOptions(task_retry_limit=0) # No more than 1 try
     properties['event_name'] = event_name
-    report_task = taskqueue.Task(params=properties,
-                                 retry_options=retry_options)
+    report_task = taskqueue.Task(params=properties)
     taskqueue.Queue('report-event').add(report_task, transactional=transactional)
 
 
@@ -133,9 +134,13 @@ def report_event_transactionally(event_name, **properties):
 
 service = MixpanelService()
 
-class ReportWorker(webapp.RequestHandler):
+class ReportWorker(BaseHandler):
     """Deferred work when reporting an event."""
     def post(self):
+        # Disable retries
+        if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
+            return
+
         params = self.request.params
         event_name = params.get('event_name')
 

@@ -11,15 +11,19 @@ from google.appengine.ext import webapp
 class WarmupWorker(webapp.RequestHandler):
     """Warmup handler that precaches application code."""
     def get(self):
+        import aircraft_types
+
         import api.v1
         import api.v1.api_handlers
+        import api.v1.connections
         import api.v1.data_sources
-        import api.v1.datasource_exceptions
+
         import config
+        import cron
+        import exceptions
         import main
         import models
         import notifications
+        import reporting
         import utils
         import web_handlers
-        import cron
-        import reporting
