@@ -12,19 +12,22 @@ from datetime import datetime, timedelta, tzinfo
 import re
 import math
 import hashlib, hmac
+import traceback
 from zlib import adler32
 
-from config import config, api_secret, on_local, on_production
-from lib import ipaddr
-
-from google.appengine.api import mail
 from google.appengine.api import memcache
+
+from lib.twilio.rest import TwilioRestClient
+
+from config import config, api_secret, on_production
+from lib import ipaddr
 
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
-ADMIN_EMAILS = ['webmaster@getjustlanded.com']
-SEND_EMAIL_AS = ((on_production() and "Just Landed Server <server@just-landed.appspotmail.com>") or
-                "Just Landed Server <server@just-landed-staging.appspotmail.com>")
+
+ADMIN_PHONES = ['16176425619']
+twilio_client = TwilioRestClient(config['twilio']['account_sid'],
+                                 config['twilio']['auth_token'])
 
 ###############################################################################
 """Common Utilities"""
@@ -345,23 +348,44 @@ def leave_soon_time(est_arrival_time, driving_time):
     leave_now = timestamp(leave_now_time(est_arrival_time, driving_time))
     return datetime.utcfromtimestamp(leave_now - leave_soon_interval)
 
-
 ###############################################################################
-"""Email Utilities"""
+"""SMS Utilities"""
 ###############################################################################
 
-def email_admins(subject, body):
-    for address in ADMIN_EMAILS:
-        mail.send_mail(SEND_EMAIL_AS, address, subject, body)
+def send_sms(to, body, from_phone=config['twilio']['just_landed_phone']):
+    assert to, 'No to phone number'
+    assert from_phone, 'No from phone number'
+    assert len(body) <= 160, 'SMS messages must be at most 160 characters'
+    twilio_client.sms.messages.create(to=to,
+                                      from_=from_phone,
+                                      body=body)
 
-def report_exception(exception, traceback_as_string):
-  """Alert admins to 500 errors via email at most once every 30 mins for identical
-  exceptions."""
-  exception_memcache_key = 'exception_%s' % adler32(traceback_as_string)
+def sms_alert_admin(message):
+    """Send an SMS alert to the admins - intended purpose: report 500 errors."""
+    for phone in ADMIN_PHONES:
+        send_sms(to=phone, body=message)
 
-  if not on_local() and not memcache.get(exception_memcache_key):
-    memcache.set(exception_memcache_key, exception, time=config['exception_cache_time'])
-    email_admins("[%s] simplylisted-production 500 error: %s" %
-                    (datetime.now(Pacific).strftime('%T'),
-                     type(exception).__name__),
-                     '%s\n\n%s' % (str(exception), traceback_as_string))
+def sms_report_exception(exception):
+    """Alert admins to 500 errors via SMS at most once every 30 mins for
+    identical exceptions."""
+    traceback_as_string = traceback.format_exc()
+    exception_memcache_key = 'exception_%s' % adler32(traceback_as_string)
+
+    if on_production() and not memcache.get(exception_memcache_key):
+        memcache.set(exception_memcache_key, exception, time=config['exception_cache_time'])
+        sms_alert_admin("[%s] Just Landed %s: %s" %
+                        (datetime.now(Pacific).strftime('%T'),
+                        type(exception).__name__,
+                        exception.message))
+
+def report_outage(disabled_services):
+    assert disabled_services
+    outage = ['Just Landed App Outage\n',
+               ': DISABLED\n'.join(disabled_services),
+               ': DISABLED']
+    outage_message = ''.join(outage)
+    outage_cache_key = 'outage_%s' % adler32(outage_message)
+
+    if not memcache.get(outage_cache_key):
+        memcache.set(outage_cache_key, outage_message, time=config['exception_cache_time'])
+        sms_alert_admin(outage_message)

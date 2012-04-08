@@ -41,6 +41,19 @@ handlers:
   login: admin
   secure: always
 
+# Exception reporting
+- url: /_ereporter.*
+  script: google.appengine.ext.ereporter.report_generator.application
+  login: admin
+  secure: always
+
 # Everything else
 - url: /.*
   script: main.app
+
+# Custom error handling
+error_handlers:
+  - file: /static/error_pages/default_error.html
+
+  - error_code: over_quota
+    file: /static/error_pages/over_quota.html

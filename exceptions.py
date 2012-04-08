@@ -10,6 +10,15 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 ###############################################################################
+"""Reporting Exceptions"""
+###############################################################################
+
+class ReportEventFailedException (Exception):
+    def __init__(self, status_code=403, event_name=''):
+        self.message = 'Unable to report event: %s' % event_name
+        self.code = status_code
+
+###############################################################################
 """Flight Data Source Exceptions"""
 ###############################################################################
 

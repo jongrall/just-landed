@@ -7,22 +7,32 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 import os
+import sys
 import logging
 import json
-import traceback
 from zlib import adler32
 
-from google.appengine.ext import webapp
+# Add lib to the system path
+LIB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib')
+if LIB_DIR not in sys.path:
+  sys.path[0:0] = [LIB_DIR]
+
+from google.appengine.api import capabilities
+from google.appengine.ext import webapp, ereporter
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
+from google.appengine.runtime.apiproxy_errors import (OverQuotaError,
+    CapabilityDisabledError, FeatureNotEnabledError, DeadlineExceededError)
 
+from lib.urbanairship import Unauthorized, AirshipFailure
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
+
+ereporter.register_logger()
+Route = webapp.Route
 
 from exceptions import *
 from config import config, on_local, on_staging
 import utils
-
-Route = webapp.Route
 
 # Define a default template context which uses the app software version number
 # to ensure that static content isn't cached to the detriment of freshness. The
@@ -48,33 +58,50 @@ class BaseHandler(webapp.RequestHandler):
         """Override standard webapp exception handling and do our own logging.
         Clients get a generic error and status code corresponding to the type
         of problem encountered."""
-        traceback_as_string = traceback.format_exc()
+
+        # These exceptions are not serious and should be logged as warnings
+        if isinstance(exception, (InvalidFlightNumberException,
+                                  FlightNotFoundException,
+                                  OldFlightException)):
+            logging.warning(exception.message)
+
+        else:
+            # Some exceptions should trigger SMS notifications to the admin
+            if isinstance(exception, (AirportNotFoundException,
+                                      UnableToSetEndpointException,
+                                      UnknownDrivingTimeException,
+                                      MalformedDrivingDataException,
+                                      DrivingAPIQuotaException,
+                                      DrivingDistanceDeniedException,
+                                      OverQuotaError,
+                                      CapabilityDisabledError,
+                                      FeatureNotEnabledError,
+                                      DeadlineExceededError,
+                                      AirshipFailure,
+                                      Unauthorized)):
+                utils.sms_report_exception(exception)
+
+            # Detect and report service outages
+            system_status = {
+                'DATASTORE READS' : capabilities.CapabilitySet('datastore_v3').is_enabled(),
+                'DATASTORE WRITES' : capabilities.CapabilitySet('datastore_v3, write').is_enabled(),
+                'MAIL SERVICE' : capabilities.CapabilitySet('mail').is_enabled(),
+                'MEMCACHE SERVICE' : capabilities.CapabilitySet('memcache').is_enabled(),
+                'TASKQUEUE SERVICE' : capabilities.CapabilitySet('taskqueue').is_enabled(),
+                'URLFETCH SERVICE' : capabilities.CapabilitySet('urlfetch').is_enabled(),
+            }
+
+            disabled_services = [k for k in system_status.keys() if system_status[k]]
+
+            if disabled_services:
+                utils.report_outage(disabled_services)
+
+            # Logged exceptions get automatically picked up by ereporter
+            logging.exception(exception)
 
         if hasattr(exception, 'code'):
-            if exception.code == 500:
-                # Only log 500s as exceptions
-                logging.exception(exception)
-                utils.report_exception(exception, traceback_as_string)
-            else:
-                # Log others as warnings
-                logging.warning(exception.message)
-
-                # Report certain errors to admin
-                if isinstance(exception, (TerminalsUnknownException,
-                                          AirportNotFoundException,
-                                          UnableToSetAlertException,
-                                          UnableToSetEndpointException,
-                                          UnableToGetAlertsException,
-                                          UnableToDeleteAlertException,
-                                          MalformedDrivingDataException,
-                                          DrivingAPIQuotaException,
-                                          DrivingDistanceDeniedException)):
-                    utils.report_exception(exception, traceback_as_string)
-
             self.response.set_status(exception.code)
         else:
-            logging.exception(exception)
-            utils.report_exception(exception, traceback_as_string)
             self.response.set_status(500)
 
 

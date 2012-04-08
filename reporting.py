@@ -24,6 +24,7 @@ from google.appengine.api import urlfetch
 
 from main import BaseHandler
 from config import config, on_local, on_staging
+from exceptions import *
 
 ###############################################################################
 """Flight Counters"""
@@ -58,15 +59,6 @@ FA_DELETED_ALERT = 'FlightAware.DeletedAlert'
 FA_FLIGHT_ALERT_CALLBACK = 'FlightAware.AlertCallback'
 GOOG_FETCH_DRIVING_TIME = 'Google.DrivingTime'
 BING_FETCH_DRIVING_TIME = 'Bing.DrivingTime'
-
-###############################################################################
-"""Reporting Exceptions"""
-###############################################################################
-
-class ReportEventFailedException (Exception):
-    def __init__(self, status_code=403, event_name=''):
-        self.message = 'Unable to report event: %s' % event_name
-        self.code = status_code
 
 ###############################################################################
 """Reporting Service"""

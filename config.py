@@ -343,3 +343,13 @@ config['campaignmonitor'] = {
       'subscriber_list_id' : '768e47891d6f304673e16c299fdf1f91',
     },
 }
+
+###############################################################################
+"""Twilio API Keys"""
+###############################################################################
+
+config['twilio'] = {
+    'account_sid' : 'AC6d2c4040d95548b3affc9ab1c0efa1b4',
+    'auth_token' : 'dbc0ecf4c9599a90f970a09df4dacdaf',
+    'just_landed_phone' : '+14157993553',
+}
