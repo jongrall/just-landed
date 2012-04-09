@@ -24,13 +24,12 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.runtime.apiproxy_errors import (OverQuotaError,
     CapabilityDisabledError, FeatureNotEnabledError, DeadlineExceededError)
 
-from lib.urbanairship import Unauthorized, AirshipFailure
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
 ereporter.register_logger()
 Route = webapp.Route
 
-from exceptions import *
+from custom_exceptions import *
 from config import config, on_local, on_staging
 import utils
 
@@ -59,6 +58,8 @@ class BaseHandler(webapp.RequestHandler):
         Clients get a generic error and status code corresponding to the type
         of problem encountered."""
 
+        gae_outage = False
+
         # These exceptions are not serious and should be logged as warnings
         if isinstance(exception, (InvalidFlightNumberException,
                                   FlightNotFoundException,
@@ -66,40 +67,41 @@ class BaseHandler(webapp.RequestHandler):
             logging.warning(exception.message)
 
         else:
-            # Some exceptions should trigger SMS notifications to the admin
-            if isinstance(exception, (AirportNotFoundException,
-                                      UnableToSetEndpointException,
-                                      UnknownDrivingTimeException,
-                                      MalformedDrivingDataException,
-                                      DrivingAPIQuotaException,
-                                      DrivingDistanceDeniedException,
-                                      OverQuotaError,
-                                      CapabilityDisabledError,
-                                      FeatureNotEnabledError,
-                                      DeadlineExceededError,
-                                      AirshipFailure,
-                                      Unauthorized)):
-                utils.sms_report_exception(exception)
+            # Detect and report service outages if possible
+            if capabilities.CapabilitySet('urlfetch').is_enabled():
 
-            # Detect and report service outages
-            system_status = {
-                'DATASTORE READS' : capabilities.CapabilitySet('datastore_v3').is_enabled(),
-                'DATASTORE WRITES' : capabilities.CapabilitySet('datastore_v3, write').is_enabled(),
-                'MAIL SERVICE' : capabilities.CapabilitySet('mail').is_enabled(),
-                'MEMCACHE SERVICE' : capabilities.CapabilitySet('memcache').is_enabled(),
-                'TASKQUEUE SERVICE' : capabilities.CapabilitySet('taskqueue').is_enabled(),
-                'URLFETCH SERVICE' : capabilities.CapabilitySet('urlfetch').is_enabled(),
-            }
+                # Some exceptions should trigger SMS notifications to the admin
+                if isinstance(exception, (FlightAwareUnavailableError,
+                                          DrivingTimeUnavailableError,
+                                          OverQuotaError,
+                                          CapabilityDisabledError,
+                                          FeatureNotEnabledError,
+                                          DeadlineExceededError,
+                                          PushNotificationsUnavailableError)):
+                    utils.sms_report_exception(exception)
 
-            disabled_services = [k for k in system_status.keys() if system_status[k]]
+                system_status = {
+                    'DATASTORE READS' : capabilities.CapabilitySet('datastore_v3').is_enabled(),
+                    'DATASTORE WRITES' : capabilities.CapabilitySet('datastore_v3, write').is_enabled(),
+                    'MAIL SERVICE' : capabilities.CapabilitySet('mail').is_enabled(),
+                    'MEMCACHE SERVICE' : capabilities.CapabilitySet('memcache').is_enabled(),
+                    'TASKQUEUE SERVICE' : capabilities.CapabilitySet('taskqueue').is_enabled(),
+                }
 
-            if disabled_services:
-                utils.report_outage(disabled_services)
+                disabled_services = [k for k in system_status.keys() if not system_status[k]]
+                if disabled_services:
+                    utils.report_outage(disabled_services)
+                    gae_outage = True
+            else:
+                gae_outage = True
 
             # Logged exceptions get automatically picked up by ereporter
             logging.exception(exception)
 
-        if hasattr(exception, 'code'):
+        if gae_outage or isinstance(exception, (OverQuotaError, CapabilityDisabledError,
+                                        FeatureNotEnabledError, DeadlineExceededError)):
+            self.response.set_status(503) # Service unavailable
+        elif hasattr(exception, 'code'):
             self.response.set_status(exception.code)
         else:
             self.response.set_status(500)

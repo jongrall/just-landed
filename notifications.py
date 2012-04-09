@@ -12,9 +12,11 @@ import logging
 from datetime import datetime
 
 from google.appengine.api import taskqueue
+from google.appengine.api.urlfetch import DownloadError
 
 from lib import urbanairship
 
+from custom_exceptions import *
 from main import BaseHandler
 from config import config, on_local, on_staging
 import utils
@@ -110,7 +112,14 @@ class PushWorker(BaseHandler):
         func = getattr(_UA, method, None)
         if func:
             # Call the function with the supplied arguments
-            func(*args, **kwds)
+            try:
+                func(*args, **kwds)
+            except DownloadError:
+                raise UrbanAirshipUnavailableError()
+            except urbanairship.Unauthorized:
+                raise UrbanAirshipUnauthorizedException()
+            except urbanairship.AirshipFailure as e:
+                raise UrbanAirshipError(status_code=e.code, message=e.message)
 
 ###############################################################################
 """Convenience Functions for sending push notifications to a user about

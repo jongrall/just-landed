@@ -35,12 +35,13 @@ import logging
 from google.appengine.api import memcache, taskqueue
 from google.appengine.ext import ndb
 from google.appengine.ext.ndb import tasklets
+from google.appengine.api.urlfetch import DownloadError
 
 from config import config, on_local, on_staging
 from connections import Connection, build_url
 from models import (Airport, FlightAwareTrackedFlight, FlightAwareAlert, iOSUser,
     Origin, Destination, Flight)
-from exceptions import *
+from custom_exceptions import *
 from notifications import *
 
 import utils
@@ -318,8 +319,13 @@ class FlightAwareSource (FlightDataSource):
             else:
                 if debug_cache:
                     logging.info('AIRPORT INFO CACHE MISS')
-                result = yield self.conn.get_json('/AirportInfo',
-                                                args={'airportCode':airport_code})
+
+                try:
+                    result = yield self.conn.get_json('/AirportInfo',
+                                                    args={'airportCode':airport_code})
+                except DownloadError:
+                    raise FlightAwareUnavailableError()
+
                 report_event(reporting.FA_AIRPORT_INFO)
 
                 if result.get('error'):
@@ -358,9 +364,14 @@ class FlightAwareSource (FlightDataSource):
     @ndb.tasklet
     def register_alert_endpoint(self, **kwargs):
         endpoint_url = config['flightaware']['alert_endpoint']
-        result = yield self.conn.get_json('/RegisterAlertEndpoint',
-                                        args={'address': endpoint_url,
-                                              'format_type': 'json/post'})
+
+        try:
+            result = yield self.conn.get_json('/RegisterAlertEndpoint',
+                                            args={'address': endpoint_url,
+                                                  'format_type': 'json/post'})
+        except DownloadError:
+            raise FlightAwareUnavailableError()
+
         error = result.get('error')
 
         if not error and result.get('RegisterAlertEndpointResult') == 1:
@@ -419,12 +430,15 @@ class FlightAwareSource (FlightDataSource):
         flight_data = None
         airline_data = None
 
-        if not flight and not airline_info:
-            flight_data, airline_data = yield to_fetch
-        elif not flight:
-            flight_data = yield to_fetch[0]
-        elif not airline_info:
-            airline_data = yield to_fetch[0]
+        try:
+            if not flight and not airline_info:
+                flight_data, airline_data = yield to_fetch
+            elif not flight:
+                flight_data = yield to_fetch[0]
+            elif not airline_info:
+                airline_data = yield to_fetch[0]
+        except DownloadError:
+            raise FlightAwareUnavailableError()
 
         cache_to_set = {}
 
@@ -495,9 +509,13 @@ class FlightAwareSource (FlightDataSource):
             if debug_cache:
                 logging.info('LOOKUP CACHE MISS')
 
-            flight_data = yield self.conn.get_json('/FlightInfoEx',
-                                        args={'ident': sanitized_f_num,
-                                              'howMany': 15})
+            try:
+                flight_data = yield self.conn.get_json('/FlightInfoEx',
+                                            args={'ident': sanitized_f_num,
+                                                  'howMany': 15})
+            except DownloadError:
+                raise FlightAwareUnavailableError()
+
             report_event(reporting.FA_FLIGHT_INFO_EX)
 
             if flight_data.get('error'):
@@ -645,11 +663,15 @@ class FlightAwareSource (FlightDataSource):
 
         # Set the alert with FlightAware and keep a record of it in our system
         channels = "{16 e_filed e_departure e_arrival e_diverted e_cancelled}"
-        result = yield self.conn.get_json('/SetAlert',
-                            args={'alert_id': 0,
-                                'ident': flight_num,
-                                'channels': channels,
-                                'max_weekly': 1000})
+        try:
+            result = yield self.conn.get_json('/SetAlert',
+                                args={'alert_id': 0,
+                                    'ident': flight_num,
+                                    'channels': channels,
+                                    'max_weekly': 1000})
+        except DownloadError:
+            raise FlightAwareUnavailableError()
+
         report_event(reporting.FA_SET_ALERT)
 
         error = result.get('error')
@@ -669,7 +691,11 @@ class FlightAwareSource (FlightDataSource):
 
     @ndb.tasklet
     def get_all_alerts(self):
-        result = yield self.conn.get_json('/GetAlerts', args={})
+        try:
+            result = yield self.conn.get_json('/GetAlerts', args={})
+        except DownloadError:
+            raise FlightAwareUnavailableError()
+
         report_event(reporting.FA_GET_ALERTS)
 
         error = result.get('error')
@@ -685,8 +711,12 @@ class FlightAwareSource (FlightDataSource):
 
     @ndb.tasklet
     def delete_alert(self, alert_id):
-        result = yield self.conn.get_json('/DeleteAlert',
-                                        args={'alert_id':alert_id})
+        try:
+            result = yield self.conn.get_json('/DeleteAlert',
+                                            args={'alert_id':alert_id})
+        except DownloadError:
+            raise FlightAwareUnavailableError()
+
         report_event(reporting.FA_DELETED_ALERT)
         error = result.get('error')
         success = result.get('DeleteAlertResult')
@@ -920,12 +950,21 @@ class GoogleDistanceSource (DrivingTimeDataSource):
                 units='imperial',
             )
 
-            data = yield self.conn.get_json('/json', args=params)
+            try:
+                data = yield self.conn.get_json('/json', args=params)
+            except DownloadError:
+                raise GoogleDistanceAPIUnavailableError()
+
             report_event(reporting.GOOG_FETCH_DRIVING_TIME)
             status = data.get('status')
 
             if status == 'OK':
                 try:
+                    elt_status = data['rows'][0]['elements'][0]['status']
+                    if elt_status == 'NOT_FOUND' or elt_status == 'ZERO_RESULTS':
+                        raise NoDrivingRouteException(404, origin_lat, origin_lon,
+                                                      dest_lat, dest_lon)
+
                     time = data['rows'][0]['elements'][0]['duration']['value']
                     # Cache data, not using traffic info, so data good indefinitely
                     if not memcache.set(driving_cache_key, time):
@@ -937,13 +976,14 @@ class GoogleDistanceSource (DrivingTimeDataSource):
                     raise MalformedDrivingDataException(origin_lat, origin_lon,
                                                       dest_lat, dest_lon, data)
             elif status == 'REQUEST_DENIED':
-                raise DrivingDistanceDeniedException(origin_lat, origin_lon,
-                                                     dest_lat, dest_lon)
+                raise DrivingTimeUnauthorizedException()
+            elif status == 'INVALID_REQUEST' or status == 'MAX_ELEMENTS_EXCEEDED':
+                raise NoDrivingRouteException(400, origin_lat, origin_lon,
+                                              dest_lat, dest_lon)
             elif status == 'OVER_QUERY_LIMIT':
                 raise DrivingAPIQuotaException()
             else:
-                raise UnknownDrivingTimeException(origin_lat, origin_lon,
-                                                  dest_lat, dest_lon)
+                raise GoogleDistanceAPIUnavailableError()
 
 
 class BingMapsDistanceSource (DrivingTimeDataSource):
@@ -985,7 +1025,11 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
                 'rpo' : 'None',
             }
 
-            data = yield self.conn.get_json('/Routes', args=params)
+            try:
+                data = yield self.conn.get_json('/Routes', args=params)
+            except DownloadError:
+                raise BingMapsUnavailableError()
+
             report_event(reporting.BING_FETCH_DRIVING_TIME)
             status = data.get('statusCode')
 
@@ -1000,11 +1044,12 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
                 except (KeyError, IndexError, TypeError):
                     raise MalformedDrivingDataException(origin_lat, origin_lon,
                                                       dest_lat, dest_lon, data)
-            elif status == 401 or status == 404:
-                raise DrivingDistanceDeniedException(origin_lat, origin_lon,
-                                                     dest_lat, dest_lon)
+            elif status == 401:
+                raise DrivingTimeUnauthorizedException()
+            elif status == 400 or status == 404:
+                raise NoDrivingRouteException(status, origin_lat, origin_lon,
+                                              dest_lat, dest_lon)
             elif status == 403:
                 raise DrivingAPIQuotaException()
             else:
-                raise UnknownDrivingTimeException(origin_lat, origin_lon,
-                                                  dest_lat, dest_lon)
+                raise BingMapsUnavailableError()

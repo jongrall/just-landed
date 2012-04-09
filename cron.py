@@ -15,7 +15,7 @@ from main import BaseHandler
 from config import on_local, config
 from models import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert, Flight
 from api.v1.data_sources import FlightAwareSource
-from exceptions import *
+from custom_exceptions import *
 
 import utils
 import reporting

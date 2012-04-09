@@ -17,13 +17,16 @@ from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 
 from main import BaseHandler, BaseAPIHandler, AuthenticatedAPIHandler
-from data_sources import FlightAwareSource, BingMapsDistanceSource
-from exceptions import *
+from data_sources import FlightAwareSource, BingMapsDistanceSource, GoogleDistanceSource
+from custom_exceptions import *
 import utils
 
-# Currently using FlightAware and Google Distance APIs
+# Currently using FlightAware for flight data
 source = FlightAwareSource()
+
+# Bing maps driving distance with Google as fallback
 distance_source = BingMapsDistanceSource()
+fallback_distance_source = GoogleDistanceSource()
 
 ###############################################################################
 """Search / Lookup"""
@@ -157,9 +160,31 @@ class TrackHandler(AuthenticatedAPIHandler):
                                                                   dest_latitude,
                                                                   dest_longitude)
                 flight.set_driving_time(driving_time)
-            except (UnknownDrivingTimeException, DrivingDistanceDeniedException,
-                    DrivingAPIQuotaException, MalformedDrivingDataException) as e:
-                logging.error(e.message)
+            except Exception as e:
+                # Tell the admin about Bing Maps outages / unexpected errors
+                if isinstance(e, (BingMapsUnavailableError, MalformedDrivingDataException,
+                                DrivingAPIQuotaException, DrivingTimeUnauthorizedException)):
+                    utils.sms_report_exception(e)
+
+                logging.exception(e)
+
+                # As long as it wasn't a NoDrivingRouteException, use the fallback datasource
+                if not isinstance(e2, NoDrivingRouteException):
+                    try:
+                        driving_time = yield fallback_distance_source.driving_time(latitude,
+                                                                                   longitude,
+                                                                                   dest_latitude,
+                                                                                   dest_longitude)
+                    except Exception as e2:
+                        if isinstance(e2, (GoogleDistanceAPIUnavailableError, MalformedDrivingDataException,
+                                            DrivingAPIQuotaException, DrivingTimeUnauthorizedException)):
+                            utils.sms_report_exception(e2)
+
+                        logging.exception(e2)
+
+                        # As long as it wasn't a NoDrivingRouteException, re-raise the exception and terminate the request
+                        if not isinstance(e2, NoDrivingRouteException):
+                            raise DrivingTimeUnavailableError()
 
         self.respond(flight.dict_for_client())
 

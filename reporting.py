@@ -21,10 +21,12 @@ import json
 
 from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
+from google.appengine.api.urlfetch import DownloadError
 
 from main import BaseHandler
 from config import config, on_local, on_staging
-from exceptions import *
+from custom_exceptions import *
+import utils
 
 ###############################################################################
 """Flight Counters"""
@@ -96,12 +98,16 @@ class MixpanelService(ReportingService):
 
         data = base64.b64encode(json.dumps(params))
         url = self._report_url + data
-        result = urlfetch.fetch(url=url, validate_certificate=True)
+
+        try:
+            result = urlfetch.fetch(url=url, validate_certificate=True)
+        except DownloadError:
+            utils.sms_report_exception(MixpanelUnavailableError())
 
         if result.status_code != 200:
-            # TODO: Catch exception
-            raise ReportEventFailedException(status_code=result.status_code,
-                                             event_name=event_name)
+            # Log, don't raise
+            logging.exception(ReportEventFailedException(status_code=result.status_code,
+                                                        event_name=event_name))
 
 ###############################################################################
 """Report Helper Methods"""
