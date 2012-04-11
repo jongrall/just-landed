@@ -347,10 +347,12 @@ class iOSUser(_User):
 
         flight_id = tracked_flight.key.string_id()
         to_put = []
+        user_changed = False
 
         # See if the user exists, create if necessary
         user = yield cls.get_by_uuid(uuid)
         if not user:
+            user_changed = True
             user = cls(id=uuid,
                        push_settings=cls.default_settings())
             if debug_datastore:
@@ -360,10 +362,12 @@ class iOSUser(_User):
 
         # Update the user's location (if needed)
         if user_latitude and user_longitude and not user.location_is_current(user_latitude, user_longitude):
+            user_changed = True
             user.last_known_location = ndb.GeoPt(user_latitude, lon=user_longitude)
 
         # Track the flight if they weren't tracking it yet
         if not user.is_tracking_flight(flight_id):
+            user_changed = True
             user.add_tracked_flight(flight_id, user_flight_num, source=source)
             tracked_flight.num_users_tracking += 1
             to_put.append(tracked_flight.put_async())
@@ -373,25 +377,31 @@ class iOSUser(_User):
 
         # Add the alert if they didn't have it yet
         if alert and alert.key not in user.alerts:
+            user_changed = True
             user.alerts.append(alert.key)
             alert.num_users_with_alert += 1
             to_put.append(alert.put_async())
             if debug_datastore:
                 logging.info('USER SUBSCRIBED TO ALERT %s' % alert.alert_id)
 
-        if debug_datastore and push_token != user.push_token:
-            logging.info('USER PUSH TOKEN UPDATED')
-
         # Only update the push token if we have a new one
-        user.push_token = push_token or user.push_token
+        if push_token and push_token != user.push_token:
+            user_changed = True
+            user.push_token = push_token
+            if debug_datastore:
+                logging.info('USER PUSH TOKEN UPDATED')
 
         # If we have driving time, update their reminders
         if driving_time is not None:
-            user.set_or_update_flight_reminders(flight, driving_time, source=source)
+            reminders_changed = user.set_or_update_flight_reminders(flight, driving_time, source=source)
+            if reminders_changed:
+                user_changed = True
 
-        # Currently writes user every time, could optimize later
-        to_put.append(user.put_async())
-        yield to_put
+        # Optimization: only write the user if we have to
+        if user_changed:
+            to_put.append(user.put_async())
+        if to_put:
+            yield to_put
         raise tasklets.Return(user)
 
     @classmethod
@@ -619,8 +629,11 @@ class iOSUser(_User):
         leave_soon_time = utils.leave_soon_time(flight.estimated_arrival_time, driving_time)
         leave_now_time = utils.leave_now_time(flight.estimated_arrival_time, driving_time)
 
+        reminders_changed = False # Denotes whether the reminders were altered
+
         # If they have no reminders for this flight, set them (even if they were supposed to fire in the past)
         if not reminders:
+            reminders_changed = True
             flight_key = None
             if source == DATA_SOURCES.FlightAware:
                 flight_key = ndb.Key(FlightAwareTrackedFlight, flight.flight_id)
@@ -643,11 +656,16 @@ class iOSUser(_User):
                 # Only update unsent reminders (stops reminders from being sent twice)
                 if r.sent == False:
                     if r.reminder_type == reminder_types.LEAVE_SOON:
-                        r.fire_time = leave_soon_time
-                        r.body = leave_soon_body
+                        if r.fire_time != leave_soon_time or r.body != leave_soon_body:
+                            reminders_changed = True
+                            r.fire_time = leave_soon_time
+                            r.body = leave_soon_body
                     else:
-                        r.fire_time = leave_now_time
-                        r.body = leave_now_body
+                        if r.fire_time != leave_now_time or r.body != leave_now_body:
+                            reminders_changed = True
+                            r.fire_time = leave_now_time
+                            r.body = leave_now_body
+        return reminders_changed
 
 
 class Origin(object):

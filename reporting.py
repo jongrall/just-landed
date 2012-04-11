@@ -18,6 +18,7 @@ __email__ = "grall@alum.mit.edu"
 
 import base64
 import json
+import logging
 
 from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
@@ -27,6 +28,8 @@ from main import BaseHandler
 from config import config, on_local, on_staging
 from custom_exceptions import *
 import utils
+
+debug_reporting = on_local() and True
 
 ###############################################################################
 """Flight Counters"""
@@ -86,6 +89,9 @@ class MixpanelService(ReportingService):
 
     def report(self, event_name, **properties):
         assert isinstance(event_name, basestring) and len(event_name)
+
+        if debug_reporting:
+            logging.info('Reporting event: %s' % event_name)
 
         # Add in the token
         properties['token'] = self._token

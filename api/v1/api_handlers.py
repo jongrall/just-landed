@@ -162,24 +162,23 @@ class TrackHandler(AuthenticatedAPIHandler):
                 flight.set_driving_time(driving_time)
             except Exception as e:
                 # Tell the admin about Bing Maps outages / unexpected errors
-                if isinstance(e, (BingMapsUnavailableError, MalformedDrivingDataException,
+                if isinstance(e, (DrivingTimeUnavailableError, MalformedDrivingDataException,
                                 DrivingAPIQuotaException, DrivingTimeUnauthorizedException)):
                     utils.sms_report_exception(e)
-
                 logging.exception(e)
 
                 # As long as it wasn't a NoDrivingRouteException, use the fallback datasource
-                if not isinstance(e2, NoDrivingRouteException):
+                if not isinstance(e, NoDrivingRouteException):
                     try:
                         driving_time = yield fallback_distance_source.driving_time(latitude,
                                                                                    longitude,
                                                                                    dest_latitude,
                                                                                    dest_longitude)
+                        flight.set_driving_time(driving_time)
                     except Exception as e2:
-                        if isinstance(e2, (GoogleDistanceAPIUnavailableError, MalformedDrivingDataException,
+                        if isinstance(e2, (DrivingTimeUnavailableError, MalformedDrivingDataException,
                                             DrivingAPIQuotaException, DrivingTimeUnauthorizedException)):
                             utils.sms_report_exception(e2)
-
                         logging.exception(e2)
 
                         # As long as it wasn't a NoDrivingRouteException, re-raise the exception and terminate the request

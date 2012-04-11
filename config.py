@@ -101,9 +101,6 @@ config['push_types'] = Enum([
     'LEAVE_NOW',
 ])
 
-# The amount of time to cache exceptions for so that they don't trigger flood of reports
-config['exception_cache_time'] = 3600,
-
 config['reminder_types'] = Enum([
    config['push_types'].LEAVE_SOON,
    config['push_types'].LEAVE_NOW,
@@ -118,6 +115,9 @@ config['flight_states'] = Enum([
     'LANDED',
     'EARLY',
 ])
+
+# The amount of time to cache exceptions for so that they don't trigger flood of reports
+config['exception_cache_time'] = 3600
 
 # Number of seconds that we should set a 'leave soon' reminder before they should leave for the airport
 config['leave_soon_seconds_before'] = 300
@@ -323,6 +323,26 @@ config['urbanairship'] = {
     'secret': 'Z6c6j5gCRpOseuOjcIpeGQ',
   },
 }
+
+# StackMob development and production public & private API keys for Just Landed
+config['stackmob'] = {
+    'app_name' : 'just-landed',
+    'development': {
+        'public_key' : 'df6126cd-906e-4ee7-b09b-d12208646bb5',
+        'private_key' : 'fe2a94b0-d732-4639-90d1-c6b80a4a9bc0',
+    },
+
+    'staging': { # Staging uses production keys
+        'public_key' : 'e417f04b-56d2-4fa9-92c5-c0f8fccfac35',
+        'private_key' : '0d7b2a49-bc1d-406f-a918-39b4b538afe1',
+    },
+
+    'production': {
+        'public_key' : 'e417f04b-56d2-4fa9-92c5-c0f8fccfac35',
+        'private_key' : '0d7b2a49-bc1d-406f-a918-39b4b538afe1',
+    },
+}
+
 
 ###############################################################################
 """Campaign Monitor Settings & API Keys"""

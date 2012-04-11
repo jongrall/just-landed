@@ -10,7 +10,7 @@ import logging
 from config import on_local
 
 def webapp_add_wsgi_middleware(app):
-    if not on_local(): # Appstats on local only
+    if True or not on_local(): # Appstats on local only
         return app
 
     from google.appengine.ext.appstats import recording

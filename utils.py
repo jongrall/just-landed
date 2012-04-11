@@ -372,8 +372,8 @@ def sms_report_exception(exception):
     exception_memcache_key = 'exception_%s' % adler32(traceback_as_string)
 
     if on_production() and not memcache.get(exception_memcache_key):
-        memcache.set(exception_memcache_key, exception, time=config['exception_cache_time'])
-        sms_alert_admin("[%s] Just Landed %s: %s" %
+        memcache.set(exception_memcache_key, exception, config['exception_cache_time'])
+        sms_alert_admin("[%s] Just Landed %s\n%s" %
                         (datetime.now(Pacific).strftime('%T'),
                         type(exception).__name__,
                         exception.message))
@@ -387,5 +387,5 @@ def report_outage(disabled_services):
     outage_cache_key = 'outage_%s' % adler32(outage_message)
 
     if not memcache.get(outage_cache_key):
-        memcache.set(outage_cache_key, outage_message, time=config['exception_cache_time'])
+        memcache.set(outage_cache_key, outage_message, config['exception_cache_time'])
         sms_alert_admin(outage_message)

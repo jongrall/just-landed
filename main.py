@@ -26,12 +26,13 @@ from google.appengine.runtime.apiproxy_errors import (OverQuotaError,
 
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
-ereporter.register_logger()
-Route = webapp.Route
-
 from custom_exceptions import *
 from config import config, on_local, on_staging
 import utils
+
+if not on_local(): # On local, ereporter causes unwanted stacktraces
+    ereporter.register_logger()
+Route = webapp.Route
 
 # Define a default template context which uses the app software version number
 # to ensure that static content isn't cached to the detriment of freshness. The
@@ -77,12 +78,14 @@ class BaseHandler(webapp.RequestHandler):
                                           CapabilityDisabledError,
                                           FeatureNotEnabledError,
                                           DeadlineExceededError,
-                                          PushNotificationsUnavailableError)):
+                                          PushNotificationsUnavailableError,
+                                          PushNotificationsUnauthorizedError,
+                                          PushNotificationsUnknownError)):
                     utils.sms_report_exception(exception)
 
                 system_status = {
                     'DATASTORE READS' : capabilities.CapabilitySet('datastore_v3').is_enabled(),
-                    'DATASTORE WRITES' : capabilities.CapabilitySet('datastore_v3, write').is_enabled(),
+                    'DATASTORE WRITES' : capabilities.CapabilitySet('datastore_v3', capabilities=['write']).is_enabled(),
                     'MAIL SERVICE' : capabilities.CapabilitySet('mail').is_enabled(),
                     'MEMCACHE SERVICE' : capabilities.CapabilitySet('memcache').is_enabled(),
                     'TASKQUEUE SERVICE' : capabilities.CapabilitySet('taskqueue').is_enabled(),

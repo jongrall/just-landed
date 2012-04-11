@@ -86,15 +86,15 @@ class DrivingTimeUnavailableError(Exception):
         self.message = 'Driving time is unavailable.'
         self.code = 503 # Service unavailable
 
-class BingMapsUnavailableError(Exception):
+class BingMapsUnavailableError(DrivingTimeUnavailableError):
     def __init__(self):
+        super(BingMapsUnavailableError, self).__init__()
         self.message = 'Bing Maps API is unavailable.'
-        self.code = 503 # Service unavailable
 
-class GoogleDistanceAPIUnavailableError(Exception):
+class GoogleDistanceAPIUnavailableError(DrivingTimeUnavailableError):
     def __init__(self):
+        super(GoogleDistanceAPIUnavailableError, self).__init__()
         self.message = 'Google distance API is unavailable.'
-        self.code = 503 # Service unavailable
 
 class MalformedDrivingDataException(Exception):
     def __init__(self, orig_lat, orig_lon, dest_lat, dest_lon, data):
@@ -126,3 +126,23 @@ class PushNotificationsUnavailableError(Exception):
     def __init__(self):
         self.message = 'Push notifications are unavailable.'
         self.code = 503 # Service unavailable
+
+class PushNotificationsUnauthorizedError(Exception):
+    def __init__(self):
+        self.message = 'Push notification unauthorized.'
+        self.code = 401 # Unauthorized
+
+class PushNotificationsUnknownError(Exception):
+    def __init__(self, status_code=500, message=''):
+        self.message = message
+        self.code = status_code
+
+class UrbanAirshipUnavailableError(PushNotificationsUnavailableError):
+    def __init__(self):
+        super(UrbanAirshipUnavailableError, self).__init__()
+        self.message = 'Urban Airship is unavailable.'
+
+class StackMobUnavailableError(PushNotificationsUnavailableError):
+    def __init__(self):
+        super(StackMobUnavailableError, self).__init__()
+        self.message = 'StackMob is unavailable.'

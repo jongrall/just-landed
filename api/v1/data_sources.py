@@ -32,10 +32,11 @@ import logging
 
 # We use memcache service to cache results from 3rd party APIs. This improves
 # performance and also reduces our bill :)
-from google.appengine.api import memcache, taskqueue
+from google.appengine.api import memcache, taskqueue, capabilities
 from google.appengine.ext import ndb
 from google.appengine.ext.ndb import tasklets
 from google.appengine.api.urlfetch import DownloadError
+from google.appengine.runtime.apiproxy_errors import CapabilityDisabledError
 
 from config import config, on_local, on_staging
 from connections import Connection, build_url
@@ -414,8 +415,6 @@ class FlightAwareSource (FlightDataSource):
             # New filter API - get by flight_id, limited to 1 result
             to_fetch.append(self.conn.get_json('/FlightInfoEx',
                                                 args={'ident': flight_id}))
-            report_event(reporting.FA_FLIGHT_INFO_EX)
-
         if airline_info:
             if debug_cache:
                 logging.info('AIRLINE INFO CACHE HIT')
@@ -425,7 +424,6 @@ class FlightAwareSource (FlightDataSource):
             to_fetch.append(self.conn.get_json('/AirlineFlightInfo',
                                                 args={'faFlightID': flight_id,
                                                       'howMany': 1}))
-            report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
 
         flight_data = None
         airline_data = None
@@ -433,10 +431,14 @@ class FlightAwareSource (FlightDataSource):
         try:
             if not flight and not airline_info:
                 flight_data, airline_data = yield to_fetch
+                report_event(reporting.FA_FLIGHT_INFO_EX)
+                report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
             elif not flight:
                 flight_data = yield to_fetch[0]
+                report_event(reporting.FA_FLIGHT_INFO_EX)
             elif not airline_info:
                 airline_data = yield to_fetch[0]
+                report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
         except DownloadError:
             raise FlightAwareUnavailableError()
 
@@ -810,19 +812,20 @@ class FlightAwareSource (FlightDataSource):
 
                 # Tell UrbanAirship about push tokens if needed
                 if old_push_token and push_token != old_push_token:
-                    deregister_token(old_push_token)
+                    deregister_token(old_push_token, _transactional=True)
 
                 # If the token isn't in the cache, we haven't seen it in a while
                 # (or ever) and should tell UA about it
-                if not memcache.get(push_token):
-                    register_token(push_token)
-                    if not memcache.set(push_token, True, config['max_push_token_age']):
-                        logging.info('Unable to cache push token: %s' % push_token)
+                register_token(push_token, _transactional=True)
 
         # TRANSACTIONAL TRACKING!
-        yield ndb.transaction_async(lambda: track_txn(flight, uuid, push_token,
-                                                      user_latitude, user_longitude,
-                                                      driving_time), xg=True)
+        # Checking write support guards against flood of set_alerts
+        if capabilities.CapabilitySet('datastore_v3', capabilities=['write']).is_enabled():
+            yield ndb.transaction_async(lambda: track_txn(flight, uuid, push_token,
+                                                          user_latitude, user_longitude,
+                                                          driving_time), xg=True)
+        else:
+            raise CapabilityDisabledError('Datastore is in read-only mode.')
 
     @ndb.tasklet
     def delayed_track(self, request, flight_id, uuid):
@@ -868,7 +871,7 @@ class FlightAwareSource (FlightDataSource):
         # TRANSACTIONAL UNTRACKING!
         yield ndb.transaction_async(lambda: untrack_txn(flight_id, uuid), xg=True)
 
-        # FIXME: Maybe clear_lookup_cache here in the future if nobody is tracking flight ident anymore
+        # FIXME: Maybe clear_lookup_cache here if nobody is tracking flight ident anymore
 
     def authenticate_remote_request(self, request):
         """Returns True if the incoming request is in fact from the trusted

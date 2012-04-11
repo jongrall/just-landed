@@ -11,34 +11,109 @@ import pickle
 import logging
 from datetime import datetime
 
-from google.appengine.api import taskqueue
-from google.appengine.api.urlfetch import DownloadError
+from google.appengine.api import memcache, taskqueue
 
 from lib import urbanairship
+from lib import stackmob
 
 from custom_exceptions import *
 from main import BaseHandler
 from config import config, on_local, on_staging
 import utils
 
-def get_airship():
-    """Returns an Urban Airship instance initialized with the correct production
-    or development credentials.
-
-    """
-    if on_local():
-        ua_creds = config['urbanairship']['development']
-    elif on_staging():
-        ua_creds = config['urbanairship']['staging']
-    else:
-        ua_creds = config['urbanairship']['production']
-
-    return urbanairship.Airship(**ua_creds)
-
 debug_push = on_local() and False
-_UA = get_airship()
 push_types = config['push_types']
 FLIGHT_STATES = config['flight_states']
+
+
+###############################################################################
+"""Push Notification Services"""
+###############################################################################
+
+class PushNotificationService(object):
+    def register_token(self, device_token):
+        """Registers a device token with the push service."""
+        pass
+
+    def deregister_token(self, device_token):
+        """De-registers a device token from the service."""
+
+    def push(self, payload, device_tokens=None):
+        """Pushes a notification payload using the push service to the supplied
+        device tokens."""
+        pass
+
+
+class UrbanAirshipService(PushNotificationService):
+    def __init__(self):
+        # Initialize a UA instance with the correct credentials
+        if on_local():
+            ua_creds = config['urbanairship']['development']
+        elif on_staging():
+            ua_creds = config['urbanairship']['staging']
+        else:
+            ua_creds = config['urbanairship']['production']
+
+        self._UA = urbanairship.Airship(**ua_creds)
+
+    def call_ua_func(self, func, *args, **kwargs):
+        # Call the function, intercept UA exceptions
+        try:
+            func(*args, **kwargs)
+        except urbanairship.Unauthorized:
+            raise PushNotificationsUnauthorizedError()
+        except urbanairship.AirshipFailure as e:
+            raise PushNotificationsUnknownError(status_code=e.code, message=e.message)
+        except Exception:
+            raise UrbanAirshipUnavailableError()
+
+    def register_token(self, device_token):
+        self.call_ua_func(self._UA.register, device_token)
+
+    def deregister_token(self, device_token):
+        self.call_ua_func(self._UA.deregister, device_token)
+
+    def push(self, payload, device_tokens=None):
+        self.call_ua_func(self._UA.push, payload, device_tokens=device_tokens)
+
+
+class StackMobService(PushNotificationService):
+    def __init__(self):
+        # Initialize a StackMob instance with the correct credentials
+        on_production = False
+
+        if on_local():
+            creds = config['stackmob']['development']
+        elif on_staging():
+            creds = config['stackmob']['staging']
+        else:
+            creds = config['stackmob']['production']
+
+        kwargs = {
+            'production' : not on_local(),
+        }
+        kwargs.update(creds)
+        self._SM = stackmob.StackMob(**kwargs)
+
+    def call_sm_func(self, func, *args, **kwargs):
+        # Call the function, intercept & translate exceptions
+        try:
+            func(*args, **kwargs)
+        except stackmob.Unauthorized:
+            raise PushNotificationsUnauthorizedError()
+        except stackmob.StackMobFailure as e:
+            raise PushNotificationsUnknownError(status_code=e.code, message='StackMob Failure')
+        except Exception as e:
+            raise StackMobUnavailableError()
+
+    def register_token(self, device_token):
+        self.call_sm_func(self._SM.register, device_token)
+
+    def deregister_token(self, device_token):
+        self.call_sm_func(self._SM.deregister, device_token)
+
+    def push(self, payload, device_tokens=None):
+        self.call_sm_func(self._SM.push, payload, device_tokens=device_tokens)
 
 ###############################################################################
 """Helper Methods for Deferring Notification Work"""
@@ -52,19 +127,21 @@ def _defer(method, *args, **kwargs):
     taskqueue.Queue('mobile-push').add(task, transactional=transactional)
 
 
-def register_token(device_token):
+def register_token(device_token, **kwargs):
     """Registers an iOS push notification device token with Urban Airship.
 
     Arguments:
     - `device_token` : The device notification token to register.
     """
     assert device_token, 'No device token'
-    _defer('register', device_token)
+    # Only re-register if we haven't done so recently (token is cached)
+    if not memcache.get(device_token):
+        _defer('register_token', device_token, **kwargs)
 
 
-def deregister_token(device_token):
+def deregister_token(device_token, **kwargs):
     assert device_token, 'No device token'
-    _defer('deregister', device_token)
+    _defer('deregister_token', device_token, **kwargs)
 
 
 def push(cls, payload, **kwargs):
@@ -75,11 +152,16 @@ def push(cls, payload, **kwargs):
     - `payload` : The payload to push to the device(s).
     - `device_tokens` : The push notification device tokens to send to.
     """
+    assert payload
     _defer('push', payload, **kwargs)
 
 ###############################################################################
 """Request Handler for Push Notification Taskqueue Callback"""
 ###############################################################################
+
+# Use UrbanAirship as the primary push service, with StackMob as a fallback
+push_service = UrbanAirshipService()
+fallback_push_service = StackMobService()
 
 class PushWorker(BaseHandler):
     """Taskqueue worker for sending our push notifications."""
@@ -108,18 +190,33 @@ class PushWorker(BaseHandler):
                 message = data['aps']['alert']
                 logging.info('PUSHING MESSAGE TO %s: \n%s' % (token, message))
 
-        # Check that urban airship supports the method we want to call
-        func = getattr(_UA, method, None)
+        # Check that the push service supports the method we want to call
+        func = getattr(push_service, method, None)
         if func:
-            # Call the function with the supplied arguments
+            # Call the function on the primary push service with the supplied arguments
             try:
                 func(*args, **kwds)
-            except DownloadError:
-                raise UrbanAirshipUnavailableError()
-            except urbanairship.Unauthorized:
-                raise UrbanAirshipUnauthorizedException()
-            except urbanairship.AirshipFailure as e:
-                raise UrbanAirshipError(status_code=e.code, message=e.message)
+
+                if method == 'register_token':
+                    push_token = args[0]
+                    # Cache push token registration so it doesn't happen every time
+                    if not memcache.set(push_token, True, config['max_push_token_age']):
+                        logging.error('Unable to cache push token: %s' % push_token)
+
+            except Exception as e:
+                # Call the fallback service for pushing messages only
+                if method == 'push':
+                    # Since we're not re-raising need to manually record
+                    utils.sms_report_exception(e)
+                    logging.exception(e)
+
+                    # Register and push to the fallback in one go (the
+                    # device is probably not previously register)
+                    fallback_push_service.register_token(kwds['device_tokens'][0])
+                    fallback_push_service.push(*args, **kwds)
+                else:
+                    raise # Give up for other methods
+
 
 ###############################################################################
 """Convenience Functions for sending push notifications to a user about
