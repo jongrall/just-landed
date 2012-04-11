@@ -14,6 +14,8 @@ import math
 import hashlib, hmac
 import traceback
 from zlib import adler32
+import re
+import string
 
 from google.appengine.api import memcache
 
@@ -28,6 +30,11 @@ METERS_IN_MILE = 1609.344
 ADMIN_PHONES = ['16176425619']
 twilio_client = TwilioRestClient(config['twilio']['account_sid'],
                                  config['twilio']['auth_token'])
+
+email_re = re.compile(
+    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"  # dot-atom
+    r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*"' # quoted-string
+    r')@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?$', re.IGNORECASE)  # domain
 
 ###############################################################################
 """Common Utilities"""
@@ -347,6 +354,16 @@ def leave_soon_time(est_arrival_time, driving_time):
     leave_soon_interval = config['leave_soon_seconds_before']
     leave_now = timestamp(leave_now_time(est_arrival_time, driving_time))
     return datetime.utcfromtimestamp(leave_now - leave_soon_interval)
+
+###############################################################################
+"""Email Utilities"""
+###############################################################################
+
+def valid_email(email):
+  """Returns true if the email address is valid, false otherwise."""
+  if email and re.match(email_re, string.lower(email)):
+    return True
+  return False
 
 ###############################################################################
 """SMS Utilities"""

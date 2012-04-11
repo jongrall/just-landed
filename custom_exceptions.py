@@ -146,3 +146,17 @@ class StackMobUnavailableError(PushNotificationsUnavailableError):
     def __init__(self):
         super(StackMobUnavailableError, self).__init__()
         self.message = 'StackMob is unavailable.'
+
+###############################################################################
+"""Mailing List Exceptions"""
+###############################################################################
+
+class CampaignMonitorUnavailableError(Exception):
+    def __init__(self):
+        self.message = 'Mailing list is unavailable.'
+        self.code = 503 # Service unavailable
+
+class CampaignMonitorUnauthorizedError(Exception):
+    def __init__(self):
+        self.message = 'Mailing list unauthorized.'
+        self.code = 401 # Unauthorized

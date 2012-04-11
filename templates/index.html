@@ -6,7 +6,7 @@
 
 {% block page_content %}
     <h1 id="logo">Just Landed</h1>
-    
+
     <form id="email-signup">
         <div class="position-relative">
             <label for="email" class="infield">Enter your email to get notified</label>
@@ -28,7 +28,7 @@
         var submitButton = $(event.data.submitButton);
 
         var emailAddress = emailField.val();
-    
+
         if (emailAddress && emailAddress.length > 0 && emailRegExp.test(emailAddress)) {
             // Enable the submit button
             if (submitButton) {
@@ -37,7 +37,7 @@
 
             return true;
         }
-        else {            
+        else {
             // Disable submit button
             if (submitButton) {
                 submitButton.attr('disabled', 'disabled').addClass('disabled');
@@ -65,10 +65,10 @@
 
             // Send request
             var request = { email: emailAddress }
-            callRemoteMethodWithCallbacks('/rpc/earlyservice', 'get_early_access', request, null, successHandler, null);
+            callRemoteMethodWithCallbacks('/mailing-list/subscribe', request, null, successHandler, null);
         }
     }
-    
+
     // Email form events
     $('form#email-signup input[type="text"]').keyup({
         emailField : $('form#email-signup input[type="text"]'),
@@ -77,7 +77,11 @@
 
     $('form#email-signup').submit({
         emailField : $('form#email-signup input[type="text"]'),
-        submitButton : $('form#email-signup input[type="submit"]')
+        submitButton : $('form#email-signup input[type="submit"]'),
+        successHandler : function() {
+          // TODO: Sean put custom success handler here
+          alert('You are subscribed, check your email to confirm!');
+        }
     }, submitEmailSignup);
 </script>
 {% endblock %}

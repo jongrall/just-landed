@@ -14,7 +14,7 @@ from api.v1.data_sources import FlightAwareSource
 
 from main import StaticHandler, BaseHandler, BaseAPIHandler
 from models import FlightAwareTrackedFlight, iOSUser
-from config import on_local, on_staging
+from config import config, on_local, on_staging
 
 source = FlightAwareSource()
 
@@ -56,7 +56,6 @@ class FlightAwareAdminAPIHandler(BaseAPIHandler):
     def clear_alerts(self):
         result = yield source.clear_all_alerts()
         self.respond(result)
-
 
 class ClearAlertsWorker(BaseHandler):
     @ndb.toplevel

@@ -29,7 +29,7 @@ from config import config, on_local, on_staging
 from custom_exceptions import *
 import utils
 
-debug_reporting = on_local() and True
+debug_reporting = on_local() and False
 
 ###############################################################################
 """Flight Counters"""

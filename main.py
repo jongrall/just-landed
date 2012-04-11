@@ -27,7 +27,7 @@ from google.appengine.runtime.apiproxy_errors import (OverQuotaError,
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
 from custom_exceptions import *
-from config import config, on_local, on_staging
+from config import config, on_local, on_staging, google_analytics_account
 import utils
 
 if not on_local(): # On local, ereporter causes unwanted stacktraces
@@ -44,6 +44,7 @@ SERVER_SOFTWARE = os.environ.get('SERVER_SOFTWARE', '')
 VERSION_CHKSM = adler32(APP_VERSION + SERVER_SOFTWARE)
 template_context = {
     'version' : VERSION_CHKSM,
+    'ga_account' : google_analytics_account(),
 }
 
 template_dir = config['template_dir']
@@ -80,7 +81,9 @@ class BaseHandler(webapp.RequestHandler):
                                           DeadlineExceededError,
                                           PushNotificationsUnavailableError,
                                           PushNotificationsUnauthorizedError,
-                                          PushNotificationsUnknownError)):
+                                          PushNotificationsUnknownError,
+                                          CampaignMonitorUnauthorizedError,
+                                          CampaignMonitorUnavailableError)):
                     utils.sms_report_exception(exception)
 
                 system_status = {
@@ -128,7 +131,10 @@ class StaticHandler(BaseHandler):
 
         # Add in the version context
         context.update(template_context)
-        self.response.write(template.render(template_path, context))
+        try:
+            self.response.write(template.render(template_path, context))
+        except Exception as e:
+            handle_404(self.request, self.response, e)
 
 
 class BaseAPIHandler(BaseHandler):
@@ -207,9 +213,12 @@ routes = [
         Route('/queue/report-event', handler='reporting.ReportWorker'),
         Route('/warmup', handler='warmup.WarmupWorker'),
     ]),
-    Route('/', handler='web_handlers.StaticHandler'),
-    Route('/iphonefaq', handler='web_handlers.iPhoneFAQHandler'),
-    Route('/mu-ddc4496d-5d1fac34-63470606-c5358264', handler='web_handlers.BlitzHandler'),
+    Route('/', handler=StaticHandler),
+    HandlerPrefixRoute('web_handlers.', [
+        Route('/mailing-list/subscribe', handler="CampaignMonitorHandler"),
+        Route('/mu-ddc4496d-5d1fac34-63470606-c5358264', handler='BlitzHandler'),
+    ]),
+    Route('/<page_name:[^/]+>', handler=StaticHandler),
 ]
 
 # Instantiate the app.
@@ -217,9 +226,9 @@ app = webapp.WSGIApplication(routes, debug=on_local())
 
 # Register custom 404 handler.
 def handle_404(request, response, exception):
-    path = os.path.join(template_dir, '%d.html' % code)
+    path = os.path.join(template_dir, '404.html')
     response.write(template.render(path, template_context))
-    response.set_status(code)
+    response.set_status(404)
 
 app.error_handlers[404] = handle_404
 

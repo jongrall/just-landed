@@ -18,6 +18,6 @@ cron:
     url: /cron/clear_orphaned_alerts
     schedule: every 24 hours
 
-  - description: Daily exception report
+  - description: daily exception report
     url: /_ereporter?sender=webmaster@getjustlanded.com&versions=all
     schedule: every day 05:00

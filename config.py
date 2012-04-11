@@ -364,6 +364,10 @@ config['campaignmonitor'] = {
     },
 }
 
+def subscriber_list_id():
+    app_mode = config['app']['mode']
+    return config['campaignmonitor'][app_mode]['subscriber_list_id']
+
 ###############################################################################
 """Twilio API Keys"""
 ###############################################################################
@@ -373,3 +377,25 @@ config['twilio'] = {
     'auth_token' : 'dbc0ecf4c9599a90f970a09df4dacdaf',
     'just_landed_phone' : '+14157993553',
 }
+
+###############################################################################
+"""Google Analytics Accounts"""
+###############################################################################
+
+config['google_analytics'] = {
+    'local' : {
+        'account_id' : 'UA-30604975-3',
+    },
+    'staging' : {
+        'account_id' : 'UA-30604975-2',
+    },
+    'production' : {
+        'account_id' : 'UA-30604975-1',
+    }
+}
+
+def google_analytics_account():
+    app_mode = config['app']['mode']
+    return config['google_analytics'][app_mode]['account_id']
+
+
