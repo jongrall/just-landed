@@ -58,13 +58,13 @@ def on_local():
 config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 
 # Buffer within which a flight is said to be "on time". Buffer is in seconds.
-config['on_time_buffer'] = 300
+config['on_time_buffer'] = 600 # 10 min buffer
 
 # Hours after a flight lands when it becomes "old"
 config['flight_old_hours'] = 2
 
 # Time to allow from tires down landing to baggage claim
-config['touchdown_to_terminal'] = 780
+config['touchdown_to_terminal'] = 600 # 10 min (aggressive)
 
 # Flight datasources
 config['data_sources'] = Enum([
@@ -125,7 +125,7 @@ config['leave_soon_seconds_before'] = 300
 # Reminder freshness requirement (don't send reminders that are older than than this)
 config['max_reminder_age'] = 120
 
-# Push token freshness requirement (don't tell urban airship about tokens that we've seen as recently as this)
+# Push token freshness requirement (don't register tokens that we've registered as recently as this)
 config['max_push_token_age'] = 14400
 
 if on_local():
@@ -273,7 +273,7 @@ config['flightaware'] = {
 ###############################################################################
 
 # Number of miles to the airport below which driving estimate isn't needed
-config['close_to_airport'] = 1.0
+config['close_to_airport'] = 0.5
 
 # Number of miles to the airport above which driving estimate isn't needed
 config['far_from_airport'] = 200.0

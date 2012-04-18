@@ -816,7 +816,8 @@ class FlightAwareSource (FlightDataSource):
 
                 # If the token isn't in the cache, we haven't seen it in a while
                 # (or ever) and should tell UA about it
-                register_token(push_token, _transactional=True)
+                if push_token:
+                    register_token(push_token, _transactional=True)
 
         # TRANSACTIONAL TRACKING!
         # Checking write support guards against flood of set_alerts
@@ -831,13 +832,7 @@ class FlightAwareSource (FlightDataSource):
     def delayed_track(self, request, flight_id, uuid):
         """Initiates a delayed track for a user of a specific flight to update their reminders."""
         assert request
-        assert isinstance(flight_id, basestring) and len(flight_id)
-        assert isinstance(uuid, basestring) and len(uuid)
         user = yield iOSUser.get_by_uuid(uuid)
-
-        # NOT NECESSARY - DATA WILL BE FRESH THANKS TO FLIGHT ALERTS
-        # Clear the cache (we want fresh data)
-        # FlightAwareSource.clear_flight_info_cache(flight_id)
 
         if user.is_tracking_flight(flight_id) and user.push_enabled and user.has_unsent_reminders:
             yield self.do_track(request, user, flight_id, delayed=True)

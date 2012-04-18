@@ -107,13 +107,12 @@ class MixpanelService(ReportingService):
 
         try:
             result = urlfetch.fetch(url=url, validate_certificate=True)
+            if result.status_code != 200:
+                # Log, don't raise
+                logging.exception(ReportEventFailedException(status_code=result.status_code,
+                                                             event_name=event_name))
         except DownloadError:
             utils.sms_report_exception(MixpanelUnavailableError())
-
-        if result.status_code != 200:
-            # Log, don't raise
-            logging.exception(ReportEventFailedException(status_code=result.status_code,
-                                                        event_name=event_name))
 
 ###############################################################################
 """Report Helper Methods"""

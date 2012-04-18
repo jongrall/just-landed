@@ -313,7 +313,7 @@ class iOSUser(_User):
     has_unsent_reminders = ndb.ComputedProperty(lambda u: bool([r for r in u.reminders if r.sent == False]))
     push_token = ndb.TextProperty()
     push_settings = ndb.StructuredProperty(PushNotificationSetting, repeated=True)
-    push_enabled = ndb.ComputedProperty(lambda u: bool(len(u.push_token)))
+    push_enabled = ndb.ComputedProperty(lambda u: bool(u.push_token))
     lifetime_flights_tracked = ndb.IntegerProperty('lifetime_tracks', default=0)
 
     @classmethod
