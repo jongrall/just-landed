@@ -111,8 +111,9 @@ class MixpanelService(ReportingService):
                 # Log, don't raise
                 logging.exception(ReportEventFailedException(status_code=result.status_code,
                                                              event_name=event_name))
-        except DownloadError:
+        except Exception as e:
             utils.sms_report_exception(MixpanelUnavailableError())
+            logging.exception(e)
 
 ###############################################################################
 """Report Helper Methods"""

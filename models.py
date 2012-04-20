@@ -130,10 +130,8 @@ class FlightAwareTrackedFlight(TrackedFlight):
         raise tasklets.Return(new_flight)
 
     @classmethod
-    @ndb.tasklet
-    def tracked_flights(cls):
-        q = cls.query(cls.is_tracking == True)
-        raise tasklets.Return(q.iter())
+    def tracked_flights_qry(cls):
+        return cls.query(cls.is_tracking == True)
 
     @classmethod
     @ndb.tasklet
@@ -475,17 +473,14 @@ class iOSUser(_User):
         raise tasklets.Return((flight, alert))
 
     @classmethod
-    @ndb.tasklet
-    def users_tracking_flight(cls, flight_id, source=DATA_SOURCES.FlightAware):
+    def users_tracking_flight_qry(cls, flight_id, source=DATA_SOURCES.FlightAware):
         assert isinstance(flight_id, basestring) and len(flight_id)
         if source == DATA_SOURCES.FlightAware:
             flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
-            q = cls.query(cls.tracked_flights.flight == flight_key)
-            raise tasklets.Return(q.iter(keys_only=True))
+            return cls.query(cls.tracked_flights.flight == flight_key)
 
     @classmethod
-    @ndb.tasklet
-    def users_to_notify(cls, alert, flight_id, source=DATA_SOURCES.FlightAware):
+    def users_to_notify_qry(cls, alert, flight_id, source=DATA_SOURCES.FlightAware):
         assert isinstance(alert, ndb.Model)
         assert isinstance(flight_id, basestring) and len(flight_id)
         flight_key = None
@@ -493,19 +488,15 @@ class iOSUser(_User):
             flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
 
         assert flight_key
-        q = cls.query(cls.tracked_flights.flight == flight_key,
-                      cls.alerts == alert.key,
-                      cls.push_enabled == True)
-        # Returns an iterator
-        raise tasklets.Return(q.iter())
+        return cls.query(cls.tracked_flights.flight == flight_key,
+                         cls.alerts == alert.key,
+                         cls.push_enabled == True)
 
     @classmethod
-    @ndb.tasklet
-    def users_with_overdue_reminders(cls):
-        q = cls.query(cls.has_unsent_reminders == True,
-                      cls.push_enabled == True,
-                      cls.reminders.fire_time < datetime.utcnow())
-        raise tasklets.Return(q.iter(keys_only=True))
+    def users_with_overdue_reminders_qry(cls):
+        return cls.query(cls.has_unsent_reminders == True,
+                        cls.push_enabled == True,
+                        cls.reminders.fire_time < datetime.utcnow())
 
     @classmethod
     @ndb.tasklet
@@ -598,7 +589,17 @@ class iOSUser(_User):
     def set_or_update_flight_reminders(self, flight, driving_time, source=DATA_SOURCES.FlightAware):
         assert isinstance(driving_time, (int, long))
         assert isinstance(flight, Flight)
+
         reminders = self.get_reminders_for_flight(flight.flight_id, source=source)
+
+        # If the flight is canceled or diverted, remove the alerts and don't add / update them
+        if flight.status == FLIGHT_STATES.CANCELED or flight.status == FLIGHT_STATES.DIVERTED:
+            if reminders:
+                self.remove_flight_reminders(flight.flight_id, source=source)
+                return True # Reminders were changed, triggers a write of iOSUser
+            else:
+                return False # We're done
+
         flight_num = self.flight_num_for_flight_id(flight.flight_id)
         dest_terminal = flight.destination.terminal
         dest_name = (flight.destination.name or flight.destination.iata_code or

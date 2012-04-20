@@ -19,5 +19,5 @@ cron:
     schedule: every 24 hours
 
   - description: daily exception report
-    url: /_ereporter?sender=webmaster@getjustlanded.com&versions=all
+    url: /_ereporter?sender=webmaster@getjustlanded.com&versions=latest
     schedule: every day 05:00

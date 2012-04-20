@@ -31,10 +31,10 @@ class UntrackOldFlightsWorker(BaseHandler):
     @ndb.toplevel
     def get(self):
         # Get all flights that are currently tracking
-        flights = yield FlightAwareTrackedFlight.tracked_flights()
+        flights_qry = FlightAwareTrackedFlight.tracked_flights_qry()
 
-        while (yield flights.has_next_async()):
-            f = flights.next()
+        @ndb.tasklet
+        def flight_cbk(f):
             flight_id = f.key.string_id()
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
             flight = Flight.from_dict(f.last_flight_data)
@@ -57,7 +57,7 @@ class UntrackOldFlightsWorker(BaseHandler):
             except Exception as e:
                 if isinstance(e, OldFlightException): # Only care about old flights
                     # We should untrack this flight for each user who was tracking it
-                    user_keys_tracking = yield iOSUser.users_tracking_flight(flight_id)
+                    users_qry = iOSUser.users_tracking_flight_qry(flight_id)
 
                     # Generate the URL and API signature
                     url_scheme = (not on_local() and 'https') or 'http'
@@ -70,8 +70,8 @@ class UntrackOldFlightsWorker(BaseHandler):
                     ctx = ndb.get_context()
                     report_event(reporting.UNTRACKED_OLD_FLIGHT)
 
-                    while (yield user_keys_tracking.has_next_async()):
-                        u_key = user_keys_tracking.next()
+                    @ndb.tasklet
+                    def user_cbk(u_key):
                         headers = {'X-Just-Landed-UUID' : u_key.string_id(),
                                    'X-Just-Landed-Signature' : sig}
 
@@ -80,46 +80,48 @@ class UntrackOldFlightsWorker(BaseHandler):
                                            deadline=120,
                                            validate_certificate=not on_local())
 
+                    yield users_qry.map_async(user_cbk, keys_only=True)
+
+        yield flights_qry.map_async(flight_cbk)
+
 
 class SendRemindersWorker(BaseHandler):
     """Cron worker for sending unsent reminders."""
     @ndb.toplevel
     def get(self):
         # Get all users who have overdue reminders
-        user_keys = yield iOSUser.users_with_overdue_reminders()
+        reminder_qry = iOSUser.users_with_overdue_reminders_qry()
 
-        while (yield user_keys.has_next_async()):
-            u_key = user_keys.next()
+        # TRANSACTIONAL REMINDER SENDING PER USER - ENSURE DUPE REMINDERS NOT SENT
+        @ndb.transactional
+        @ndb.tasklet
+        def callback(u_key):
+            user = yield u_key.get_async()
+            unsent_reminders = user.get_unsent_reminders()
+            outbox = []
+            now = datetime.utcnow()
+            max_age = now - timedelta(seconds=config['max_reminder_age'])
 
-            @ndb.tasklet
-            def send_txn():
-                user = yield u_key.get_async()
-                unsent_reminders = user.get_unsent_reminders()
-                outbox = []
-                now = datetime.utcnow()
-                max_age = now - timedelta(seconds=config['max_reminder_age'])
-
-                for r in unsent_reminders:
-                    if ((max_age < r.fire_time <= now) or
-                        (r.reminder_type == reminder_types.LEAVE_NOW and r.fire_time <= now)):
-                        # Max 5 transactional tasks per txn
-                        if len(outbox) < 6 and user.wants_notification_type(r.reminder_type):
-                            r.sent = True # Mark sent
-                            if r.reminder_type == reminder_types.LEAVE_SOON:
-                                outbox.append(LeaveSoonAlert(user.push_token, r.body))
-                            else:
-                                outbox.append(LeaveNowAlert(user.push_token, r.body))
-                if outbox:
-                    yield user.put_async() # Save the changes to reminders
-                    for r in outbox:
-                        r.push(_transactional=True)
-                        if isinstance(r, LeaveSoonAlert):
-                            report_event_transactionally(reporting.SENT_LEAVE_SOON_NOTIFICATION)
+            for r in unsent_reminders:
+                if ((max_age < r.fire_time <= now) or
+                    (r.reminder_type == reminder_types.LEAVE_NOW and r.fire_time <= now)):
+                    # Max 5 transactional tasks per txn
+                    if len(outbox) < 6 and user.wants_notification_type(r.reminder_type):
+                        r.sent = True # Mark sent
+                        if r.reminder_type == reminder_types.LEAVE_SOON:
+                            outbox.append(LeaveSoonAlert(user.push_token, r.body))
                         else:
-                            report_event_transactionally(reporting.SENT_LEAVE_NOW_NOTIFICATION)
+                            outbox.append(LeaveNowAlert(user.push_token, r.body))
+            if outbox:
+                yield user.put_async() # Save the changes to reminders
+                for r in outbox:
+                    r.push(_transactional=True) # Transactional push
+                    if isinstance(r, LeaveSoonAlert):
+                        report_event_transactionally(reporting.SENT_LEAVE_SOON_NOTIFICATION)
+                    else:
+                        report_event_transactionally(reporting.SENT_LEAVE_NOW_NOTIFICATION)
 
-            # TRANSACTIONAL REMINDER SENDING PER USER - ENSURE DUPE REMINDERS NOT SENT
-            yield ndb.transaction_async(send_txn)
+        yield reminder_qry.map_async(callback, keys_only=True)
 
 
 class ClearOrphanedAlertsWorker(BaseHandler):

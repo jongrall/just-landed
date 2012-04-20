@@ -600,7 +600,6 @@ class FlightAwareSource (FlightDataSource):
                 # Send out push notifications
                 push_types = config['push_types']
                 ctx = ndb.get_context()
-                flight_numbers = []
 
                 # Reporting
                 if event_code == 'change' or event_code == 'minutes_out':
@@ -615,11 +614,11 @@ class FlightAwareSource (FlightDataSource):
                     report_event(reporting.FLIGHT_CANCELED)
 
                 # FIXME: Assume iOS user
-                users_to_notify = yield iOSUser.users_to_notify(alert, flight_id, source=DATA_SOURCES.FlightAware)
-                while (yield users_to_notify.has_next_async()):
-                    u = users_to_notify.next()
+                notify_qry = iOSUser.users_to_notify_qry(alert, flight_id, source=DATA_SOURCES.FlightAware)
+
+                @ndb.tasklet
+                def notify_cbk(u):
                     user_flight_num = u.flight_num_for_flight_id(flight_id) or flight_num
-                    flight_numbers.append(utils.sanitize_flight_number(user_flight_num))
                     device_token = u.push_token
 
                     # Send notifications to each user, only if they want that notification type
@@ -652,6 +651,11 @@ class FlightAwareSource (FlightDataSource):
 
                     # Fire off a /track for the user, which will update their reminders
                     yield self.do_track(request, u, flight_id)
+
+                    # Return the user-entered flight number so we can nix the cache for it
+                    raise tasklets.Return(utils.sanitize_flight_number(user_flight_num))
+
+                flight_numbers = yield notify_qry.map_async(notify_cbk)
 
                 # Cache freshness: clear memcache keys for lookup
                 FlightAwareSource.clear_flight_lookup_cache(flight_numbers)
@@ -834,7 +838,7 @@ class FlightAwareSource (FlightDataSource):
         assert request
         user = yield iOSUser.get_by_uuid(uuid)
 
-        if user.is_tracking_flight(flight_id) and user.push_enabled and user.has_unsent_reminders:
+        if user and user.is_tracking_flight(flight_id) and user.push_enabled and user.has_unsent_reminders:
             yield self.do_track(request, user, flight_id, delayed=True)
 
     @ndb.tasklet
