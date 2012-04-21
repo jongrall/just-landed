@@ -101,7 +101,7 @@ class DelayedTrackWorker(BaseHandler):
         flight_id = params.get('flight_id')
         assert isinstance(uuid, basestring) and len(uuid)
         assert isinstance(flight_id, basestring) and len(flight_id)
-        yield source.delayed_track(self, flight_id, uuid)
+        yield source.do_track(self, flight_id, uuid, delayed=True)
 
 
 class TrackHandler(AuthenticatedAPIHandler):
@@ -134,10 +134,6 @@ class TrackHandler(AuthenticatedAPIHandler):
         uuid = self.request.headers.get('X-Just-Landed-UUID')
         push_token = self.request.params.get('push_token')
 
-        # Was this a server-initiated, delayed /track?
-        delayed = self.request.params.get('delayed')
-        server_scheduled = (utils.is_int(delayed) and bool(int(delayed))) or False
-
         # Get driving time, if we have their location
         driving_time = None
         latitude = self.request.params.get('latitude')
@@ -147,6 +143,7 @@ class TrackHandler(AuthenticatedAPIHandler):
 
         dest_latitude = flight.destination.latitude
         dest_longitude = flight.destination.longitude
+        driving_time = None
 
         if (latitude and longitude and
             not utils.too_close_or_far(latitude,
@@ -159,7 +156,6 @@ class TrackHandler(AuthenticatedAPIHandler):
                                                                   longitude,
                                                                   dest_latitude,
                                                                   dest_longitude)
-                flight.set_driving_time(driving_time)
             except Exception as e:
                 # Tell the admin about Bing Maps outages / unexpected errors
                 if isinstance(e, (DrivingTimeUnavailableError, MalformedDrivingDataException,
@@ -174,7 +170,6 @@ class TrackHandler(AuthenticatedAPIHandler):
                                                                                    longitude,
                                                                                    dest_latitude,
                                                                                    dest_longitude)
-                        flight.set_driving_time(driving_time)
                     except Exception as e2:
                         if isinstance(e2, (DrivingTimeUnavailableError, MalformedDrivingDataException,
                                             DrivingAPIQuotaException, DrivingTimeUnauthorizedException)):
@@ -185,7 +180,13 @@ class TrackHandler(AuthenticatedAPIHandler):
                         if not isinstance(e2, NoDrivingRouteException):
                             raise DrivingTimeUnavailableError()
 
-        self.respond(flight.dict_for_client())
+        response = flight.dict_for_client()
+
+        if driving_time:
+            response['drivingTime'] = driving_time
+            response['leaveForAirportTime'] = utils.timestamp(utils.leave_now_time(flight.estimated_arrival_time,
+                                                                  driving_time))
+        self.respond(response)
 
         # Track the flight (deferred)
         task = taskqueue.Task(params={
@@ -198,34 +199,6 @@ class TrackHandler(AuthenticatedAPIHandler):
         })
         taskqueue.Queue('track').add(task)
 
-        # Schedule a /track to happen a couple of times in the future before landing - this will ensure that their
-        # leave alerts are accurate - taking into account traffic conditions
-        # checking server_scheduled prevents a cascade of calls to /track
-        if not server_scheduled and utils.is_int(driving_time) and uuid and flight.is_in_flight :
-            driving_time = int(driving_time)
-            now = datetime.utcnow()
-
-            # Allow for 50% fluctuation in driving time, 1 min cron delay
-            first_check_time = utils.leave_now_time(flight.estimated_arrival_time, (driving_time * 1.5) + 60)
-            # Check again at leave soon minus 1 min
-            second_check_time = utils.leave_soon_time(flight.estimated_arrival_time, driving_time + 60)
-
-            if first_check_time > now:
-                delayed_task = taskqueue.Task(params={
-                                                'flight_id' : flight_id,
-                                                'uuid' : uuid,
-                                                },
-                                                eta=first_check_time)
-                taskqueue.Queue('delayed-track').add(delayed_task)
-
-            if second_check_time > now:
-                delayed_task = taskqueue.Task(params={
-                                                'flight_id' : flight_id,
-                                                'uuid' : uuid,
-                                                },
-                                                eta=second_check_time)
-                taskqueue.Queue('delayed-track').add(delayed_task)
-
 
 class UntrackWorker(BaseHandler):
     """Deferred work when untracking a flight."""
@@ -236,7 +209,7 @@ class UntrackWorker(BaseHandler):
         assert isinstance(flight_id, basestring) and len(flight_id)
 
         uuid = params.get('uuid')
-        yield source.stop_tracking_flight(flight_id, uuid=uuid)
+        yield source.untrack_flight(flight_id, uuid=uuid)
 
 
 class UntrackHandler(AuthenticatedAPIHandler):

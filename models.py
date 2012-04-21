@@ -69,6 +69,7 @@ class Airport(ndb.Model):
 
         """
         return dict(city=self.city,
+                    altitude=self.altitude,
                     icaoCode=self.key.string_id(),
                     iataCode=self.iata_code,
                     latitude=utils.round_coord(self.location.lat),
@@ -419,7 +420,7 @@ class iOSUser(_User):
 
     @classmethod
     @ndb.tasklet
-    def untrack_flight(cls, uuid, flight_id, alert=None, source=DATA_SOURCES.FlightAware):
+    def stop_tracking_flight(cls, uuid, flight_id, alert=None, source=DATA_SOURCES.FlightAware):
         assert isinstance(uuid, basestring) and len(uuid)
         assert isinstance(flight_id, basestring) and len(flight_id)
 
@@ -678,6 +679,14 @@ class Origin(object):
             self._data = {}
 
     @property
+    def altitude(self):
+        return self._data.get('altitude')
+
+    @altitude.setter
+    def altitude(self, value):
+        self._data['altitude'] = value
+
+    @property
     def iata_code(self):
         return self._data.get('iataCode')
 
@@ -741,6 +750,7 @@ class Origin(object):
     def dict_for_client(self):
         info = {}
         info.update(self._data)
+        info = utils.sub_dict_select(info, config['airport_fields'])
         return info
 
 
@@ -753,6 +763,14 @@ class Destination(Origin):
     @bag_claim.setter
     def bag_claim(self, value):
         self._data['bagClaim'] = value
+
+    @property
+    def gate(self):
+        return self._data.get('gate')
+
+    @gate.setter
+    def gate(self, value):
+        self._data['gate'] = value
 
 
 class Flight(object):
@@ -883,13 +901,8 @@ class Flight(object):
     def status(self):
         if self.actual_departure_time == 0:
             # See if it has missed its take-off time
-            if utils.timestamp(datetime.utcnow()) > self.scheduled_departure_time:
-                time_diff = (self.estimated_arrival_time -
-                (self.scheduled_departure_time + self.scheduled_flight_duration))
-                if time_diff > config['on_time_buffer']:
-                    return FLIGHT_STATES.DELAYED
-                else:
-                    return FLIGHT_STATES.SCHEDULED
+            if utils.timestamp(datetime.utcnow()) > self.scheduled_departure_time + config['on_time_buffer']:
+                return FLIGHT_STATES.DELAYED
             else:
                 return FLIGHT_STATES.SCHEDULED
         elif self.diverted:
@@ -961,16 +974,38 @@ class Flight(object):
         return self.actual_arrival_time > 0
 
     @property
-    def leave_for_airport_time(self):
-        return self._data.get('leaveForAirportTime')
+    def is_night(self):
+        if not self.is_in_flight:
+            if self.status == FLIGHT_STATES.LANDED:
+                # The flight has arrived, use the destination
+                return utils.is_dark_now(self.destination.latitude,
+                                         self.destination.longitude,
+                                         altitude_in_feet=self.destination.altitude or 0)
+            else:
+                # The flight hasn't left, use the origin
+                return utils.is_dark_now(self.origin.latitude,
+                                         self.origin.longitude,
+                                         altitude_in_feet=self.origin.altitude or 0)
+        else:
+            # The flight is in progress, approximate whether it is light or dark
+            origin_sun_angle = utils.sun_altitude_degrees(self.origin.latitude,
+                                                          self.origin.longitude,
+                                                          altitude_in_feet=self.origin.altitude or 0)
+            dest_sun_angle = utils.sun_altitude_degrees(self.destination.latitude,
+                                                        self.destination.longitude,
+                                                        altitude_in_feet=self.destination.altitude or 0)
+            now = utils.timestamp(datetime.utcnow())
+            progress = 0.0
 
-    @leave_for_airport_time.setter
-    def leave_for_airport_time(self, value):
-        self._data['leaveForAirportTime'] = value
+            if now > self.estimated_arrival_time:
+                progress = 0.999 # Landing overdue
+            else:
+                time_since_takeoff = now - self.actual_departure_time
+                total_flight_time = self.estimated_arrival_time - self.actual_departure_time
+                progress = time_since_takeoff / float(total_flight_time)
 
-    def set_driving_time(self, driving_time):
-        self.leave_for_airport_time = (self.estimated_arrival_time +
-            config['touchdown_to_terminal'] - driving_time)
+            sun_angle_approx = ((dest_sun_angle - origin_sun_angle) * progress) + origin_sun_angle
+            return sun_angle_approx < 0.0
 
     def to_dict(self):
         info = utils.sub_dict_select(self._data, config['flight_fields'])
@@ -982,4 +1017,5 @@ class Flight(object):
         info = self.to_dict()
         info['status'] = self.status
         info['detailedStatus'] = self.detailed_status
+        info['isNight'] = self.is_night
         return info

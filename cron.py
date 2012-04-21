@@ -52,7 +52,7 @@ class UntrackOldFlightsWorker(BaseHandler):
 
                 else:
                     # Do nothing for flights that aren't old or landed
-                    continue
+                    raise tasklets.Return(True)
 
             except Exception as e:
                 if isinstance(e, OldFlightException): # Only care about old flights

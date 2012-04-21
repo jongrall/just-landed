@@ -136,11 +136,7 @@ class FlightDataSource (object):
         """
         pass
 
-    def delayed_track(self, flight_id, uuid):
-        """Initiates a delayed track for a user of a specific flight."""
-        pass
-
-    def stop_tracking_flight(self, flight_id, **kwargs):
+    def untrack_flight(self, flight_id, **kwargs):
         """Stops tracking a flight. If there are alerts set and no users tracking
         the flight any longer, we delete & disable the alerts.
 
@@ -232,10 +228,16 @@ class FlightAwareSource (FlightDataSource):
                 password=config['flightaware']['production']['key'])
 
     @ndb.tasklet
-    def do_track(self, request, user, flight_id, delayed=False):
+    def do_track(self, request, flight_id, uuid, user=None, delayed=False):
         assert request
-        assert isinstance(user, iOSUser)
+        assert isinstance(uuid, basestring) and len(uuid)
         assert isinstance(flight_id, basestring) and len(flight_id)
+        user = user or (yield iOSUser.get_by_uuid(uuid))
+        assert user
+
+        if delayed and (not user.is_tracking_flight(flight_id) or
+            not user.push_enabled or not user.has_unsent_reminders):
+            return # We're done
 
         user_flight_num = user.flight_num_for_flight_id(flight_id)
         # Fire off a /track for the user, which will update their reminders
@@ -246,10 +248,9 @@ class FlightAwareSource (FlightDataSource):
                                     _full=True,
                                     _scheme=url_scheme)
         full_track_url = build_url(track_url, '', args={
-            'push_token' : user.push_token,
+            'push_token' : user.push_token or '',
             'latitude' : user.last_known_location and user.last_known_location.lat,
             'longitude' : user.last_known_location and user.last_known_location.lon,
-            'delayed' : (delayed and 1) or 0,
         })
 
         sig = utils.api_query_signature(full_track_url, client='Server')
@@ -291,7 +292,9 @@ class FlightAwareSource (FlightDataSource):
             # Convert aircraft type
             flight.aircraft_type = aircraft_types.type_to_major_type(data.get('aircraftType'))
             flight.origin.name = utils.proper_airport_name(data['originName'])
+            flight.origin.city = flight.origin.city.split(', ')[0]
             flight.destination.name = utils.proper_airport_name(data['destinationName'])
+            flight.destination.city = flight.destination.city.split(', ')[0]
             raise tasklets.Return(flight)
 
     @ndb.tasklet
@@ -345,6 +348,9 @@ class FlightAwareSource (FlightDataSource):
                     # Add ICAO code back in (we don't have IATA)
                     airport['icaoCode'] = airport_code
                     airport['iataCode'] = None
+
+                    # Add altitude
+                    airport['altitude'] = 0 # AirportInfo doesn't have altitude yet
 
                     # Make sure the name is well formed
                     airport['name'] = utils.proper_airport_name(airport['name'])
@@ -488,6 +494,7 @@ class FlightAwareSource (FlightDataSource):
         flight.origin.terminal = airline_info['originTerminal']
         flight.destination.terminal = airline_info['destinationTerminal']
         flight.destination.bag_claim = airline_info['bagClaim']
+        flight.destination.gate = airline_info['destinationGate']
         raise tasklets.Return(flight)
 
     @ndb.tasklet
@@ -650,7 +657,7 @@ class FlightAwareSource (FlightDataSource):
                         logging.error('Unknown eventcode: %s' % event_code)
 
                     # Fire off a /track for the user, which will update their reminders
-                    yield self.do_track(request, u, flight_id)
+                    yield self.do_track(request, flight_id, u.key.string_id(), user=u)
 
                     # Return the user-entered flight number so we can nix the cache for it
                     raise tasklets.Return(utils.sanitize_flight_number(user_flight_num))
@@ -797,11 +804,9 @@ class FlightAwareSource (FlightDataSource):
 
             # Save the user's tracking activity if we have a uuid
             if uuid:
-                old_push_token = None
-
-                if push_token:
-                    existing_user = yield iOSUser.get_by_uuid(uuid)
-                    old_push_token = existing_user and existing_user.push_token
+                existing_user = yield iOSUser.get_by_uuid(uuid)
+                old_push_token = existing_user and existing_user.push_token
+                already_tracking = existing_user and existing_user.is_tracking_flight(flight_id)
 
                 yield iOSUser.track_flight(uuid,
                                            flight,
@@ -814,7 +819,7 @@ class FlightAwareSource (FlightDataSource):
                                            alert=alert,
                                            source=DATA_SOURCES.FlightAware)
 
-                # Tell UrbanAirship about push tokens if needed
+                # Tell UrbanAirship about expired push tokens
                 if old_push_token and push_token != old_push_token:
                     deregister_token(old_push_token, _transactional=True)
 
@@ -822,6 +827,39 @@ class FlightAwareSource (FlightDataSource):
                 # (or ever) and should tell UA about it
                 if push_token:
                     register_token(push_token, _transactional=True)
+
+                # Schedule /track to happen a couple of times in the future before
+                # landing - this will ensure that their leave alerts are accurate
+                # even if the user is not checking on it. Only do this the first
+                # time they track this flight otherwise it will trigger a flood of
+                # delayed tracking tasks.
+                if driving_time and not already_tracking:
+                    now = datetime.utcnow()
+                    # Allow for 50% fluctuation in driving time, 1 min cron delay
+                    first_check_time = utils.leave_now_time(flight.estimated_arrival_time,
+                                                            (driving_time * 1.5) + 60)
+
+                    # Check again at leave soon minus 1 min
+                    second_check_time = utils.leave_soon_time(flight.estimated_arrival_time,
+                                                              driving_time + 60)
+
+                    if first_check_time > now:
+                        first_check = taskqueue.Task(params={
+                                                        'flight_id' : flight_id,
+                                                        'uuid' : uuid,
+                                                        },
+                                                        eta=first_check_time)
+                        taskqueue.Queue('delayed-track').add(first_check,
+                                                             transactional=True)
+
+                    if second_check_time > now:
+                        second_check = taskqueue.Task(params={
+                                                        'flight_id' : flight_id,
+                                                        'uuid' : uuid,
+                                                        },
+                                                        eta=second_check_time)
+                        taskqueue.Queue('delayed-track').add(second_check,
+                                                             transactional=True)
 
         # TRANSACTIONAL TRACKING!
         # Checking write support guards against flood of set_alerts
@@ -833,16 +871,7 @@ class FlightAwareSource (FlightDataSource):
             raise CapabilityDisabledError('Datastore is in read-only mode.')
 
     @ndb.tasklet
-    def delayed_track(self, request, flight_id, uuid):
-        """Initiates a delayed track for a user of a specific flight to update their reminders."""
-        assert request
-        user = yield iOSUser.get_by_uuid(uuid)
-
-        if user and user.is_tracking_flight(flight_id) and user.push_enabled and user.has_unsent_reminders:
-            yield self.do_track(request, user, flight_id, delayed=True)
-
-    @ndb.tasklet
-    def stop_tracking_flight(self, flight_id, **kwargs):
+    def untrack_flight(self, flight_id, **kwargs):
         uuid = kwargs.get('uuid')
 
         @ndb.tasklet
@@ -853,7 +882,7 @@ class FlightAwareSource (FlightDataSource):
 
             # Mark the user as no longer tracking the flight or the alert
             if uuid:
-                flight, alert = yield iOSUser.untrack_flight(uuid,
+                flight, alert = yield iOSUser.stop_tracking_flight(uuid,
                                                             flight_id,
                                                             alert=alert,
                                                             source=DATA_SOURCES.FlightAware)

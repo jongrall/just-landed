@@ -5,7 +5,7 @@ api_version: 1
 threadsafe: true
 
 builtins:
-# - remote_api: on
+ - remote_api: on
  - appstats: on
 
 inbound_services:

@@ -81,12 +81,25 @@ config['flight_fields'] = [
     'estimatedArrivalTime',
     'flightID',
     'flightNumber',
+    'isNight',
     'lastUpdated',
     'leaveForAirportTime',
     'origin',
     'scheduledDepartureTime',
     'scheduledFlightDuration',
     'status',
+]
+
+# Fields to send for an airport
+config['airport_fields'] = [
+    'bagClaim',
+    'city',
+    'gate',
+    'iataCode',
+    'icaoCode',
+    'latitude',
+    'longitude',
+    'terminal',
 ]
 
 # Supported push notification preference names.
@@ -225,6 +238,7 @@ config['flightaware'] = {
         'filed_departuretime' : 'scheduledDepartureTime',
         'filed_ete' : 'scheduledFlightDuration',
         'filed_time' : 'lastUpdated',
+        'gate_dest' : 'destinationGate',
         'ident' : 'flightNumber',
         'location' : 'city',
         'terminal_dest' : 'destinationTerminal',
@@ -245,6 +259,7 @@ config['flightaware'] = {
         'terminal_orig',
         'terminal_dest',
         'bag_claim',
+        'gate_dest',
     ],
 
     # Fields that should be retained from a FlightInfoEx response

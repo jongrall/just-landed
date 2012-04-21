@@ -359,32 +359,44 @@ def leave_soon_time(est_arrival_time, driving_time):
 """Night / Day Utilities"""
 ###############################################################################
 
-def sun_altitude_degrees(latitude, longitude, when=None, elevation=0, air_pressure=1013.25):
+def sun_altitude_degrees(latitude, longitude, when=None, altitude_in_feet=0):
+    """Calculates the angle of the sun relative to the horizon given location,
+    time, and altitude.
+
+    """
     if not when:
         when = datetime.utcnow()
     assert isinstance(when, datetime)
-    return pysolar.GetAltitude(latitude, longitude, when, elevation=elevation,
-                                temperature_celsius=25, air_pressure=air_pressure)
-
-def is_dark(latitude, longitude, when=None, elevation=0, air_pressure=1013.25):
-    return sun_altitude_degrees(latitude,
-                                longitude,
-                                when=when,
-                                elevation=elevation,
-                                air_pressure=air_pressure) > 0.0
-
-def is_twilight(latitude, longitude, when=None, elevation=0, air_pressure=1013.25):
-    return sun_altitude_degrees(latitude,
-                                longitude,
-                                when=when,
-                                elevation=elevation,
-                                air_pressure=air_pressure) > -6.0
-
-def is_dark_now(latitude, longitude, altitude_in_feet=30000):
     elevation_meters = altitude_in_feet * 0.3048
     pressure_millibars = 101325 * math.pow((1 - 2.25577e-5 * elevation_meters), 5.25588) / 100.0
-    return is_dark(latitude, longitude, elevation=elevation_meters,
-                   air_pressure=pressure_millibars)
+    return pysolar.GetAltitude(latitude, longitude, when,
+                                elevation=elevation_meters,
+                                temperature_celsius=25,
+                                pressure_millibars=pressure_millibars)
+
+def is_dark(latitude, longitude, when=None, altitude_in_feet=0):
+    """Returns true if it is dark at the given location, time and
+    elevation (in meters). Dark is defined as the sun being below the horizon.
+
+    """
+    return sun_altitude_degrees(latitude,
+                                longitude,
+                                when=when,
+                                altitude_in_feet=altitude_in_feet) < 0.0
+
+def is_twilight(latitude, longitude, when=None, altitude_in_feet=0):
+    """Returns true if it is twilight at the given location, time and
+    elevation (in meters). Twilight is defined as the sun being below the horizon
+    but by no more than 6 degrees (civilian twilight).
+    """
+    sun_altitude = sun_altitude_degrees(latitude,
+                                longitude,
+                                when=when,
+                                altitude_in_feet=altitude_in_feet)
+    return -6.0 <= sun_altitude <= 0.0
+
+def is_dark_now(latitude, longitude, altitude_in_feet=30000):
+    return is_dark(latitude, longitude, altitude_in_feet=altitude_in_feet)
 
 ###############################################################################
 """Email Utilities"""
