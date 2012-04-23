@@ -128,7 +128,9 @@ for major_type in aircraft_types.keys():
         type_mapping[minor_type] = major_type
 
 def type_to_major_type(aircraft_type):
+    """Converts a specific aircraft model to a broader design categorization."""
     if not aircraft_type:
         return 'PROP2'
+
     match = type_mapping.get(aircraft_type)
     return match or 'PROP2'

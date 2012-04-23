@@ -627,9 +627,9 @@ class iOSUser(_User):
             leave_now_body = 'Leave now for %s. Flight %s arrives soon.' % (
                                 dest_name, flight_num)
 
-        # Calculate the reminder times
-        leave_soon_time = utils.leave_soon_time(flight.estimated_arrival_time, driving_time)
-        leave_now_time = utils.leave_now_time(flight.estimated_arrival_time, driving_time)
+        # Calculate the reminder times (cron=True accounts for cron delay)
+        leave_soon_time = utils.leave_soon_time(flight.estimated_arrival_time, driving_time, cron=True)
+        leave_now_time = utils.leave_now_time(flight.estimated_arrival_time, driving_time, cron=True)
 
         reminders_changed = False # Denotes whether the reminders were altered
 

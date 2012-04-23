@@ -54,6 +54,5 @@ handlers:
 # Custom error handling
 error_handlers:
   - file: /static/error_pages/default_error.html
-
   - error_code: over_quota
     file: /static/error_pages/over_quota.html

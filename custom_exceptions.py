@@ -1,9 +1,6 @@
 #!/usr/bin/python
 
-"""custom_exceptions.py: This module defines all the exceptions thrown by the Just
-Landed app.
-
-"""
+"""custom_exceptions.py: defines all the exceptions thrown by Just Landed."""
 
 __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed"

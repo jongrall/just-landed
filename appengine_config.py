@@ -6,11 +6,11 @@ __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
-import logging
 from config import on_local
 
 def webapp_add_wsgi_middleware(app):
-    if not on_local(): # Appstats on local only
+    # Optimization: only add appstats middleware in the development environment
+    if not on_local():
         return app
 
     from google.appengine.ext.appstats import recording
@@ -18,6 +18,7 @@ def webapp_add_wsgi_middleware(app):
     return app
 
 def appstats_should_record(env):
+    # Don't record admin stuff
     if env.get('PATH_INFO').startswith('/_ah/admin'):
         return False
     return True

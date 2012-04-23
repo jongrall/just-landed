@@ -835,13 +835,13 @@ class FlightAwareSource (FlightDataSource):
                 # delayed tracking tasks.
                 if driving_time and not already_tracking:
                     now = datetime.utcnow()
-                    # Allow for 50% fluctuation in driving time, 1 min cron delay
+                    # Allow for 50% fluctuation in driving time
                     first_check_time = utils.leave_now_time(flight.estimated_arrival_time,
-                                                            (driving_time * 1.5) + 60)
+                                                            (driving_time * 1.5), cron=True)
 
-                    # Check again at leave soon minus 1 min
+                    # Check again at leave soon minus 1 min, want to beat the cron job
                     second_check_time = utils.leave_soon_time(flight.estimated_arrival_time,
-                                                              driving_time + 60)
+                                                              driving_time + 60.0, cron=True)
 
                     if first_check_time > now:
                         first_check = taskqueue.Task(params={

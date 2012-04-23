@@ -1,6 +1,6 @@
 # Just Landed cron jobs
 cron:
-  # Cost of task: $$ (/untrack for each old flight, some calls to /track to verify)
+  # Cost of task: $$ (/untrack for each old flight, some calls to flight_info to verify old)
   # Stops unnecessary tracking of old flights w/ unwanted alerts and push notifications
   - description: stop tracking old flights
     url: /cron/untrack_old_flights
@@ -12,12 +12,13 @@ cron:
     url: /cron/send_reminders
     schedule: every 1 minutes
 
-  # Cost of task: $ (one flight to get_alerts, one call to delete_alert for each orphaned alert)
+  # Cost of task: $ (one call to get_alerts, one call to delete_alert for each orphaned alert)
   # Gets rid of orphaned flight alerts, stops us from being billed for those alerts
   - description: clear orphaned flightaware alerts
     url: /cron/clear_orphaned_alerts
     schedule: every 24 hours
 
+  # Sends admins an email digest of any exceptions occurring in the last day
   - description: daily exception report
     url: /_ereporter?sender=webmaster@getjustlanded.com&versions=latest
     schedule: every day 05:00

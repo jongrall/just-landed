@@ -344,15 +344,16 @@ Central  = USTimeZone(-6, "Central",  "CST", "CDT")
 Mountain = USTimeZone(-7, "Mountain", "MST", "MDT")
 Pacific  = USTimeZone(-8, "Pacific",  "PST", "PDT")
 
-def leave_now_time(est_arrival_time, driving_time):
-    # -60 fudge factor for cron delay
+def leave_now_time(est_arrival_time, driving_time, cron=False):
     touchdown_to_terminal = config['touchdown_to_terminal']
+    # Cron is every 60 seconds, so leave_now should be earlier to account for delay in sending reminders
+    cron_offset = (cron and 60) or 0
     return datetime.utcfromtimestamp(
-        touchdown_to_terminal + est_arrival_time - driving_time - 60)
+        touchdown_to_terminal + est_arrival_time - driving_time - cron_offset)
 
-def leave_soon_time(est_arrival_time, driving_time):
+def leave_soon_time(est_arrival_time, driving_time, cron=False):
     leave_soon_interval = config['leave_soon_seconds_before']
-    leave_now = timestamp(leave_now_time(est_arrival_time, driving_time))
+    leave_now = timestamp(leave_now_time(est_arrival_time, driving_time, cron=cron))
     return datetime.utcfromtimestamp(leave_now - leave_soon_interval)
 
 ###############################################################################

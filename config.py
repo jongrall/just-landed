@@ -7,12 +7,14 @@ __copyright__ = "Copyright 2012, Just Landed"
 __email__ = "grall@alum.mit.edu"
 
 import os
-from google.appengine.api import app_identity
 
 # Figure out if we're on local, staging or production environments
+from google.appengine.api import app_identity
 app_id = app_identity.get_application_id()
 
-config = {}
+###############################################################################
+"""Enum Helper Class."""
+###############################################################################
 
 class Enum(set):
   """Solution for Enums
@@ -30,6 +32,8 @@ class Enum(set):
 """App Configuration."""
 ###############################################################################
 
+config = {}
+
 config['app'] = {}
 
 # Figure out if we're on local, staging or production environments
@@ -43,35 +47,39 @@ elif app_id == 'just-landed-staging':
   config['app']['mode'] = 'staging'
 
 def on_production():
-  """Returns true if the app is running in production"""
+  """Returns true if the app is running in production."""
   return config['app']['mode'] == 'production'
 
 def on_staging():
-  """Returns true if the app is running on staging"""
+  """Returns true if the app is running on staging."""
   return config['app']['mode'] == 'staging'
 
 def on_local():
-  """Returns true if the app is running on the local devserver."""
+  """Returns true if the app is running on the development server."""
   return config['app']['mode'] == 'local'
 
-# The directory where templates are found
+# Template directory
 config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 
+###############################################################################
+"""Flight Tracking Settings."""
+###############################################################################
+
 # Buffer within which a flight is said to be "on time". Buffer is in seconds.
-config['on_time_buffer'] = 600 # 10 min buffer
+config['on_time_buffer'] = 600
 
 # Hours after a flight lands when it becomes "old"
 config['flight_old_hours'] = 2
 
 # Time to allow from tires down landing to baggage claim
-config['touchdown_to_terminal'] = 600 # 10 min (aggressive)
+config['touchdown_to_terminal'] = 600
 
-# Flight datasources
+# Supported flight data sources
 config['data_sources'] = Enum([
     'FlightAware',
 ])
 
-# Fields to send for a flight
+# Fields to send for a Flight in the JSON response
 config['flight_fields'] = [
     'actualArrivalTime',
     'actualDepartureTime',
@@ -90,7 +98,7 @@ config['flight_fields'] = [
     'status',
 ]
 
-# Fields to send for an airport
+# Fields to send for an Airport in the JSON response
 config['airport_fields'] = [
     'bagClaim',
     'city',
@@ -102,7 +110,7 @@ config['airport_fields'] = [
     'terminal',
 ]
 
-# Supported push notification preference names.
+# Supported push notification types
 config['push_types'] = Enum([
     'FILED',
     'DIVERTED',
@@ -114,11 +122,13 @@ config['push_types'] = Enum([
     'LEAVE_NOW',
 ])
 
+# Supported reminder types
 config['reminder_types'] = Enum([
    config['push_types'].LEAVE_SOON,
    config['push_types'].LEAVE_NOW,
 ])
 
+# Possible flight statuses/states
 config['flight_states'] = Enum([
     'SCHEDULED',
     'ON_TIME',
@@ -129,7 +139,7 @@ config['flight_states'] = Enum([
     'EARLY',
 ])
 
-# The amount of time to cache exceptions for so that they don't trigger flood of reports
+# Cache expiration time for exceptions for so that they don't trigger flood of reports
 config['exception_cache_time'] = 3600
 
 # Number of seconds that we should set a 'leave soon' reminder before they should leave for the airport
@@ -141,9 +151,10 @@ config['max_reminder_age'] = 120
 # Push token freshness requirement (don't register tokens that we've registered as recently as this)
 config['max_push_token_age'] = 14400
 
+# Server urls and api credentials that are used to sign requests
 if on_local():
     config['server_url'] = 'http://c-98-207-175-25.hsd1.ca.comcast.net'
-    config['api_credentials'] = { # For signing requests
+    config['api_credentials'] = {
         'iOS' : {
             'username' : 'iOS-Development',
             'secret' : 'd90816f7e6ea93001a2aa62cd8dd8f0e830a93d1',
@@ -153,9 +164,10 @@ if on_local():
             'secret' : '8f131377dba9f8c0fe7a9ae9a865842acd153fb0',
         },
     }
+
 elif on_staging():
     config['server_url'] = 'https://just-landed-staging.appspot.com/'
-    config['api_credentials'] = { # For signing requests
+    config['api_credentials'] = {
         'iOS' : {
             'username' : 'iOS-Staging',
             'secret' : '55ca8681039e129bb985991014f61774de31fe1e',
@@ -165,9 +177,10 @@ elif on_staging():
             'secret' : 'ecbfb931b4bde2404285923e80a3b3a72d04531a',
         },
     }
+
 else:
     config['server_url'] = 'https://just-landed.appspot.com/'
-    config['api_credentials'] = { # For signing requests
+    config['api_credentials'] = {
         'iOS' : {
             'username' : 'iOS-Production',
             'secret' : '4399d9ce77acf522799543f13c926c0a41e2ea3f',
@@ -187,6 +200,7 @@ def api_secret(client='iOS'):
 ###############################################################################
 
 def fa_alert_url():
+    """Returns the endpoint url to use for alerts posted by FlightAware."""
     no_ssl_url = config['server_url'].replace('https', 'http') # SSL not yet supported
     return no_ssl_url + '/api/v1/handle_alert'
 
@@ -208,6 +222,7 @@ config['flightaware'] = {
         'key' : 'e1c5aec44a409bb94742fbba5548946721c7d855',
     },
 
+    # Expected user agent and remote hosts to use to authenticate alert callbacks
     'remote_user_agent': 'FlightXML/2.0 (mc_chan_flightxml)',
     'trusted_remote_hosts' : [
         '216.52.171.64/26',
@@ -216,10 +231,14 @@ config['flightaware'] = {
         '89.151.84.224/28',
     ],
 
-    # Caching settings
-    'flight_lookup_cache_time' : 3600, # Flight data from /search
-    'flight_from_lookup_cache_time' : 120, # Cached from /search to save when /track right after
-    'flight_cache_time' : 3600, # Cached /track
+    # Cache expiration for flight data from /search
+    'flight_lookup_cache_time' : 3600,
+
+    # Cache expiration for fight data from /search that will be used by /track
+    'flight_from_lookup_cache_time' : 120,
+
+    # Cache expiration time for flight data from /track
+    'flight_cache_time' : 3600,
 
     # Alert endpoint
     'alert_endpoint' : fa_alert_url(),
@@ -246,7 +265,7 @@ config['flightaware'] = {
         'timestamp' : 'lastUpdated',
     },
 
-    # Fields that should be retained from an AirportInfo response
+    # Fields that should be retained from a /AirportInfo response
     'airport_info_fields' : [
         'name',
         'location',
@@ -254,7 +273,7 @@ config['flightaware'] = {
         'latitude',
     ],
 
-    # Fields that should be retained from an AirlineFlightInfo response
+    # Fields that should be retained from a /AirlineFlightInfo response
     'airline_flight_info_fields' : [
         'terminal_orig',
         'terminal_dest',
@@ -262,7 +281,7 @@ config['flightaware'] = {
         'gate_dest',
     ],
 
-    # Fields that should be retained from a FlightInfoEx response
+    # Fields that should be retained from a /FlightInfoEx response
     'flight_info_fields' : [
         'actualarrivaltime',
         'actualdeparturetime',
@@ -293,10 +312,10 @@ config['close_to_airport'] = 0.5
 # Number of miles to the airport above which driving estimate isn't needed
 config['far_from_airport'] = 200.0
 
-# Amount of time to cache driving time for when using real-time traffic
+# Cache expiration for driving route data when using real-time traffic
 config['traffic_cache_time'] = 3600
 
-# Bing Maps Credentials (used for all versions)
+# Bing Maps Credentials
 config['bing_maps'] = {
     'key' : 'AjUZ_rECu8dsAMwFNtVRXALPksPaXALYysv-pZ8FSFCWpyhcBkJRb82LEWgECEgZ',
 }
@@ -321,14 +340,14 @@ config['mixpanel'] = {
 """Push Notification Settings & API Keys"""
 ###############################################################################
 
-# Urban Airship development and production API keys and secrets for Just Landed
 config['urbanairship'] = {
   'development': {
     'key': '9HBQrA0ISk2WzkJkWAst1g',
     'secret': 'Ok15UGaPRJqWfTUdmcn7sA',
   },
 
-  'staging': { # Staging uses production push cert & creds
+  # Note: staging uses production push cert & creds
+  'staging': {
     'key': 'WZR0ix1mRCeTBmIaLUIi8g',
     'secret': 'Z6c6j5gCRpOseuOjcIpeGQ',
   },
@@ -339,7 +358,7 @@ config['urbanairship'] = {
   },
 }
 
-# StackMob development and production public & private API keys for Just Landed
+
 config['stackmob'] = {
     'app_name' : 'just-landed',
     'development': {
@@ -347,7 +366,8 @@ config['stackmob'] = {
         'private_key' : 'fe2a94b0-d732-4639-90d1-c6b80a4a9bc0',
     },
 
-    'staging': { # Staging uses production keys
+    # Note: staging uses production push cert & creds
+    'staging': {
         'public_key' : 'e417f04b-56d2-4fa9-92c5-c0f8fccfac35',
         'private_key' : '0d7b2a49-bc1d-406f-a918-39b4b538afe1',
     },
@@ -364,8 +384,10 @@ config['stackmob'] = {
 ###############################################################################
 
 config['campaignmonitor'] = {
+    # Credentials
     'key' : '5bd221f998c1e9712f209eed6a7ce5dc',
 
+    # Subscriber list ids used to record mailing list members
     'local' : {
       'subscriber_list_id' : 'e0df0058fb3d482a890ef41ba4adfbeb',
     },
@@ -384,7 +406,7 @@ def subscriber_list_id():
     return config['campaignmonitor'][app_mode]['subscriber_list_id']
 
 ###############################################################################
-"""Twilio API Keys"""
+"""Twilio Configuration"""
 ###############################################################################
 
 config['twilio'] = {
@@ -412,5 +434,3 @@ config['google_analytics'] = {
 def google_analytics_account():
     app_mode = config['app']['mode']
     return config['google_analytics'][app_mode]['account_id']
-
-
