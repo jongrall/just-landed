@@ -103,8 +103,7 @@ class SendRemindersWorker(BaseHandler):
             max_age = now - timedelta(seconds=config['max_reminder_age'])
 
             for r in unsent_reminders:
-                if ((max_age < r.fire_time <= now) or
-                    (r.reminder_type == reminder_types.LEAVE_NOW and r.fire_time <= now)):
+                if max_age < r.fire_time <= now:
                     # Max 5 transactional tasks per txn
                     if len(outbox) < 6 and user.wants_notification_type(r.reminder_type):
                         r.sent = True # Mark sent

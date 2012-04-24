@@ -899,7 +899,7 @@ class FlightAwareSource (FlightDataSource):
         # TRANSACTIONAL UNTRACKING!
         yield ndb.transaction_async(lambda: untrack_txn(flight_id, uuid), xg=True)
 
-        # FIXME: Maybe clear_lookup_cache here if nobody is tracking flight ident anymore
+        # FIXME: Clear_lookup_cache here if nobody is tracking flight ident anymore
 
     def authenticate_remote_request(self, request):
         """Returns True if the incoming request is in fact from the trusted
