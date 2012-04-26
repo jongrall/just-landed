@@ -5,8 +5,8 @@ urlfetch requests using the ndb.urlfetch() function.
 """
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
 import json
 import urllib

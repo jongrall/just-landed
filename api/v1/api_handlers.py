@@ -6,8 +6,8 @@ requests by Just Landed clients are routed through here.
 """
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
 import logging
 import json
@@ -182,10 +182,13 @@ class TrackHandler(AuthenticatedAPIHandler):
 
         response = flight.dict_for_client()
 
-        if driving_time:
+        if driving_time and driving_time > 0:
             response['drivingTime'] = driving_time
             response['leaveForAirportTime'] = utils.timestamp(utils.leave_now_time(flight.estimated_arrival_time,
                                                                   driving_time))
+        elif latitude and longitude and utils.at_airport(latitude, longitude, dest_latitude, dest_longitude):
+            response['drivingTime'] = 0
+
         self.respond(response)
 
         # Track the flight (deferred)

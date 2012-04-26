@@ -3,12 +3,12 @@
 """main.py: Main WSGI app instantiation and configuration for Just Landed."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
+import logging
 import os
 import sys
-import logging
 import json
 from zlib import adler32
 
@@ -24,16 +24,20 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.runtime.apiproxy_errors import (OverQuotaError,
     CapabilityDisabledError, FeatureNotEnabledError, DeadlineExceededError)
 
+# Optimization: path prefix speeds up request routing
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
 from custom_exceptions import *
-from config import config, on_local, on_staging, google_analytics_account
+from config import config, on_development, on_staging, google_analytics_account
 import utils
 
-if not on_local(): # On local, ereporter causes unwanted stacktraces
+# Ereporter doesn't work well with the development server
+if not on_development():
     ereporter.register_logger()
 Route = webapp.Route
 
+# Optimization: allow browsers to cache content indefinitely, use version string
+# to ensure immediate updates when content changes.
 # Define a default template context which uses the app software version number
 # to ensure that static content isn't cached to the detriment of freshness. The
 # version number provided by this context is supposed to be appended to all
@@ -58,21 +62,22 @@ class BaseHandler(webapp.RequestHandler):
     def handle_exception(self, exception, debug):
         """Override standard webapp exception handling and do our own logging.
         Clients get a generic error and status code corresponding to the type
-        of problem encountered."""
+        of problem encountered.
 
+        """
         gae_outage = False
 
-        # These exceptions are not serious and should be logged as warnings
+        # Some exceptions are not serious and should be logged as warnings
         if isinstance(exception, (InvalidFlightNumberException,
                                   FlightNotFoundException,
                                   OldFlightException)):
             logging.warning(exception.message)
 
         else:
-            # Detect and report service outages if possible
+            # Reliability: detect and report service outages if possible
             if capabilities.CapabilitySet('urlfetch').is_enabled():
 
-                # Some exceptions should trigger SMS notifications to the admin
+                # Reliability: some exceptions should trigger SMS notifications to the admin
                 if isinstance(exception, (FlightAwareUnavailableError,
                                           DrivingTimeUnavailableError,
                                           OverQuotaError,
@@ -101,12 +106,16 @@ class BaseHandler(webapp.RequestHandler):
             else:
                 gae_outage = True
 
+            # FIXME: Nested transaction can happen here
             # Logged exceptions get automatically picked up by ereporter
             logging.exception(exception)
 
-        if gae_outage or isinstance(exception, (OverQuotaError, CapabilityDisabledError,
-                                        FeatureNotEnabledError, DeadlineExceededError)):
-            self.response.set_status(503) # Service unavailable
+        unrecoverable_errors = (OverQuotaError, CapabilityDisabledError,
+                                FeatureNotEnabledError, DeadlineExceededError)
+
+        # Use response status to indicate to clients what happened
+        if gae_outage or isinstance(exception, unrecoverable_errors):
+            self.response.set_status(503)
         elif hasattr(exception, 'code'):
             self.response.set_status(exception.code)
         else:
@@ -162,13 +171,16 @@ class BaseAPIHandler(BaseHandler):
 
 
 class AuthenticatedAPIHandler(BaseAPIHandler):
-    """An API handler that also authenticates incoming API requests."""
+    """An API handler that authenticates all incoming API requests before
+    dispatching them to the handler.
+
+    """
     def dispatch(self):
         is_server = self.request.headers.get('User-Agent').startswith('AppEngine')
         self.client = (is_server and 'Server') or 'iOS'
-        if on_local() or on_staging() or utils.authenticate_api_request(self.request, client=self.client):
-            # Parent class will call the method to be dispatched
-            # -- get() or post() or etc.
+
+        # For convenience, don't authenticate in development environment
+        if on_development() or utils.authenticate_api_request(self.request, client=self.client):
             super(AuthenticatedAPIHandler, self).dispatch()
         else:
             self.abort(403)
@@ -177,7 +189,6 @@ class AuthenticatedAPIHandler(BaseAPIHandler):
 """Routes & WSGI App Instantiation"""
 ###############################################################################
 
-# Configuration of supported routes
 routes = [
     PathPrefixRoute('/api/v1', [
         HandlerPrefixRoute('api.v1.api_handlers.', [
@@ -222,14 +233,15 @@ routes = [
 ]
 
 # Instantiate the app.
-app = webapp.WSGIApplication(routes, debug=on_local())
+app = webapp.WSGIApplication(routes, debug=on_development())
 
-# Register custom 404 handler.
 def handle_404(request, response, exception):
+    """Custom 404 handler."""
     path = os.path.join(template_dir, '404.html')
     response.write(template.render(path, template_context))
     response.set_status(404)
 
+# Register custom 404 handler.
 app.error_handlers[404] = handle_404
 
 def main():

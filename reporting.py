@@ -13,23 +13,24 @@ necessary at small scale however.
 """
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
+import logging
 import base64
 import json
-import logging
 
 from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
 from google.appengine.api.urlfetch import DownloadError
 
 from main import BaseHandler
-from config import config, on_local, on_staging
+from config import config, on_development, on_staging
 from custom_exceptions import *
 import utils
 
-debug_reporting = on_local() and False
+# Enable to log informational messages about reported events
+debug_reporting = on_development() and False
 
 ###############################################################################
 """Flight Counters"""
@@ -77,10 +78,14 @@ class ReportingService(object):
 
 
 class MixpanelService(ReportingService):
+    """A concrete implementation of an event reporting service. Service is
+    provided by Mixpanel.
+
+    """
     def __init__(self):
         self._report_url = 'https://api.mixpanel.com/track/?data='
 
-        if on_local():
+        if on_development():
             self._token = config['mixpanel']['development']['token']
         elif on_staging():
             self._token = config['mixpanel']['staging']['token']
@@ -88,6 +93,7 @@ class MixpanelService(ReportingService):
             self._token = config['mixpanel']['production']['token']
 
     def report(self, event_name, **properties):
+        """Reports an event to Mixpanel."""
         assert isinstance(event_name, basestring) and len(event_name)
 
         if debug_reporting:
@@ -111,6 +117,8 @@ class MixpanelService(ReportingService):
                 # Log, don't raise
                 logging.exception(ReportEventFailedException(status_code=result.status_code,
                                                              event_name=event_name))
+
+        # Reliability: don't allow reporting exceptions to propagate
         except Exception as e:
             utils.sms_report_exception(MixpanelUnavailableError())
             logging.exception(e)
@@ -120,16 +128,24 @@ class MixpanelService(ReportingService):
 ###############################################################################
 
 def _defer_report(event_name, transactional, **properties):
+    """Defers reporting an event and properties using the Taskqueue service.
+    Specifying transactional ensures the event only gets added to the queue if
+    the enclosing transaction is committed successfully.
+
+    """
     properties['event_name'] = event_name
     report_task = taskqueue.Task(params=properties)
     taskqueue.Queue('report-event').add(report_task, transactional=transactional)
 
-
 def report_event(event_name, **properties):
+    """Adds an event to the taskqueue for deferred reporting."""
     _defer_report(event_name, False, **properties)
 
-
 def report_event_transactionally(event_name, **properties):
+    """Adds an event to the taskqueue for deferred reporting. Event is only
+    enqueued if the enclosing transaction is committed successfully.
+
+    """
     _defer_report(event_name, True, **properties)
 
 ###############################################################################
@@ -139,9 +155,10 @@ def report_event_transactionally(event_name, **properties):
 service = MixpanelService()
 
 class ReportWorker(BaseHandler):
-    """Deferred work when reporting an event."""
+    """Worker that actually reports events to the 3rd party reporting service."""
     def post(self):
-        # Disable retries
+        # Reliability: disable retries, would rather lose events than have them
+        # erroneously reported many times.
         if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
             return
 

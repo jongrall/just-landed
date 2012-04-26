@@ -25,8 +25,8 @@ TODO: Document request & response formats.
 """
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
 import logging
 
@@ -38,7 +38,7 @@ from google.appengine.ext.ndb import tasklets
 from google.appengine.api.urlfetch import DownloadError
 from google.appengine.runtime.apiproxy_errors import CapabilityDisabledError
 
-from config import config, on_local, on_staging
+from config import config, on_development, on_staging
 from connections import Connection, build_url
 from models import (Airport, FlightAwareTrackedFlight, FlightAwareAlert, iOSUser,
     Origin, Destination, Flight)
@@ -53,8 +53,8 @@ from reporting import report_event, report_event_transactionally
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
-debug_cache = on_local() and False
-debug_alerts = on_local() and False
+debug_cache = on_development() and False
+debug_alerts = on_development() and False
 
 ###############################################################################
 """Flight Data Sources"""
@@ -212,7 +212,7 @@ class FlightAwareSource (FlightDataSource):
         return config['flightaware']['key_mapping']
 
     def __init__(self):
-        if on_local():
+        if on_development():
             self.conn = Connection(self.base_url,
                 username=config['flightaware']['development']['username'],
                 password=config['flightaware']['development']['key'])
@@ -241,7 +241,7 @@ class FlightAwareSource (FlightDataSource):
 
         user_flight_num = user.flight_num_for_flight_id(flight_id)
         # Fire off a /track for the user, which will update their reminders
-        url_scheme = (on_local() and 'http') or 'https'
+        url_scheme = (on_development() and 'http') or 'https'
         track_url = request.uri_for('track',
                                     flight_number=user_flight_num,
                                     flight_id=flight_id,
@@ -261,7 +261,7 @@ class FlightAwareSource (FlightDataSource):
         yield ctx.urlfetch(full_track_url,
                             headers=headers,
                             deadline=120,
-                            validate_certificate=(not on_local()))
+                            validate_certificate=(not on_development()))
 
     @ndb.tasklet
     def raw_flight_data_to_flight(self, data, sanitized_flight_num):
@@ -873,6 +873,9 @@ class FlightAwareSource (FlightDataSource):
     @ndb.tasklet
     def untrack_flight(self, flight_id, **kwargs):
         uuid = kwargs.get('uuid')
+        user = uuid and (yield iOSUser.get_by_uuid(uuid))
+        user_flight_num = user and user.flight_num_for_flight_id(flight_id)
+        clear_lookup_cache = user_flight_num and not (yield iOSUser.multiple_users_tracking_flight_num(user_flight_num))
 
         @ndb.tasklet
         def untrack_txn(flight_id, uuid):
@@ -899,7 +902,10 @@ class FlightAwareSource (FlightDataSource):
         # TRANSACTIONAL UNTRACKING!
         yield ndb.transaction_async(lambda: untrack_txn(flight_id, uuid), xg=True)
 
-        # FIXME: Clear_lookup_cache here if nobody is tracking flight ident anymore
+        # Clear_lookup_cache here if nobody is tracking flight ident anymore
+        if user_flight_num and clear_lookup_cache:
+            FlightAwareSource.clear_flight_lookup_cache([user_flight_num])
+
 
     def authenticate_remote_request(self, request):
         """Returns True if the incoming request is in fact from the trusted

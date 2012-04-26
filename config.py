@@ -3,8 +3,8 @@
 """config.py: This module contains all settings for the Just Landed app."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
 import os
 
@@ -54,7 +54,7 @@ def on_staging():
   """Returns true if the app is running on staging."""
   return config['app']['mode'] == 'staging'
 
-def on_local():
+def on_development():
   """Returns true if the app is running on the development server."""
   return config['app']['mode'] == 'local'
 
@@ -152,8 +152,9 @@ config['max_reminder_age'] = 120
 config['max_push_token_age'] = 14400
 
 # Server urls and api credentials that are used to sign requests
-if on_local():
-    config['server_url'] = 'http://c-98-207-175-25.hsd1.ca.comcast.net'
+if on_development():
+    #config['server_url'] = 'http://c-98-207-175-25.hsd1.ca.comcast.net'
+    config['server_url'] = 'http://pool-173-63-21-213.nwrknj.fios.verizon.net:8082'
     config['api_credentials'] = {
         'iOS' : {
             'username' : 'iOS-Development',
@@ -232,13 +233,13 @@ config['flightaware'] = {
     ],
 
     # Cache expiration for flight data from /search
-    'flight_lookup_cache_time' : 3600,
+    'flight_lookup_cache_time' : 1800,
 
     # Cache expiration for fight data from /search that will be used by /track
     'flight_from_lookup_cache_time' : 120,
 
     # Cache expiration time for flight data from /track
-    'flight_cache_time' : 3600,
+    'flight_cache_time' : 1800,
 
     # Alert endpoint
     'alert_endpoint' : fa_alert_url(),

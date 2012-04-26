@@ -3,8 +3,8 @@
 """cron.py: Handlers for cron jobs."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
 import logging
 from datetime import datetime, timedelta
@@ -12,27 +12,22 @@ from datetime import datetime, timedelta
 from google.appengine.ext import ndb
 
 from main import BaseHandler
-from config import on_local, config
+from config import on_development, config
 from models import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert, Flight
 from api.v1.data_sources import FlightAwareSource
 from custom_exceptions import *
-
-import utils
+from notifications import LeaveSoonAlert, LeaveNowAlert
 import reporting
 from reporting import report_event, report_event_transactionally
-from notifications import LeaveSoonAlert, LeaveNowAlert
+import utils
 
 source = FlightAwareSource()
 reminder_types = config['reminder_types']
-
 
 class UntrackOldFlightsWorker(BaseHandler):
     """Cron worker for untracking old flights."""
     @ndb.toplevel
     def get(self):
-        # Get all flights that are currently tracking
-        flights_qry = FlightAwareTrackedFlight.tracked_flights_qry()
-
         @ndb.tasklet
         def flight_cbk(f):
             flight_id = f.key.string_id()
@@ -60,7 +55,7 @@ class UntrackOldFlightsWorker(BaseHandler):
                     users_qry = iOSUser.users_tracking_flight_qry(flight_id)
 
                     # Generate the URL and API signature
-                    url_scheme = (not on_local() and 'https') or 'http'
+                    url_scheme = (not on_development() and 'https') or 'http'
                     to_sign = self.uri_for('untrack', flight_id=flight_id)
                     sig = utils.api_query_signature(to_sign, client='Server')
                     untrack_url = self.uri_for('untrack',
@@ -78,10 +73,12 @@ class UntrackOldFlightsWorker(BaseHandler):
                         yield ctx.urlfetch(untrack_url,
                                            headers=headers,
                                            deadline=120,
-                                           validate_certificate=not on_local())
+                                           validate_certificate=not on_development())
 
                     yield users_qry.map_async(user_cbk, keys_only=True)
 
+        # Get all flights that are currently tracking
+        flights_qry = FlightAwareTrackedFlight.tracked_flights_qry()
         yield flights_qry.map_async(flight_cbk)
 
 

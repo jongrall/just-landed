@@ -3,8 +3,8 @@
 """custom_exceptions.py: defines all the exceptions thrown by Just Landed."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
 ###############################################################################
 """Reporting Exceptions"""

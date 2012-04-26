@@ -3,14 +3,14 @@
 """appengine_config.py: Additional App-Engine specific config."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
-from config import on_local
+from config import on_development
 
 def webapp_add_wsgi_middleware(app):
     # Optimization: only add appstats middleware in the development environment
-    if not on_local():
+    if not on_development():
         return app
 
     from google.appengine.ext.appstats import recording

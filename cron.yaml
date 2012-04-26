@@ -16,7 +16,7 @@ cron:
   # Gets rid of orphaned flight alerts, stops us from being billed for those alerts
   - description: clear orphaned flightaware alerts
     url: /cron/clear_orphaned_alerts
-    schedule: every 24 hours
+    schedule: every 6 hours
 
   # Sends admins an email digest of any exceptions occurring in the last day
   - description: daily exception report

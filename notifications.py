@@ -3,12 +3,12 @@
 """notifications.py: Utilities for sending push notifications via Urban Airship."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
+import logging
 import os
 import pickle
-import logging
 from datetime import datetime
 
 from google.appengine.api import memcache, taskqueue
@@ -18,19 +18,22 @@ from lib import stackmob
 
 from custom_exceptions import *
 from main import BaseHandler
-from config import config, on_local, on_staging
+from config import config, on_development, on_staging
 import utils
 
-debug_push = on_local() and False
+# Enable to log informational messages about push notification activity
+debug_push = on_development() and False
+
 push_types = config['push_types']
 FLIGHT_STATES = config['flight_states']
-
 
 ###############################################################################
 """Push Notification Services"""
 ###############################################################################
 
 class PushNotificationService(object):
+    """Class that defines a generic push notification service interface."""
+
     def register_token(self, device_token):
         """Registers a device token with the push service."""
         pass
@@ -45,9 +48,12 @@ class PushNotificationService(object):
 
 
 class UrbanAirshipService(PushNotificationService):
+    """Concrete implementation of a Push Notification Service using Urban
+    Airship.
+
+    """
     def __init__(self):
-        # Initialize a UA instance with the correct credentials
-        if on_local():
+        if on_development():
             ua_creds = config['urbanairship']['development']
         elif on_staging():
             ua_creds = config['urbanairship']['staging']
@@ -57,7 +63,7 @@ class UrbanAirshipService(PushNotificationService):
         self._UA = urbanairship.Airship(**ua_creds)
 
     def call_ua_func(self, func, *args, **kwargs):
-        # Call the function, intercept UA exceptions
+        # Reliability: intercept & translate UA exceptions
         try:
             func(*args, **kwargs)
         except urbanairship.Unauthorized:
@@ -78,11 +84,10 @@ class UrbanAirshipService(PushNotificationService):
 
 
 class StackMobService(PushNotificationService):
-    def __init__(self):
-        # Initialize a StackMob instance with the correct credentials
-        on_production = False
+    """Concrete implementation of a PushNotificationService using StackMob."""
 
-        if on_local():
+    def __init__(self):
+        if on_development():
             creds = config['stackmob']['development']
         elif on_staging():
             creds = config['stackmob']['staging']
@@ -90,13 +95,13 @@ class StackMobService(PushNotificationService):
             creds = config['stackmob']['production']
 
         kwargs = {
-            'production' : not on_local(),
+            'production' : not on_development(),
         }
         kwargs.update(creds)
         self._SM = stackmob.StackMob(**kwargs)
 
     def call_sm_func(self, func, *args, **kwargs):
-        # Call the function, intercept & translate exceptions
+        # Reliability: intercept & translate exceptions
         try:
             func(*args, **kwargs)
         except stackmob.Unauthorized:
@@ -120,7 +125,10 @@ class StackMobService(PushNotificationService):
 ###############################################################################
 
 def _defer(method, *args, **kwargs):
-    """Adds a method to the push notification queue for later execution."""
+    """Adds a method to the push notification queue for later execution.
+    Supports transactional notification enqueueing using the _transactional kwd.
+
+    """
     transactional = kwargs.get('_transactional') or False
     payload = pickle.dumps((method, args, kwargs))
     task = taskqueue.Task(payload=payload)
@@ -128,18 +136,22 @@ def _defer(method, *args, **kwargs):
 
 
 def register_token(device_token, **kwargs):
-    """Registers an iOS push notification device token with Urban Airship.
+    """Defers registering an iOS push notification device token for sending push
+    notifications to that device in the future.
 
     Arguments:
     - `device_token` : The device notification token to register.
+
     """
     assert device_token, 'No device token'
-    # Only re-register if we haven't done so recently (token is cached)
+
+    # Optimization: only re-register if we haven't done so recently
     if not memcache.get(device_token):
         _defer('register_token', device_token, **kwargs)
 
 
 def deregister_token(device_token, **kwargs):
+    """Defers deregistering a device token from the push notification service."""
     assert device_token, 'No device token'
     _defer('deregister_token', device_token, **kwargs)
 
@@ -159,14 +171,16 @@ def push(cls, payload, **kwargs):
 """Request Handler for Push Notification Taskqueue Callback"""
 ###############################################################################
 
-# Use UrbanAirship as the primary push service, with StackMob as a fallback
+# Reliability: UrbanAirship is the primary push service, StackMob is a fallback
 push_service = UrbanAirshipService()
 fallback_push_service = StackMobService()
 
 class PushWorker(BaseHandler):
-    """Taskqueue worker for sending our push notifications."""
+    """Taskqueue worker for sending push notifications."""
     def post(self):
-        # Disable retries
+        # Reliability: disable retries, a flood of duplicate push notifications
+        # being sent to users would be disastrous.
+        # TODO: Implement fully transactional, retry-able notification tasks.
         if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
             return
 
@@ -175,7 +189,6 @@ class PushWorker(BaseHandler):
         if '_transactional' in kwds.keys():
             del(kwds['_transactional'])
 
-        # Debug push
         if debug_push:
             if method == 'register':
                 token = args[0]
@@ -190,32 +203,32 @@ class PushWorker(BaseHandler):
                 message = data['aps']['alert']
                 logging.info('PUSHING MESSAGE TO %s: \n%s' % (token, message))
 
-        # Check that the push service supports the method we want to call
+        # Reliability: check that the push service supports the method we want to call
         func = getattr(push_service, method, None)
+
         if func:
-            # Call the function on the primary push service with the supplied arguments
             try:
                 func(*args, **kwds)
 
                 if method == 'register_token':
                     push_token = args[0]
-                    # Cache push token registration so it doesn't happen every time
+                    # Optimization: cache push token registration so it doesn't happen every time
                     if not memcache.set(push_token, True, config['max_push_token_age']):
                         logging.error('Unable to cache push token: %s' % push_token)
 
+            # Reliability: don't allow push notification exceptions to propagate
             except Exception as e:
-                # Call the fallback service for pushing messages only
+                # Reliability: call the fallback service for pushing messages only
                 if method == 'push':
-                    # Since we're not re-raising need to manually record
                     utils.sms_report_exception(e)
                     logging.exception(e)
 
-                    # Register and push to the fallback in one go (the
-                    # device is probably not previously register)
+                    # Register and push to the fallback service (the device is
+                    # probably not previously registered)
                     fallback_push_service.register_token(kwds['device_tokens'][0])
                     fallback_push_service.push(*args, **kwds)
                 else:
-                    raise # Give up for other methods
+                    raise # Re-raise only for methods other than push
 
 
 ###############################################################################
@@ -224,13 +237,14 @@ specific types of events."""
 ###############################################################################
 
 class _Alert(object):
-    """Represent a push notification. Not intended to be used directly, but
+    """Represents a push notification. Not intended to be used directly, but
     rather subclassed."""
     def __init__(self, device_token):
         assert device_token
         self._device_token = device_token
 
     def push(self, **kwargs):
+        """Push the alert (adds to taskqueue for processing)."""
         data =  self.payload
         kwargs['device_tokens'] = [self._device_token]
         # Don't send empty messages
@@ -239,6 +253,7 @@ class _Alert(object):
 
     @property
     def payload(self):
+        """Returns a valid iOS push notification payload for the alert."""
         return {
           'notification_type': self.notification_type,
           'aps': {
@@ -302,6 +317,7 @@ class FlightDivertedAlert(_FlightAlert):
     """A push notification indicating a flight has been diverted."""
     @property
     def message(self):
+        # TODO: Figure out what airport it was diverted to
         return 'Flight %s from %s has been diverted to another airport.' % (
             self._user_flight_num,
             self._origin_city_or_airport)
@@ -383,6 +399,7 @@ class FlightPlanChangeAlert(_FlightAlert):
         time_diff = self._flight.estimated_arrival_time - utils.timestamp(date=datetime.utcnow())
         pretty_interval = utils.pretty_time_interval(time_diff, round_days=True)
 
+        # Figure out what changed about the flight
         if flight_status == FLIGHT_STATES.DELAYED:
             return 'Flight %s from %s is delayed. Estimated to arrive at %s in %s.' % (
                     self._user_flight_num,
@@ -408,7 +425,7 @@ class FlightPlanChangeAlert(_FlightAlert):
 
 
 class TerminalChangeAlert(FlightPlanChangeAlert):
-    """A push notification indicating a flight plan has changed."""
+    """Push notification indicating that the destination terminal has changed."""
     @property
     def message(self):
         terminal = self._flight.destination.terminal

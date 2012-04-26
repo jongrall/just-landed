@@ -3,8 +3,8 @@
 """admin_handlers.py: Module that defines admin web handlers."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
 import logging
 
@@ -13,7 +13,7 @@ from google.appengine.ext import ndb
 from api.v1.data_sources import FlightAwareSource
 from main import StaticHandler, BaseHandler, BaseAPIHandler
 from models import FlightAwareTrackedFlight, iOSUser
-from config import config, on_local, on_staging
+from config import config, on_development, on_staging
 
 source = FlightAwareSource()
 
@@ -33,7 +33,7 @@ class FlightAwareAdminHandler(StaticHandler):
         consistent = alert_count <= tracking_count <= users_tracking_count
 
         # Figure out what environment we're running in
-        environment = (on_local() and 'Development') or (on_staging() and 'Staging') or 'Production'
+        environment = (on_development() and 'Development') or (on_staging() and 'Staging') or 'Production'
 
         context = dict(alert_count=alert_count,
                        environment=environment,

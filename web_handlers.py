@@ -6,8 +6,8 @@ getjustlanded.com website.
 """
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
 import logging
 import urllib
@@ -46,8 +46,8 @@ class CampaignMonitorHandler(BaseAPIHandler):
 
         # Email is valid, try to register with campaign monitor
         try:
-            # No name for the user, no custom fields
-            response = Subscriber().add(subscriber_list_id(), email, '', [], resubscribe=True)
+            response = Subscriber().add(subscriber_list_id(), email, '', [],
+                                        resubscribe=True)
         except createsend.Unauthorized:
             raise CampaignMonitorUnauthorizedError()
         except Exception:

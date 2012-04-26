@@ -3,8 +3,8 @@
 """aircraft_types.py: Utilities for mapping aircraft codes to simplified types."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
 aircraft_types = {
     'JET2': [

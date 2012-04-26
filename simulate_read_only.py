@@ -3,8 +3,8 @@
 """simulate_read_only.py: Utilities for simulating readonly mode on devserver."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed"
-__email__ = "grall@alum.mit.edu"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
 
 from google.appengine.api.capabilities import CapabilitySet
 
