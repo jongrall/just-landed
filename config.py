@@ -308,7 +308,7 @@ config['flightaware'] = {
 ###############################################################################
 
 # Number of miles to the airport below which driving estimate isn't needed
-config['close_to_airport'] = 0.5
+config['close_to_airport'] = 1.0
 
 # Number of miles to the airport above which driving estimate isn't needed
 config['far_from_airport'] = 200.0
