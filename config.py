@@ -8,7 +8,7 @@ __email__ = "jon@getjustlanded.com"
 
 import os
 
-# Figure out if we're on local, staging or production environments
+# Figure out if we're on development, staging or production environments
 from google.appengine.api import app_identity
 app_id = app_identity.get_application_id()
 
@@ -36,9 +36,8 @@ config = {}
 
 config['app'] = {}
 
-# Figure out if we're on local, staging or production environments
 if os.environ.get('SERVER_SOFTWARE', '').startswith('Dev'):
-  config['app']['mode'] = 'local'
+  config['app']['mode'] = 'development'
 
 elif app_id == 'just-landed':
   config['app']['mode'] = 'production'
@@ -56,7 +55,7 @@ def on_staging():
 
 def on_development():
   """Returns true if the app is running on the development server."""
-  return config['app']['mode'] == 'local'
+  return config['app']['mode'] == 'development'
 
 # Template directory
 config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
@@ -303,6 +302,11 @@ config['flightaware'] = {
     ],
 }
 
+def flightaware_credentials():
+    app_mode = config['app']['mode']
+    creds = config['flightaware'][app_mode]
+    return creds['username'], creds['key']
+
 ###############################################################################
 """Driving Time Settings"""
 ###############################################################################
@@ -318,7 +322,7 @@ config['traffic_cache_time'] = 3600
 
 # Bing Maps Credentials
 config['bing_maps'] = {
-    'key' : 'AjUZ_rECu8dsAMwFNtVRXALPksPaXALYysv-pZ8FSFCWpyhcBkJRb82LEWgECEgZ',
+    'key' : 'AgxrJjwYLm84MqrzSfMO8NehyoZkE639by3KZi2lGrg0NEVpKEbRo2hS2ONwxo75',
 }
 
 ###############################################################################
@@ -389,7 +393,7 @@ config['campaignmonitor'] = {
     'key' : '5bd221f998c1e9712f209eed6a7ce5dc',
 
     # Subscriber list ids used to record mailing list members
-    'local' : {
+    'development' : {
       'subscriber_list_id' : 'e0df0058fb3d482a890ef41ba4adfbeb',
     },
 
@@ -421,7 +425,7 @@ config['twilio'] = {
 ###############################################################################
 
 config['google_analytics'] = {
-    'local' : {
+    'development' : {
         'account_id' : 'UA-30604975-3',
     },
     'staging' : {

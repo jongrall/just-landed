@@ -17,7 +17,7 @@ from zlib import adler32
 import re
 import string
 
-from google.appengine.api import memcache
+from google.appengine.api import memcache, capabilities
 
 from config import config, api_secret, on_production
 from lib.twilio.rest import TwilioRestClient
@@ -142,6 +142,11 @@ def is_float(s):
 """Security Utilities"""
 ###############################################################################
 
+def is_valid_uuid(uuid, client='iOS'):
+    """Tests whether a uuid is valid."""
+    if client == 'iOS':
+        return isinstance(uuid, basestring) and len(uuid) > 0
+
 def api_query_signature(query_string, client='iOS'):
     """Calculates the expected API query signature from the query string and
     Just Landed client name.
@@ -246,6 +251,26 @@ def is_valid_icao(icao_code):
 def is_valid_iata(iata_code):
     """Tests whether the argument could be a valid IATA airport code."""
     return isinstance(iata_code, basestring) and len(iata_code) == 3
+
+def is_valid_flight_id(flight_id):
+    """Forgiving test for non-empty flight id."""
+    return isinstance(flight_id, basestring) and len(flight_id)
+
+def is_valid_fa_flight_id(flight_id):
+    """Tests whether a flight id is a valid FlightAware flight ID."""
+    return is_valid_flight_id(flight_id) and len(flight_id.split('-')) > 1
+
+def is_valid_fa_alert_body(alert_body):
+    """Tests whether a FlightAware alert body is valid."""
+    if not isinstance(alert_body, dict):
+        return False
+    event_code = alert_body.get('eventcode')
+    flight_data = alert_body.get('flight')
+    flight_id = flight_data.get('faFlightID')
+    origin = flight_data.get('origin')
+    destination = flight_data.get('destination')
+    return (is_valid_fa_flight_id(flight_id) and isinstance(event_code, basestring)
+        and len(event_code) > 0 and origin and destination)
 
 def proper_airport_name(name):
     """Adds 'Airport' to an airport name if needed."""
@@ -464,18 +489,55 @@ def sms_report_exception(exception):
                         type(exception).__name__,
                         exception.message))
 
-def report_outage(disabled_services):
-    """Given a list of disabled App Engine services, sends an SMS alert to the
-    admin advising them of which services are down.
+###############################################################################
+"""GAE Capabilities Utilities"""
+###############################################################################
+
+def url_fetch_enabled():
+    return capabilities.CapabilitySet('urlfetch').is_enabled()
+
+def datastore_reads_enabled():
+    return capabilities.CapabilitySet('datastore_v3').is_enabled()
+
+def datastore_writes_enabled():
+    return capabilities.CapabilitySet('datastore_v3', capabilities=['write']).is_enabled()
+
+def mail_enabled():
+    return capabilities.CapabilitySet('mail').is_enabled()
+
+def memcache_enabled():
+    return capabilities.CapabilitySet('memcache').is_enabled()
+
+def taskqueue_enabled():
+    return capabilities.CapabilitySet('taskqueue').is_enabled()
+
+def disabled_services():
+    system_status = {
+        'URLFETCH' : url_fetch_enabled(),
+        'DATASTORE READS' : datastore_reads_enabled(),
+        'DATASTORE WRITES' : datastore_writes_enabled(),
+        'MAIL' : mail_enabled(),
+        'MEMCACHE' : memcache_enabled(),
+        'TASKQUEUE' : taskqueue_enabled(),
+    }
+    return [k for k in system_status.keys() if not system_status[k]]
+
+def try_reporting_outage(disabled_services):
+    """Given a list of disabled App Engine services, tries to send an SMS alert
+    to the admin advising them of which services are down.
 
     """
     assert disabled_services
-    outage = ['Just Landed App Outage\n',
-               ': DISABLED\n'.join(disabled_services),
-               ': DISABLED']
-    outage_message = ''.join(outage)
-    outage_cache_key = 'outage_%s' % adler32(outage_message)
 
-    if not memcache.get(outage_cache_key):
-        memcache.set(outage_cache_key, outage_message, config['exception_cache_time'])
-        sms_alert_admin(outage_message)
+    # Without urlfetch we're hosed, and without memcache we'll potentially send a flood of sms
+    if url_fetch_enabled() and memcache_enabled():
+        outage = ['Just Landed App Outage\n',
+                   ': DISABLED\n'.join(disabled_services),
+                   ': DISABLED']
+        outage_message = ''.join(outage)
+        outage_cache_key = 'outage_%s' % adler32(outage_message)
+
+        # Only report exceptions we haven't recently seen
+        if not memcache.get(outage_cache_key):
+            memcache.set(outage_cache_key, outage_message, config['exception_cache_time'])
+            sms_alert_admin(outage_message)

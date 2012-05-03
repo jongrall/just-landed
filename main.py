@@ -17,8 +17,7 @@ LIB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib')
 if LIB_DIR not in sys.path:
   sys.path[0:0] = [LIB_DIR]
 
-from google.appengine.api import capabilities
-from google.appengine.ext import webapp, ereporter
+from google.appengine.ext import webapp, ndb, ereporter
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.runtime.apiproxy_errors import (OverQuotaError,
@@ -74,44 +73,34 @@ class BaseHandler(webapp.RequestHandler):
             logging.warning(exception.message)
 
         else:
+            # Reliability: some exceptions should trigger SMS notifications to the admin
+            if utils.url_fetch_enabled() and isinstance(exception, (FlightAwareUnavailableError,
+                                      DrivingTimeUnavailableError,
+                                      OverQuotaError,
+                                      CapabilityDisabledError,
+                                      FeatureNotEnabledError,
+                                      DeadlineExceededError,
+                                      PushNotificationsUnavailableError,
+                                      PushNotificationsUnauthorizedError,
+                                      PushNotificationsUnknownError,
+                                      CampaignMonitorUnauthorizedError,
+                                      CampaignMonitorUnavailableError)):
+                utils.sms_report_exception(exception)
+
             # Reliability: detect and report service outages if possible
-            if capabilities.CapabilitySet('urlfetch').is_enabled():
+            disabled_services = utils.disabled_services()
+            gae_outage = len(disabled_services) > 0
+            if gae_outage:
+                utils.try_reporting_outage(disabled_services)
 
-                # Reliability: some exceptions should trigger SMS notifications to the admin
-                if isinstance(exception, (FlightAwareUnavailableError,
-                                          DrivingTimeUnavailableError,
-                                          OverQuotaError,
-                                          CapabilityDisabledError,
-                                          FeatureNotEnabledError,
-                                          DeadlineExceededError,
-                                          PushNotificationsUnavailableError,
-                                          PushNotificationsUnauthorizedError,
-                                          PushNotificationsUnknownError,
-                                          CampaignMonitorUnauthorizedError,
-                                          CampaignMonitorUnavailableError)):
-                    utils.sms_report_exception(exception)
-
-                system_status = {
-                    'DATASTORE READS' : capabilities.CapabilitySet('datastore_v3').is_enabled(),
-                    'DATASTORE WRITES' : capabilities.CapabilitySet('datastore_v3', capabilities=['write']).is_enabled(),
-                    'MAIL SERVICE' : capabilities.CapabilitySet('mail').is_enabled(),
-                    'MEMCACHE SERVICE' : capabilities.CapabilitySet('memcache').is_enabled(),
-                    'TASKQUEUE SERVICE' : capabilities.CapabilitySet('taskqueue').is_enabled(),
-                }
-
-                disabled_services = [k for k in system_status.keys() if not system_status[k]]
-                if disabled_services:
-                    utils.report_outage(disabled_services)
-                    gae_outage = True
-            else:
-                gae_outage = True
-
-            # FIXME: Nested transaction can happen here
             # Logged exceptions get automatically picked up by ereporter
-            logging.exception(exception)
+            @ndb.non_transactional
+            def log_exc():
+                logging.exception(exception)
+            log_exc()
 
         unrecoverable_errors = (OverQuotaError, CapabilityDisabledError,
-                                FeatureNotEnabledError, DeadlineExceededError)
+                                FeatureNotEnabledError)
 
         # Use response status to indicate to clients what happened
         if gae_outage or isinstance(exception, unrecoverable_errors):

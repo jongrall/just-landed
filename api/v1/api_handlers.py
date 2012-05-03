@@ -54,7 +54,6 @@ class SearchHandler(AuthenticatedAPIHandler):
 """Tracking Flights"""
 ###############################################################################
 
-
 class TrackWorker(BaseHandler):
     """Deferred work when tracking a flight."""
     @ndb.toplevel
@@ -99,8 +98,8 @@ class DelayedTrackWorker(BaseHandler):
         params = self.request.params
         uuid = params.get('uuid')
         flight_id = params.get('flight_id')
-        assert isinstance(uuid, basestring) and len(uuid)
-        assert isinstance(flight_id, basestring) and len(flight_id)
+        assert utils.is_valid_uuid(uuid)
+        assert utils.is_valid_flight_id(flight_id)
         yield source.do_track(self, flight_id, uuid, delayed=True)
 
 
@@ -143,8 +142,8 @@ class TrackHandler(AuthenticatedAPIHandler):
 
         dest_latitude = flight.destination.latitude
         dest_longitude = flight.destination.longitude
-        driving_time = None
 
+        # Optimization: only get driving distance if they're not too close or too far from the airport
         if (latitude and longitude and
             not utils.too_close_or_far(latitude,
                                         longitude,
@@ -191,7 +190,7 @@ class TrackHandler(AuthenticatedAPIHandler):
 
         self.respond(response)
 
-        # Track the flight (deferred)
+        # Optimization: defer the bulk of the work to track the flight
         task = taskqueue.Task(params={
             'flight' : json.dumps(flight.to_dict()),
             'uuid' : uuid or '',
@@ -209,8 +208,6 @@ class UntrackWorker(BaseHandler):
     def post(self):
         params = self.request.params
         flight_id = params.get('flight_id')
-        assert isinstance(flight_id, basestring) and len(flight_id)
-
         uuid = params.get('uuid')
         yield source.untrack_flight(flight_id, uuid=uuid)
 
@@ -222,14 +219,14 @@ class UntrackHandler(AuthenticatedAPIHandler):
 
     """
     def get(self, flight_id):
-        if not flight_id or not isinstance(flight_id, basestring):
+        if not utils.is_valid_flight_id(flight_id):
             raise FlightNotFoundException(flight_id)
 
         # FIXME: Assume iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
         self.respond({'untracked' : flight_id})
 
-        # Untrack the flight (deferred)
+        # Optimization: defer untracking the flight
         task = taskqueue.Task(params = {
             'flight_id' : flight_id,
             'uuid' : uuid,
@@ -262,6 +259,7 @@ class AlertHandler(BaseAPIHandler):
     def post(self):
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
+            # Optimization: defer processing the alert
             task = taskqueue.Task(payload=self.request.body)
             taskqueue.Queue('process-alert').add(task)
         else:
