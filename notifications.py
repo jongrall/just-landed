@@ -69,7 +69,7 @@ class UrbanAirshipService(PushNotificationService):
         except urbanairship.Unauthorized:
             raise PushNotificationsUnauthorizedError()
         except urbanairship.AirshipFailure as e:
-            raise PushNotificationsUnknownError(status_code=e.code, message=e.message)
+            raise PushNotificationsUnknownError(status_code=e.args[0], message=e.args[1])
         except Exception:
             raise UrbanAirshipUnavailableError()
 
