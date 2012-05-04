@@ -39,7 +39,7 @@ from google.appengine.ext.ndb import tasklets
 from google.appengine.api.urlfetch import DownloadError
 from google.appengine.runtime.apiproxy_errors import CapabilityDisabledError
 
-from config import config, on_development
+from config import config, on_development, flightaware_credentials
 from connections import Connection, build_url
 from models import (Airport, FlightAwareTrackedFlight, FlightAwareAlert, iOSUser,
     Origin, Destination, Flight)
@@ -54,8 +54,8 @@ from reporting import report_event, report_event_transactionally
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
-debug_cache = on_development() and False
-debug_alerts = on_development() and False
+debug_cache = on_development() and True
+debug_alerts = on_development() and True
 
 ###############################################################################
 """Flight Data Sources"""
@@ -212,7 +212,7 @@ class FlightAwareSource (FlightDataSource):
         return config['flightaware']['key_mapping']
 
     def __init__(self):
-        uname, pwd = config.flightaware_credentials()
+        uname, pwd = flightaware_credentials()
         self.conn = Connection(self.base_url, username=uname, password=pwd)
 
     @ndb.tasklet
@@ -427,7 +427,7 @@ class FlightAwareSource (FlightDataSource):
                     logging.info('FLIGHT RESULT CACHE HIT')
 
                 try:
-                    airline_data = self.conn.get_json('/AirlineFlightInfo',
+                    airline_data = yield self.conn.get_json('/AirlineFlightInfo',
                                                         args={'faFlightID': flight_id,
                                                               'howMany': 1})
                     report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
@@ -482,7 +482,7 @@ class FlightAwareSource (FlightDataSource):
 
             # Cache the result
             if not memcache.set(flight_cache_key, flight,
-                                time=config['flightaware']['flight_cache_time'])
+                                time=config['flightaware']['flight_cache_time']):
                 logging.error('Unable to cache flight info!')
             elif debug_cache:
                 logging.info('FLIGHT CACHE SET')
@@ -792,9 +792,9 @@ class FlightAwareSource (FlightDataSource):
             if futs:
                 results = yield futs
                 for r in results:
-                    if r isinstance(r, FlightAwareAlert):
+                    if isinstance(r, FlightAwareAlert):
                         alert = r
-                    elif r isinstance(r, FlightAwareTrackedFlight):
+                    elif isinstance(r, FlightAwareTrackedFlight):
                         tracked_flight = r
 
             # Save the user's tracking activity if we have a uuid

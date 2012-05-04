@@ -152,8 +152,8 @@ config['max_push_token_age'] = 14400
 
 # Server urls and api credentials that are used to sign requests
 if on_development():
-    #config['server_url'] = 'http://c-98-207-175-25.hsd1.ca.comcast.net'
-    config['server_url'] = 'http://pool-173-63-21-213.nwrknj.fios.verizon.net:8082'
+    config['server_url'] = 'http://c-98-207-175-25.hsd1.ca.comcast.net'
+    #config['server_url'] = 'http://pool-173-63-21-213.nwrknj.fios.verizon.net:8082'
     config['api_credentials'] = {
         'iOS' : {
             'username' : 'iOS-Development',

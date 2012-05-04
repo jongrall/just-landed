@@ -30,7 +30,7 @@ from custom_exceptions import *
 import utils
 
 # Enable to log informational messages about reported events
-debug_reporting = on_development() and False
+debug_reporting = on_development() and True
 
 ###############################################################################
 """Flight Counters"""

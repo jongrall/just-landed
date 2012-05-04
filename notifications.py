@@ -22,7 +22,7 @@ from config import config, on_development, on_staging
 import utils
 
 # Enable to log informational messages about push notification activity
-debug_push = on_development() and False
+debug_push = on_development() and True
 
 push_types = config['push_types']
 FLIGHT_STATES = config['flight_states']
