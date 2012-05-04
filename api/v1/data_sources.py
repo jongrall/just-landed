@@ -54,8 +54,8 @@ from reporting import report_event, report_event_transactionally
 
 FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
-debug_cache = on_development() and True
-debug_alerts = on_development() and True
+debug_cache = on_development() and False
+debug_alerts = on_development() and False
 
 ###############################################################################
 """Flight Data Sources"""
