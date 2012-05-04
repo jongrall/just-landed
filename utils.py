@@ -273,11 +273,8 @@ def is_valid_fa_alert_body(alert_body):
         and len(event_code) > 0 and origin and destination)
 
 def proper_airport_name(name):
-    """Adds 'Airport' to an airport name if needed."""
-    if name.lower().find('airport') == -1:
-        return name + ' Airport'
-    else:
-        return name
+    """Replaces 'International' with 'Int'l.' in an airport name."""
+    return name.replace("International", "Int'l")
 
 def flight_num_from_fa_flight_id(flight_id):
     """Extracts a flight number from a FlightAware flight id."""
