@@ -1,0 +1,125 @@
+#!/usr/bin/env python
+
+"""fix_airport_locations.py: Script that uses the Google Places API to improve our
+airport locations dataset by fetching terminal locations instead of runway locations,
+and by replacing the names with Google's.
+
+"""
+
+__author__ = "Jon Grall"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
+
+import sys
+import logging
+import csv
+
+from connections import Connection
+
+GOOGLE_PLACES_KEY = 'AIzaSyCN0SpDuAhLxC9bH9gFsGMO2PPlNo7PDLw'
+MAX_TO_PROCESS = 0
+
+def main():
+    # Load the files
+    src_count = len(open('airports.csv', 'rU').readlines())
+
+    try:
+        dest_count = len(open('airports_rev.csv', 'rU').readlines())
+    except:
+        dest_count = 0
+
+    if dest_count >= src_count:
+        return # We're done
+
+    src_file = open('airports.csv', 'rU')
+    dest_file = open('airports_rev.csv', 'a')
+    airport_data = csv.reader(src_file)
+    revised_airport_data = csv.writer(dest_file)
+    google_places = Connection('https://maps.googleapis.com/maps/api/place')
+    count = 0
+    left_alone = 0
+    updated = 0
+
+    try:
+        for airport in airport_data:
+            # First line is a set of headers, just copy it
+            if count == 0 and dest_count == 0:
+                revised_airport_data.writerow(airport)
+
+            # Pickup where we left off
+            elif count >= dest_count and (MAX_TO_PROCESS == 0 or count < MAX_TO_PROCESS + 1):
+                # Process airport
+                airport = [part.decode('utf-8') for part in airport]
+                icao, iata, name, city, country, lat, lon, alt, tz_off, dst = airport
+                old_latitude = float(lat)
+                old_longitude = float(lon)
+
+                # Get the new information from Google Places
+                args = {
+                    'key' : GOOGLE_PLACES_KEY,
+                    'keyword' : iata,
+                    'location' : '%f,%f' % (old_latitude, old_longitude),
+                    'radius' : 10000,
+                    'sensor' : 'false',
+                    'types' : 'airport',
+                }
+                status_code, resp = google_places.get_json('/search/json', args)
+
+                def write_old_airport():
+                    old_airport = airport
+                    old_airport = [part.encode('utf-8') for part in airport]
+                    revised_airport_data.writerow(old_airport)
+                    print '%s LEFT ALONE' % iata
+
+                def write_updated_airport(new_name, new_lat, new_lon):
+                    new_info = [icao, iata, new_name, city, country, str(new_lat),
+                                str(new_lon), alt, tz_off, dst]
+                    new_airport = [part.encode('utf-8') for part in new_info]
+                    revised_airport_data.writerow(new_airport)
+                    print '%s UPDATED: %s => %s, (%s, %s) => (%s, %s)' % (
+                        iata, name, new_name, lat, lon, str(new_lat), str(new_lon))
+
+                if status_code == 200:
+                    try:
+                        status = resp['status']
+                        if status == 'ZERO_RESULTS':
+                            # No match found, keep the old data
+                            write_old_airport()
+                            left_alone += 1
+                        elif status == 'OK':
+                            # Get the info from the first result
+                            first_result = resp['results'][0]
+                            new_name = first_result['name']
+                            new_lat = first_result['geometry']['location']['lat']
+                            new_lon = first_result['geometry']['location']['lng']
+
+                            # Write the updated info
+                            write_updated_airport(new_name, new_lat, new_lon)
+                            updated += 1
+                        else:
+                            # Some other problem
+                            print 'Google Places response status: %s' % status
+                            sys.exit(1)
+
+                    except (KeyError, IndexError, TypeError) as e:
+                        # We got invalid data back from Google, give up
+                        print 'Invalid data returned by Google Places: %s' % e
+                        sys.exit(1)
+                else:
+                    # We didn't get a valid response, stop here
+                    # TODO: Retries
+                    print 'Request error: %d' % status_code
+                    sys.exit(1)
+
+            count += 1
+
+    finally:
+        src_file.close()
+        dest_file.close()
+        dest_count = len(open('airports_rev.csv', 'rU').readlines())
+        print '\nPROCESSED: %d/%d AIRPORTS' % (dest_count - 1, src_count - 1)
+        print '%d LEFT ALONE, %d UPDATED' % (left_alone, updated)
+
+
+if __name__ == '__main__':
+    main()
