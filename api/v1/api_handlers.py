@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """api_handlers.py: This module defines the Just Landed API handlers. All
 requests by Just Landed clients are routed through here.

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """simulate_read_only.py: Utilities for simulating readonly mode on devserver."""
 

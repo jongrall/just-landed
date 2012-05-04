@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """web_handlers.py: Module that defines handlers for (static) web content on the
 getjustlanded.com website.

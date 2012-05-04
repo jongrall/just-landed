@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """main.py: Main WSGI app instantiation and configuration for Just Landed."""
 
@@ -236,5 +236,5 @@ app.error_handlers[404] = handle_404
 def main():
     run_wsgi_app(app)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

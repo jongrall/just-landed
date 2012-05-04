@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """models.py: This module defines model classes used by the Just Landed app.
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """connections.py: This module defines helper functions for making asynchronous
 urlfetch requests using the ndb.urlfetch() function.

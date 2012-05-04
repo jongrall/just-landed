@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """appengine_config.py: Additional App-Engine specific config."""
 

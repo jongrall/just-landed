@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """cron.py: Handlers for cron jobs."""
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """A simple Python client wrapper for the Push API provided by StackMob."""
 

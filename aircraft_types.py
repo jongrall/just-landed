@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """aircraft_types.py: Utilities for mapping aircraft codes to simplified types."""
 

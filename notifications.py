@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """notifications.py: Utilities for sending push notifications via Urban Airship."""
 

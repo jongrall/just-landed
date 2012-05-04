@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """data_sources.py: This module defines all the data sources that power
 the Just Landed app.

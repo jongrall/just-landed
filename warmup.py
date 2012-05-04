@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """warmup.py: Pre-caching Application Code via a Warmup Handler."""
 

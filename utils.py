@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """utils.py: Utility methods used by the Just Landed app."""
 

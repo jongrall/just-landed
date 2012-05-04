@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 #    Copyright 2007-2010 Brandon Stafford
 #

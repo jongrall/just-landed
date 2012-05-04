@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """admin_handlers.py: Module that defines admin web handlers."""
 

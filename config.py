@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """config.py: This module contains all settings for the Just Landed app."""
 

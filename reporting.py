@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """reporting.py: This module defines functions for doing deferred server-side
 event tracking and reporting to any 3rd party HTTP/REST based reporting service.
