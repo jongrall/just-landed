@@ -828,11 +828,11 @@ class FlightAwareSource (FlightDataSource):
             if driving_time and not already_tracking:
                 now = datetime.utcnow()
                 # Allow for 75% fluctuation in driving time
-                first_check_time = utils.leave_now_time(flight.estimated_arrival_time,
+                first_check_time = utils.leave_now_time(flight,
                                                         (driving_time * 1.75), cron=True)
 
                 # Check again at leave soon minus 1 min, want to beat the cron job
-                second_check_time = utils.leave_soon_time(flight.estimated_arrival_time,
+                second_check_time = utils.leave_soon_time(flight,
                                                           driving_time, cron=True) - timedelta(seconds=60)
 
                 check_times = [first_check_time, second_check_time]

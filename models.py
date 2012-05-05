@@ -80,6 +80,7 @@ class Airport(ndb.Model):
 
         """
         return dict(city=self.city,
+                    country=self.country,
                     altitude=self.altitude,
                     icaoCode=self.key.string_id(),
                     iataCode=self.iata_code,
@@ -443,8 +444,8 @@ class iOSUser(_User):
                                 dest_name, flight_num)
 
         # Calculate the reminder times (cron=True accounts for cron delay)
-        leave_soon_time = utils.leave_soon_time(flight.estimated_arrival_time, driving_time, cron=True)
-        leave_now_time = utils.leave_now_time(flight.estimated_arrival_time, driving_time, cron=True)
+        leave_soon_time = utils.leave_soon_time(flight, driving_time, cron=True)
+        leave_now_time = utils.leave_now_time(flight, driving_time, cron=True)
 
         # If they have no reminders for this flight, set them (even if they were supposed to fire in the past)
         if not reminders:
@@ -721,6 +722,14 @@ class Origin(object):
     @city.setter
     def city(self, value):
         self._data['city'] = value
+
+    @property
+    def country(self):
+        return self._data.get('country')
+
+    @country.setter
+    def country(self, value):
+        self._data['country'] = value
 
     @property
     def name(self):

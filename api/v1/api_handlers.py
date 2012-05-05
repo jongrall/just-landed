@@ -183,8 +183,7 @@ class TrackHandler(AuthenticatedAPIHandler):
 
         if driving_time and driving_time > 0:
             response['drivingTime'] = driving_time
-            response['leaveForAirportTime'] = utils.timestamp(utils.leave_now_time(flight.estimated_arrival_time,
-                                                                  driving_time))
+            response['leaveForAirportTime'] = utils.timestamp(utils.leave_now_time(flight, driving_time))
         elif latitude and longitude and utils.at_airport(latitude, longitude, dest_latitude, dest_longitude):
             response['drivingTime'] = 0
 

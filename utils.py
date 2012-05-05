@@ -362,7 +362,7 @@ def pretty_time_interval(num_secs, round_days=False):
     else:
         return ' '.join(pretty)
 
-def leave_now_time(est_arrival_time, driving_time, cron=False):
+def leave_now_time(flight, driving_time, cron=False):
     """Calculates the time that a user should leave given the estimated
     arrival time of the flight, and the driving time from their current location
     to the destination airport.
@@ -372,13 +372,17 @@ def leave_now_time(est_arrival_time, driving_time, cron=False):
     be delayed by up to a minute. Compensates by adding a 60 second buffer.
 
     """
-    touchdown_to_terminal = config['touchdown_to_terminal']
+    # Different touchdown to terminal arrival for international flights
+    is_international = flight.origin.country != flight.destination.country
+    touchdown_to_terminal = ((is_international and config['touchdown_to_terminal_intl']) or
+                            config['touchdown_to_terminal'])
+
     # Cron is every 60 seconds, so leave_now should be earlier to account for delay in sending reminders
     cron_offset = (cron and 60) or 0
     return datetime.utcfromtimestamp(
-        touchdown_to_terminal + est_arrival_time - driving_time - cron_offset)
+        touchdown_to_terminal + flight.estimated_arrival_time - driving_time - cron_offset)
 
-def leave_soon_time(est_arrival_time, driving_time, cron=False):
+def leave_soon_time(flight, driving_time, cron=False):
     """Calculates the leave soon reminder time given the estimated arrival time
     of the flight, and the driving time from their current location to the
     destination airport.
@@ -389,7 +393,7 @@ def leave_soon_time(est_arrival_time, driving_time, cron=False):
 
     """
     leave_soon_interval = config['leave_soon_seconds_before']
-    leave_now = timestamp(leave_now_time(est_arrival_time, driving_time, cron=cron))
+    leave_now = timestamp(leave_now_time(flight, driving_time, cron=cron))
     return datetime.utcfromtimestamp(leave_now - leave_soon_interval)
 
 ###############################################################################

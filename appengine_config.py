@@ -7,10 +7,11 @@ __copyright__ = "Copyright 2012, Just Landed LLC"
 __email__ = "jon@getjustlanded.com"
 
 from config import on_development
+appstats_enabled = False
 
 def webapp_add_wsgi_middleware(app):
     # Optimization: only add appstats middleware in the development environment
-    if not on_development():
+    if not appstats_enabled or not on_development():
         return app
 
     from google.appengine.ext.appstats import recording
