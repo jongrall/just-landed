@@ -274,6 +274,7 @@ def is_valid_fa_alert_body(alert_body):
 
 def proper_airport_name(name):
     """Replaces 'International' with 'Int'l.' in an airport name."""
+    name = name.replace("Intl", "Int'l")
     return name.replace("International", "Int'l")
 
 def flight_num_from_fa_flight_id(flight_id):

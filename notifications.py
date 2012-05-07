@@ -281,7 +281,7 @@ class _Alert(object):
     def notification_sound(self):
         """Returns the name of the sound that should play when the alert
         arrives on the receiving device."""
-        return 'announcement.caf'
+        return 'announcement.wav'
 
 
 class _FlightAlert(_Alert):
@@ -355,7 +355,7 @@ class FlightDepartedAlert(_FlightAlert):
 
     @property
     def notification_sound(self):
-        return 'takeoff.caf'
+        return 'takeoff.wav'
 
 
 class FlightArrivedAlert(_FlightAlert):
@@ -388,7 +388,7 @@ class FlightArrivedAlert(_FlightAlert):
 
     @property
     def notification_sound(self):
-        return 'landing.caf'
+        return 'landing.wav'
 
 
 class FlightPlanChangeAlert(_FlightAlert):
