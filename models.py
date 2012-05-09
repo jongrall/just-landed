@@ -370,7 +370,7 @@ class iOSUser(_User):
             logging.info('UPDATING EXISTING USER %s' % uuid)
 
         # Optimization: only update the user's location if it has changed
-        if user_latitude and user_longitude and not user.location_is_current(user_latitude, user_longitude):
+        if (user_latitude is not None) and (user_longitude is not None) and not user.location_is_current(user_latitude, user_longitude):
             user.last_known_location = ndb.GeoPt(user_latitude, lon=user_longitude)
 
         # Track the flight if they weren't tracking it yet
