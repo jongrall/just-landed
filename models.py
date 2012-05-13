@@ -44,6 +44,7 @@ class Airport(ndb.Model):
     - `iata_code` : The IATA code associated with the airport.
     - `location` : The location of the airport (lat, long)
     - `name` : The name of the aiport.
+    - `timezone_name` : The standard name of the timezone.
     - `timezone_offset` : The timezone offset from GMT where the airport is.
 
     """
@@ -54,6 +55,7 @@ class Airport(ndb.Model):
     iata_code = ndb.StringProperty('iata', required=True)
     location = ndb.GeoPtProperty('loc', required=True, indexed=False)
     name = ndb.TextProperty(required=True)
+    timezone_name = ndb.TextProperty('tz')
     timezone_offset = ndb.FloatProperty('tz_off', indexed=False)
 
     @classmethod
@@ -86,6 +88,7 @@ class Airport(ndb.Model):
                     iataCode=self.iata_code,
                     latitude=utils.round_coord(self.location.lat),
                     longitude=utils.round_coord(self.location.lon),
+                    timezone=self.timezone_name,
                     name=utils.proper_airport_name(self.name))
 
 
@@ -767,6 +770,15 @@ class Origin(object):
     @terminal.setter
     def terminal(self, value):
         self._data['terminal'] = value.upper().strip()
+
+    @property
+    def timezone(self):
+        """Returns the name of the timezone."""
+        return self._data.get('timezone') or ''
+
+    @timezone.setter
+    def timezone(self, value):
+        self._data['timezone'] = value
 
     def dict_for_client(self):
         info = {}

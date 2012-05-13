@@ -36,14 +36,16 @@ def main():
     airport_data = csv.reader(src_file)
     revised_airport_data = csv.writer(dest_file)
     google_places = Connection('https://maps.googleapis.com/maps/api/place')
+    geo_names = Connection('http://api.geonames.org')
     count = 0
     left_alone = 0
     updated = 0
 
     try:
         for airport in airport_data:
-            # First line is a set of headers, just copy it
+            # First line is a set of headers
             if count == 0 and dest_count == 0:
+                airport.append('timezone_name') # Add timezone name
                 revised_airport_data.writerow(airport)
 
             # Pickup where we left off
@@ -65,19 +67,56 @@ def main():
                 }
                 status_code, resp = google_places.get_json('/search/json', args)
 
+                # Get the timezone info from GeoNames
+                args = {
+                    'lat' : old_latitude,
+                    'lng' : old_longitude,
+                    'username' : 'justlanded',
+                }
+
+                tz_status, tz_resp = geo_names.get_json('/timezoneJSON', args)
+                tz_name = ''
+
+                if tz_status == 200 and tz_resp:
+                    try:
+                        has_error = tz_resp.get('status') is not None
+
+                        if has_error:
+                            tz_error_code = tz_resp['status']['value']
+                            if tz_error_code in [18, 19, 20]:
+                                print 'Exceeded GeoNames quota!'
+                                sys.exit(1)
+                            elif tz_error_code in [11, 15]:
+                                print 'Timezone not found!'
+                            else:
+                                print 'Unknown GeoNames error!'
+                                sys.exit(1)
+                        else:
+                            tz_name = tz_resp.get('timezoneId') or ''
+
+                    except  (KeyError, IndexError, TypeError) as e:
+                        # We got invalid data back from GeoNames, give up
+                        print 'Invalid data returned by GeoNames: %s' % e
+                        sys.exit(1)
+                else:
+                    print '%d, %s' % (tz_status, tz_resp)
+                    print 'GeoNames server error.'
+                    sys.exit(1)
+
                 def write_old_airport():
                     old_airport = airport
                     old_airport = [part.encode('utf-8') for part in airport]
+                    old_airport.append(tz_name)
                     revised_airport_data.writerow(old_airport)
-                    print '%s LEFT ALONE' % iata
+                    print '%s LEFT LOCATION ALONE %s' % (iata, tz_name)
 
                 def write_updated_airport(new_name, new_lat, new_lon):
                     new_info = [icao, iata, new_name, city, country, str(new_lat),
-                                str(new_lon), alt, tz_off, dst]
+                                str(new_lon), alt, tz_off, dst, tz_name]
                     new_airport = [part.encode('utf-8') for part in new_info]
                     revised_airport_data.writerow(new_airport)
-                    print '%s UPDATED: %s => %s, (%s, %s) => (%s, %s)' % (
-                        iata, name, new_name, lat, lon, str(new_lat), str(new_lon))
+                    print '%s UPDATED: %s => %s, (%s, %s) => (%s, %s) %s' % (
+                        iata, name, new_name, lat, lon, str(new_lat), str(new_lon), tz_name)
 
                 if status_code == 200:
                     try:

@@ -47,6 +47,10 @@ transformers:
       external_name: altitude
       import_transform: transform.none_if_empty(int)
 
+    - property: tz
+      external_name: timezone_name
+      import_transform: db.Text
+
     - property: tz_off
       external_name: timezone_offset
       import_transform: transform.none_if_empty(float)

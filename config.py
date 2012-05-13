@@ -111,6 +111,7 @@ config['airport_fields'] = [
     'latitude',
     'longitude',
     'terminal',
+    'timezone',
 ]
 
 # Supported push notification types
