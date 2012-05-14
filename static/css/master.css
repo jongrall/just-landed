@@ -6,18 +6,12 @@ html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abb
 /* Base Styles
 ------------------------------------------------------------ */
 
-html {
-    height: 100%; /* For body background gradient */
-}
-
 body {
-    /* background-image: url('../images/clouds.png'), -webkit-gradient(linear, left top, left bottom, color-stop(0.3, #afc9d0), color-stop(0.6, #cfdfe3), color-stop(1, #eff4f6)); */
-    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0.3, #afc9d0), color-stop(0.6, #cfdfe3), color-stop(1, #eff4f6));
-    background-size: 100% 100%;
-    background-repeat: no-repeat;
-    font: 15px / 22px 'Lucida Grande', 'Lucida Sans Unicode', Helvetica, Arial, Verdana, sans-serif;
+    background: #eff4f8;
+    font: 15px / 22px 'Open Sans', 'Lucida Grande', 'Lucida Sans Unicode', Helvetica, Arial, Verdana, sans-serif;
     -webkit-font-smoothing: antialiased;
-    color: #2d2d2d;
+    color: #77a0bf;
+    position: relative;
 }
 
 .clear:after {
@@ -32,19 +26,75 @@ body {
     position: relative;
 }
 
-#content {
-    width: 720px;
+.float-left {
+    float: left;
+}
+
+.float-right {
+    float: right;
+}
+
+/* Type
+------------------------------------------------------------ */
+
+h2 {
+    color: #4d7fa5;
+    font-size: 16px;
+    text-transform: uppercase;
+    margin: 0 0 5px 0;
+}
+
+a {
+    color: #ff5b00;
+    text-decoration: none;
+}
+
+/* Main Layout
+------------------------------------------------------------ */
+
+/* Grid overlay
+------------------------------ */
+
+#grid {
+    display: none;
+    position: absolute;
+    background: url('../images/grid860.png') repeat-y top left;
+    width: 770px;
+    height: 100%;
+    opacity: 0.3;
+    z-index: 9999;
+}
+
+/* Center the page layout
+------------------------------ */
+
+.centered {
+    width: 770px;
     margin: 0 auto;
 }
 
-/* Page Content
------------------------------------------------------------- */
+/* Footer
+------------------------------ */
 
-#logo {
-    background: url('../images/logo.png') no-repeat center;
-    height: 106px;
-    text-indent: -9999px;
-    margin: 140px 0 60px 0;
+#footer {
+    text-align: center;
+    padding: 80px 0 40px 0;
+    color: #77a0bf;
+    opacity: 0.5;
+    -webkit-transition: opacity 0.2s linear;
+}
+
+#footer:hover {
+    opacity: 1;
+}
+
+#footer a {
+    color: #77a0bf;
+    margin: 0 30px 0 0;
+}
+
+#footer a:hover {
+    color: #4d7fa5;
 }
 
 /* Forms

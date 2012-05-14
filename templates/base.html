@@ -1,15 +1,16 @@
 <!doctype html>
 <html>
 <head>
-    <title>Just Landed &nbsp; &#9992; &nbsp; Getting you there on time</title>
+    <title>{% block page_title%}Just Landed &nbsp; &#9992; &nbsp; Making airport pickups easy{% endblock %}</title>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
 
-    <!-- !CSS -->
-    <link rel="stylesheet" href="/static/css/master.css?v={{ version }}" />
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/static/css/master.css?v={{ version }}" />
+    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Open+Sans:400,600" />
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
 
-    <!-- !JAVASCRIPT -->
+    <!-- JAVASCRIPT -->
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
     <script type="text/javascript">Rot13={map:null,convert:function(a){Rot13.init();var b="";for(i=0;i<a.length;i++){var c=a.charAt(i);b+=c>="A"&&c<="Z"||c>="a"&&c<="z"?Rot13.map[c]:c}return b},init:function(){if(Rot13.map!=null)return;var a=new Array;var b="abcdefghijklmnopqrstuvwxyz";for(i=0;i<b.length;i++)a[b.charAt(i)]=b.charAt((i+13)%26);for(i=0;i<b.length;i++)a[b.charAt(i).toUpperCase()]=b.charAt((i+13)%26).toUpperCase();Rot13.map=a},write:function(a){document.write(Rot13.convert(a))}}</script>
     <script type="text/javascript">
@@ -26,123 +27,19 @@
     {% block extra_js_head %}{% endblock %}
 </head>
 <body>
-    <div id="content">
-        <!-- !PAGE HEADLINE -->
-        {% block page_headline %}{% endblock %}
-
-        <!-- !PAGE CONTENT -->
-        {% block page_content %}{% endblock %}
+    <!-- GRID -->
+    <div class="centered">
+        <div id="grid"></div>
     </div>
-
-{% block footer %}{% endblock %}
-
-<!-- JAVASCRIPT -->
-<script type="text/javascript">
-    /***********************************************************************************
-    Site Global Variables
-    ***********************************************************************************/
-
-    var emailRegExp = new RegExp("(?:[a-z0-9!#$%\\&'*+/=?\\^_`{|}~-]+(?:\\.[a-z0-9!#$%\\&'*+/=?\\^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])");
-
-    /***********************************************************************************
-    RPC Convenience Method
-    ***********************************************************************************/
-
-    function callRemoteMethodWithCallbacks(url, request, preflight, success, error) {
-        var ajaxSettings = {
-            contentType: 'application/json',
-            data: JSON.stringify(request),
-            type: 'POST',
-            beforeSend: preflight,
-            success: success,
-            error: error
-        };
-
-        $.ajax(url, ajaxSettings);
-    }
-
-    function ajaxRequest(url, method, request, preflight, success, error) {
-        if (!method) {
-            method = 'POST';
-        }
-
-        var ajaxSettings = {
-            contentType: 'application/x-www-form-urlencoded',
-            data: request,
-            type: method,
-            beforeSend: preflight,
-            success: success,
-            error: error
-        };
-
-        $.ajax(url, ajaxSettings);
-    }
-
-    /***********************************************************************************
-    Inline Field Labels (loaded last so markup is there to get the handlers right)
-    ***********************************************************************************/
-
-    // Fade out the focused field's label
-    function labelFadeIn() {
-        // Get the ID of the focused element
-        var fieldId = $(this).attr('id');
-
-        // fade the field's corresponding <label>
-        if ($(this).val().length == 0) {
-            $('label[for="' + fieldId + '"]').fadeTo(100, 0.6);
-        }
-    }
-
-    // Fade in the now blurred field's label
-    function labelFadeOut() {
-        // Get the ID of the focused element
-        var fieldId = $(this).attr('id');
-
-        // fade the field's corresponding <label>
-        if ($(this).val().length == 0) {
-            $('label[for="' + fieldId + '"]').fadeTo(100, 1);
-        }
-    }
-
-    // Determine if the label should be visible
-    function labelHide() {
-        // Get the ID of the focused element
-        var fieldId = $(this).attr('id');
-
-        // If there's text in the field, hide the label, show label if not
-        if ($(this).val().length > 0) {
-            $('label[for="' + fieldId + '"]').hide();
-        } else {
-            $('label[for="' + fieldId + '"]').show();
-        }
-    }
-
-    // Check for inputs with no values, and show its label if they're empty
-    function checkInputValues() {
-        // Get all the inputs on the page
-        var pageInputs = $('textarea, input[type="text"], input[type="password"]');
-        var currentFieldId;
-
-        // Loop over all the inputs
-        for (i = 0; i < pageInputs.length; i++) {
-            // We want fields that don't have values
-            if ($(pageInputs[i]).val().length == 0) {
-                // Get the ID of that field
-                currentFieldId = $(pageInputs[i]).attr('id');
-
-                // Show the associating label for that field
-                $('label[for="' + currentFieldId + '"]').show();
-            }
-        }
-    }
-
-    // Form Field Handling
-    $(document).ready(function() { checkInputValues(); });
-    $('textarea, input[type="text"], input[type="password"]').focus(labelFadeIn);
-    $('textarea, input[type="text"], input[type="password"]').blur(labelFadeOut);
-    $('textarea, input[type="text"], input[type="password"]').bind('input', labelHide); // Modern browsers
-    $('textarea, input[type="text"], input[type="password"]').keyup(labelHide); // For IE
-</script>
-{% block extra_js %}{% endblock %}
+        
+    <!-- PAGE CONTENT -->
+    {% block page_content %}{% endblock %}
+    
+    <!-- FOOTER -->
+    {% block footer %}{% endblock %}
+    
+    <!-- JAVASCRIPT -->
+    <script type="text/javascript" src="/static/javascript/master.js?v={{ version }}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
