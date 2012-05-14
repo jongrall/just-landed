@@ -1,6 +1,16 @@
-{% extends "base.html" %}
-{% block page_title %}404{% endblock %}
+{% extends "base_clouds.html" %}
 
-{% block page_content %}
-404 page goes here
+{% block page_title %}404 Page Not Found &nbsp; &middot; &nbsp; Just Landed{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <link rel="stylesheet" href="/static/css/errors.css?v={{ version }}" />
+{% endblock %}
+
+{% block clouds_content %}
+    <div class="centered clear">
+        <div id="error">
+            <a href="/"><img src="/static/images/404.png" width="345" height="212" alt="404 Page Not Found" /></a>
+        </div>
+    </div>
 {% endblock %}

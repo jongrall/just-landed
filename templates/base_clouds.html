@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="/static/css/homepage.css?v={{ version }}" />
+{% endblock %}
+
+{% block page_content %}
+    <!-- TOP CONTENT -->
+    <div id="main-content">
+        <div class="clouds-foreground"></div>
+        
+        <!-- Lots of nested divs because there's a lot of things happening behind the monolith iPhone -->
+        <div class="plane">
+            <div class="clouds-background">
+                {% block clouds_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    
+    {% block more_clouds_content %}{% endblock %}
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript">
+        function moveForeground() {
+            // 2250px is the width of the clouds graphic. Does one whole loop before calling itself again to start again
+            $('.clouds-foreground').css('background-position-x', '0').animate({ 'background-position-x': '2250px' }, 90000, 'linear', moveForeground);
+        }
+        
+        function moveBackground() {
+            $('.clouds-background').css('background-position-x', '0').animate({ 'background-position-x': '2250px' }, 300000, 'linear', moveBackground);
+        }
+        
+        $(document).ready(function() {
+            // Clouds
+            moveForeground();
+            moveBackground();
+            
+            // Plane in background
+            $('.plane').delay(5000).css('background-position-x', '-1280px').animate({ 'background-position-x': '2560px' }, 70000, 'linear');
+        });
+    </script>
+{% endblock %}

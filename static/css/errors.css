@@ -1,0 +1,18 @@
+/* Overrides
+------------------------------------------------------------ */
+
+.plane {
+    background-image: none; /* Don't want the plane to fly by on these pages */
+}
+
+/* Page Errors
+------------------------------------------------------------ */
+
+#error {
+    height: 675px;
+    text-align: center;
+}
+
+#error img {
+    margin: 140px 0 0 0;
+}

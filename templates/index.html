@@ -1,38 +1,26 @@
-{% extends "base.html" %}
+{% extends "base_clouds.html" %}
 
-{% block extra_css %}
-    <link rel="stylesheet" href="/static/css/homepage.css?v={{ version }}" />
-{% endblock %}
-
-{% block page_content %}    
-    <!-- TOP CONTENT -->
-    <div id="main-content">
-        <div class="clouds-foreground"></div>
+{% block clouds_content %}
+    <div class="centered clear">
+        <!-- iPHONE PREVIEW -->
+        <div id="iphone">
+            <div id="iphone-glare"></div>
+            <video width="261" autoplay="autoplay" loop="loop">
+                <source src="/static/movies/preview.mov" type="video/mp4" />
+            </video>
+        </div>
         
-        <!-- Lots of nested divs because there's a lot of things happening behind the monolith iPhone -->
-        <div class="plane">
-            <div class="clouds-background">
-                <div class="centered clear">
-                    <!-- iPHONE PREVIEW -->
-                    <div id="iphone">
-                        <div id="iphone-glare"></div>
-                        <video width="261" autoplay="autoplay" loop="loop">
-                            <source src="/static/movies/preview.mov" type="video/mp4" />
-                        </video>
-                    </div>
-                    
-                    <!-- APP DETAILS -->
-                    <div id="details">
-                        <h1 id="logo"><a href="/">Just Landed</a></h1>
-                        <h2 id="tagline">&ellip;getting you there on time</h2>
-                        
-                        <a href="#" class="app-store-button"><img src="/static/images/homepage/app_store_button_text.png" width="350" height="67" alt="Download!" /></a>
-                    </div>
-                </div>
-            </div>
+        <!-- APP DETAILS -->
+        <div id="details">
+            <h1 id="logo"><a href="/">Just Landed</a></h1>
+            <h2 id="tagline">&ellip;getting you there on time</h2>
+            
+            <a href="#" class="app-store-button"><img src="/static/images/homepage/app_store_button_text.png" width="350" height="67" alt="Download!" /></a>
         </div>
     </div>
-    
+{% endblock %}
+
+{% block more_clouds_content %}
     <!-- BOTTOM CONTENT -->
     <div class="centered">
         <!-- APP FEATURES -->
@@ -63,26 +51,4 @@
             by Little Details
         </div>
     </div>
-{% endblock %}
-
-{% block extra_js %}
-    <script type="text/javascript">
-        function moveForeground() {
-            // 2250px is the width of the clouds graphic. Does one whole loop before calling itself again to start again
-            $('.clouds-foreground').css('background-position-x', '0').animate({ 'background-position-x': '2250px' }, 90000, 'linear', moveForeground);
-        }
-        
-        function moveBackground() {
-            $('.clouds-background').css('background-position-x', '0').animate({ 'background-position-x': '2250px' }, 300000, 'linear', moveBackground);
-        }
-        
-        $(document).ready(function() {
-            // Clouds
-            moveForeground();
-            moveBackground();
-            
-            // Plane in background
-            $('.plane').delay(5000).css('background-position-x', '-1280px').animate({ 'background-position-x': '2560px' }, 70000, 'linear');
-        });
-    </script>
 {% endblock %}
