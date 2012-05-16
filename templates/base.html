@@ -36,7 +36,16 @@
     {% block page_content %}{% endblock %}
     
     <!-- FOOTER -->
-    {% block footer %}{% endblock %}
+    {% block footer %}
+        <div id="footer" class="clear">
+            <a href="/terms">Terms</a>
+            <a href="/privacy">Privacy</a>
+            <a href="#" target="_blank">Facebook</a>
+            <a href="#" target="_blank">Twitter</a>
+            <a href="/">by Little Details</a>
+            <!-- <p style="margin: 20px 0 0 0;"><a href="https://mixpanel.com/f/partner"><img src="https://mixpanel.com/site_media/images/partner/badge_light.png" alt="Mobile and Web Analytics" /></a></p> -->
+        </div>
+    {% endblock %}
     
     <!-- JAVASCRIPT -->
     <script type="text/javascript" src="/static/javascript/master.js?v={{ version }}"></script>

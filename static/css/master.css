@@ -44,9 +44,26 @@ h2 {
     margin: 0 0 5px 0;
 }
 
+p {
+    margin: 0 0 15px 0;
+}
+
+p:last-child {
+    margin-bottom: 0;
+}
+
 a {
     color: #ff5b00;
     text-decoration: none;
+}
+
+/* Lists
+------------------------------ */
+
+ul li {
+    margin: 0 0 5px 20px;
+    padding: 0 0 0 5px;
+    list-style-type: disc;
 }
 
 /* Main Layout

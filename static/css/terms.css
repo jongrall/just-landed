@@ -1,0 +1,32 @@
+/* Overrides
+------------------------------------------------------------ */
+
+body {
+    background: #fff;
+}
+
+.centered {
+    width: 600px;
+}
+
+/* Type
+------------------------------------------------------------ */
+
+h1 {
+    font-size: 30px;
+    color: #4d7fa5;
+    padding: 60px 0;
+    text-align: center;
+}
+
+/* Groups
+------------------------------------------------------------ */
+
+.group {
+    margin: 0 0 30px 0;
+    text-align: justify;
+}
+
+.group:last-child {
+    margin-bottom: 0;
+}
