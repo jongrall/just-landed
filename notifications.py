@@ -144,9 +144,10 @@ def register_token(device_token, **kwargs):
 
     """
     assert device_token, 'No device token'
+    force = kwargs.get('force') or False
 
     # Optimization: only re-register if we haven't done so recently
-    if not memcache.get(device_token):
+    if not memcache.get(device_token) or force:
         _defer('register_token', device_token, **kwargs)
 
 
@@ -188,6 +189,8 @@ class PushWorker(BaseHandler):
         method, args, kwds = pickle.loads(self.request.body)
         if '_transactional' in kwds.keys():
             del(kwds['_transactional'])
+        if 'force' in kwds.keys():
+            del(kwds['force'])
 
         if debug_push:
             if method == 'register':

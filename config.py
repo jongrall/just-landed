@@ -153,7 +153,7 @@ config['leave_soon_seconds_before'] = 300
 config['max_reminder_age'] = 120
 
 # Push token freshness requirement (don't register tokens that we've registered as recently as this)
-config['max_push_token_age'] = 14400
+config['max_push_token_age'] = 3600
 
 # Server urls and api credentials that are used to sign requests
 if on_development():

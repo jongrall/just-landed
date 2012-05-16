@@ -801,7 +801,7 @@ class FlightAwareSource (FlightDataSource):
             old_push_token = existing_user and existing_user.push_token
             already_tracking = existing_user and existing_user.is_tracking_flight(flight_id)
 
-            yield iOSUser.track_flight(uuid,
+            user = yield iOSUser.track_flight(uuid,
                                        flight,
                                        tracked_flight,
                                        flight.flight_number,
@@ -812,13 +812,25 @@ class FlightAwareSource (FlightDataSource):
                                        alert=alert,
                                        source=DATA_SOURCES.FlightAware)
 
+            # If the user is tracking any other flights than this one, untrack them
+            if user:
+                for f in user.tracked_flights:
+                    f_id = f.flight.string_id()
+                    if f_id != flight_id:
+                        # untrack
+                        untrack_task = taskqueue.Task(params = {
+                            'flight_id' : f_id,
+                            'uuid' : uuid,
+                        })
+                        taskqueue.Queue('untrack').add(untrack_task)
+
             # Tell UrbanAirship about expired push tokens
             if old_push_token and push_token != old_push_token:
                 deregister_token(old_push_token, _transactional=True)
 
             # Tell UA about the push token
             if push_token:
-                register_token(push_token, _transactional=True)
+                register_token(push_token, _transactional=True, force=(not already_tracking))
 
             # Schedule /track to happen a couple of times in the future before
             # landing - this will ensure that their leave alerts are accurate
