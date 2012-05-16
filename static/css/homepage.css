@@ -1,0 +1,169 @@
+/* Top Content
+------------------------------------------------------------ */
+
+#main-content {
+    position: relative;
+    background-color: #77a0bf;
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #21347f), color-stop(0.6, #77a0bf), color-stop(1.0, #cddbe7));
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    padding: 50px 0 0 0;
+}
+
+/* iPhone Preview
+------------------------------ */
+
+#iphone {
+    position: relative;
+    float: left;
+    background: url('../images/homepage/iphone.png');
+    width: 310px;
+    height: 675px; /* iPhone graphic is 715px tall */
+    -webkit-perspective: 600;
+    overflow: hidden;
+}
+
+#iphone #iphone-glare {
+    position: absolute;
+    background: url('../images/homepage/iphone_glare.png');
+    top: 0;
+    left: 0;
+    width: 310px;
+    height: 715px;
+    z-index: 99;
+}
+
+#iphone video {
+    position: absolute;
+    top: 124px;
+    left: 45px;
+    z-index: 98;
+    -webkit-transform-origin: 0 0;
+    -webkit-transform: scaleY(1.188) rotateY(9deg) skewY(4.7deg);
+}
+
+/* App Details
+------------------------------ */
+
+#details {
+    float: right;
+    margin: 200px 0 0 0;
+    width: 350px;
+}
+
+/* Logo */
+
+#details h1#logo a {
+    display: block;
+    background: url('../images/logo.png') no-repeat;
+    width: 356px;
+    height: 57px;
+    text-indent: -9999px;
+    margin: 0 0 8px -3px; /* Compensate alignment for 5px of drop shadow */
+}
+
+/* Tagline */
+
+#details h2#tagline {
+    display: block;
+    background: url('../images/tagline.png') no-repeat right;
+    width: 351px;
+    height: 36px;
+    text-indent: -9999px;
+    margin: 0 0 40px 0;
+}
+
+/* App Store Button */
+
+a.app-store-button {
+    display: block;
+    background-color: #ff5b00;
+    background-image: -o-linear-gradient(top, #ff7800, #ff5b00);
+    background-image: -moz-linear-gradient(top, #ff7800, #ff5b00);
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #ff7800), color-stop(1.0, #ff5b00));
+    height: 70px;
+    text-align: center;
+    color: #fff;
+    font-weight: bold;
+    font-size: 30px;
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    border-bottom: none;
+    -o-border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
+    -o-box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), inset 0 -1px rgba(0, 0, 0, 0.2), inset 0 -4px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 30, 0.6);
+    -moz-box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), inset 0 -1px rgba(0, 0, 0, 0.2), inset 0 -4px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 30, 0.6);
+    -webkit-box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), inset 0 -1px rgba(0, 0, 0, 0.2), inset 0 -4px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 30, 0.6);
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), inset 0 -1px rgba(0, 0, 0, 0.2), inset 0 -4px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 30, 0.6);
+}
+
+a.app-store-button img {
+    display: block;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+}
+
+a.app-store-button:hover {
+    background-image: -o-linear-gradient(top, #ff8111, #ff6611);
+    background-image: -moz-linear-gradient(top, #ff8111, #ff6611);
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #ff8111), color-stop(1.0, #ff6611));
+}
+
+a.app-store-button:active {
+    position: relative;
+    top: 4px;
+    height: 66px;
+    background-image: -o-linear-gradient(top, #ff5b00, #ff7800);
+    background-image: -moz-linear-gradient(top, #ff5b00, #ff7800);
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #ff5b00), color-stop(1.0, #ff7800));
+    border-color: #702700;
+    -o-box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8), 0 1px rgba(255, 255, 255, 0.3);
+    -moz-box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8), 0 1px rgba(255, 255, 255, 0.3);
+    -webkit-box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8), 0 1px rgba(255, 255, 255, 0.3);
+    box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8), 0 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Bottom Content
+------------------------------------------------------------ */
+
+#sub-content {
+    margin: 20px 0 0 0;
+}
+
+/* Features
+------------------------------ */
+
+#sub-content .feature {
+    width: 230px;
+    float: left;
+    margin: 0 40px 0 0;
+    text-align: justify;
+}
+
+#sub-content .feature:last-child {
+    margin-right: 0;
+}
+
+/* Clouds Overlay
+------------------------------------------------------------ */
+
+.clouds-foreground {
+    position: absolute;
+    bottom: 0;
+    background: url('../images/homepage/clouds_foreground.png') repeat-x 0 100%;
+    width: 100%;
+    height: 200px;
+    z-index: 999;
+}
+
+.clouds-background {
+    background: url('../images/homepage/clouds_background.png') repeat-x 0 100%;
+}
+
+/* Plane Contrail
+------------------------------------------------------------ */
+
+.plane {
+    background: url('../images/plane_contrail.png') no-repeat -1280px 73%;
+}
