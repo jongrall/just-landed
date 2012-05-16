@@ -157,6 +157,15 @@ a.app-store-button:active {
     z-index: 999;
 }
 
+.clouds-midground {
+    position: absolute;
+    bottom: 0;
+    background: url('../images/homepage/clouds_midground.png') repeat-x 0 100%;
+    width: 100%;
+    height: 200px;
+    z-index: 998;
+}
+
 .clouds-background {
     background: url('../images/homepage/clouds_background.png') repeat-x 0 100%;
 }
@@ -165,5 +174,5 @@ a.app-store-button:active {
 ------------------------------------------------------------ */
 
 .plane {
-    background: url('../images/plane_contrail.png') no-repeat -1280px 73%;
+    background: url('../images/plane_contrail.png') no-repeat -1280px 10%;
 }
