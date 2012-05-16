@@ -66,11 +66,11 @@ class BaseHandler(webapp.RequestHandler):
         """
         gae_outage = False
 
-        # Some exceptions are not serious and should be logged as warnings
+        # Some exceptions are not serious and should be logged as info
         if isinstance(exception, (InvalidFlightNumberException,
                                   FlightNotFoundException,
                                   OldFlightException)):
-            logging.warning(exception.message)
+            logging.info(exception.message)
 
         else:
             # Reliability: some exceptions should trigger SMS notifications to the admin

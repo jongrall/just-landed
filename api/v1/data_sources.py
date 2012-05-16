@@ -216,16 +216,16 @@ class FlightAwareSource (FlightDataSource):
         self.conn = Connection(self.base_url, username=uname, password=pwd)
 
     @ndb.tasklet
-    def do_track(self, request, flight_id, uuid, user=None, delayed=False):
+    def do_track(self, request, flight_id, uuid, user=None):
         assert request
         assert utils.is_valid_uuid(uuid)
         assert utils.is_valid_fa_flight_id(flight_id)
         user = user or (yield iOSUser.get_by_uuid(uuid))
         assert user
 
-        # Optimization: don't track unncessarily
-        if delayed and (not user.is_tracking_flight(flight_id) or
-            not user.push_enabled or not user.has_unsent_reminders):
+        # Don't track if they're no longer tracking this flight or if it's pointless
+        if (not user.is_tracking_flight(flight_id) or not user.push_enabled or
+            not user.has_unsent_reminders):
             return # We're done
 
         user_flight_num = user.flight_num_for_flight_id(flight_id)
@@ -237,16 +237,22 @@ class FlightAwareSource (FlightDataSource):
                                     flight_id=flight_id,
                                     _full=True,
                                     _scheme=url_scheme)
-        full_track_url = build_url(track_url, '', args={
-            'push_token' : user.push_token or '',
-            'latitude' : user.last_known_location and user.last_known_location.lat,
-            'longitude' : user.last_known_location and user.last_known_location.lon,
-        })
 
-        sig = utils.api_query_signature(full_track_url, client='Server')
+        req_args =  {'push_token' : user.push_token or '',
+                    'latitude' : user.last_known_location and user.last_known_location.lat,
+                    'longitude' : user.last_known_location and user.last_known_location.lon,
+        }
+
+        full_track_url = build_url(track_url, '', args=req_args)
+
+        to_sign = request.uri_for('track',
+                                   flight_number=user_flight_num,
+                                   flight_id=flight_id)
+
+        to_sign = to_sign + '?' + utils.sorted_request_params(req_args)
+        sig = utils.api_query_signature(to_sign, client='Server')
         headers = {'X-Just-Landed-UUID' : user.key.string_id(),
                    'X-Just-Landed-Signature' : sig}
-
         ctx = ndb.get_context()
         yield ctx.urlfetch(full_track_url,
                             headers=headers,

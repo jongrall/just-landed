@@ -166,7 +166,7 @@ def api_request_signature(request, client='iOS'):
         to_sign = path + '?' + params
     else:
         to_sign = path
-    return api_query_signature(to_sign, client)
+    return api_query_signature(to_sign, client=client)
 
 def authenticate_api_request(request, client='iOS'):
     """Authenticates an incoming request as coming from a trusted client by
@@ -175,7 +175,6 @@ def authenticate_api_request(request, client='iOS'):
     """
     assert request
     request_sig = request.headers.get('X-Just-Landed-Signature')
-
     if not request_sig:
         return False
     return api_request_signature(request, client=client) == request_sig

@@ -153,52 +153,52 @@ config['leave_soon_seconds_before'] = 300
 config['max_reminder_age'] = 120
 
 # Push token freshness requirement (don't register tokens that we've registered as recently as this)
-config['max_push_token_age'] = 3600
+config['max_push_token_age'] = 7200
 
 # Server urls and api credentials that are used to sign requests
-if on_development():
-    config['server_url'] = 'http://c-98-207-175-25.hsd1.ca.comcast.net'
-    #config['server_url'] = 'http://pool-173-63-21-213.nwrknj.fios.verizon.net:8082'
-    config['api_credentials'] = {
+config['server_url'] = {
+    'development' : 'http://c-98-207-175-25.hsd1.ca.comcast.net/',
+    'staging' : 'https://just-landed-staging.appspot.com/',
+    'production' : 'https://just-landed.appspot.com/',
+}
+
+def server_url():
+    app_mode = config['app']['mode']
+    return config['server_url'][app_mode]
+
+config['api_credentials'] = {
+    'development' : {
         'iOS' : {
-            'username' : 'iOS-Development',
             'secret' : 'd90816f7e6ea93001a2aa62cd8dd8f0e830a93d1',
         },
         'Server' : {
-            'username' : 'JustLanded-Development',
             'secret' : '8f131377dba9f8c0fe7a9ae9a865842acd153fb0',
         },
-    }
+    },
 
-elif on_staging():
-    config['server_url'] = 'https://just-landed-staging.appspot.com/'
-    config['api_credentials'] = {
+    'staging' : {
         'iOS' : {
-            'username' : 'iOS-Staging',
             'secret' : '55ca8681039e129bb985991014f61774de31fe1e',
         },
         'Server' : {
-            'username' : 'JustLanded-Staging',
             'secret' : 'ecbfb931b4bde2404285923e80a3b3a72d04531a',
         },
-    }
+    },
 
-else:
-    config['server_url'] = 'https://just-landed.appspot.com/'
-    config['api_credentials'] = {
+    'production' : {
         'iOS' : {
-            'username' : 'iOS-Production',
             'secret' : '4399d9ce77acf522799543f13c926c0a41e2ea3f',
         },
         'Server' : {
-            'username' : 'JustLanded-Production',
             'secret' : '270a0d95cc6c6a6d48b6e69117e053226fe7f5b5',
         },
-    }
+    },
+}
 
 def api_secret(client='iOS'):
     """Returns the api secret for a given Just Landed client."""
-    return config['api_credentials'][client]['secret']
+    app_mode = config['app']['mode']
+    return config['api_credentials'][app_mode][client]['secret']
 
 ###############################################################################
 """Flight Data API Keys & Settings"""
@@ -206,7 +206,7 @@ def api_secret(client='iOS'):
 
 def fa_alert_url():
     """Returns the endpoint url to use for alerts posted by FlightAware."""
-    no_ssl_url = config['server_url'].replace('https', 'http') # SSL not yet supported
+    no_ssl_url = server_url().replace('https', 'http') # SSL not yet supported
     return no_ssl_url + '/api/v1/handle_alert'
 
 # FlightAware settings
