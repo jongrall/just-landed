@@ -643,7 +643,7 @@ class FlightAwareSource (FlightDataSource):
                         FlightCanceledAlert(device_token, alerted_flight, user_flight_num).push()
 
                     else:
-                        logging.error('Unhandled eventcode: %s' % event_code)
+                        logging.info('Unhandled eventcode: %s' % event_code)
 
                     # Fire off a /track for the user, which will update their reminders
                     yield self.do_track(request, flight_id, u.key.string_id(), user=u)
