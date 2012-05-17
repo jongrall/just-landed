@@ -157,9 +157,9 @@ config['max_push_token_age'] = 7200
 
 # Server urls and api credentials that are used to sign requests
 config['server_url'] = {
-    'development' : 'http://c-98-207-175-25.hsd1.ca.comcast.net/',
-    'staging' : 'https://just-landed-staging.appspot.com/',
-    'production' : 'https://just-landed.appspot.com/',
+    'development' : 'http://c-98-207-175-25.hsd1.ca.comcast.net',
+    'staging' : 'https://just-landed-staging.appspot.com',
+    'production' : 'https://just-landed.appspot.com',
 }
 
 def server_url():
