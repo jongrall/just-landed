@@ -2,6 +2,7 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="/static/css/homepage.css?v={{ version }}" />
+    <link rel="stylesheet" media="only screen and (max-device-width: 480px)" href="/static/css/iphone.css?v={{ version }}" />
 {% endblock %}
 
 {% block page_content %}
@@ -30,7 +31,7 @@
         
         function moveMidground() {
             // 2250px is the width of the clouds graphic. Does one whole loop before calling itself again to start again
-            $('.clouds-midground').css('background-position-x', '0').animate({ 'background-position-x': '2250px' }, 150000, 'linear', moveForeground);
+            $('.clouds-midground').css('background-position-x', '0').animate({ 'background-position-x': '2250px' }, 150000, 'linear', moveMidground);
         }
         
         function moveBackground() {

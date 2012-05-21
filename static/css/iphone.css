@@ -1,0 +1,67 @@
+/* iPhone Overrides
+------------------------------------------------------------ */
+
+.centered {
+    width: 320px;
+}
+
+.clouds-background {
+    background: none;
+}
+
+.plane {
+    background: none;
+}
+
+#iphone {
+    display: none;
+}
+
+#details {
+    float: none;
+    width: 320px;
+    margin: 0 0 180px 0;
+}
+
+#details h1#logo a {
+    background-image: url('../images/logo@2x.png');
+    width: 320px;
+    margin: 0;
+    background-size: 90%;
+    background-position-x: center;
+}
+
+#details h2#tagline {
+    background-image: url('../images/tagline@2x.png');
+    width: 320px;
+    background-size: 80%;
+    background-position-x: center;
+}
+
+a.app-store-button {
+    margin: 0 10px;
+    height: 62px;
+}
+
+a.app-store-button img {
+    width: 300px;
+    height: 57px;
+}
+
+#sub-content {
+    margin-top: 0;
+}
+
+#sub-content .feature {
+    float: none;
+    width: 260px;
+    margin: 0 20px 40px 20px;
+}
+
+#footer {
+    margin: 0 20px;
+}
+
+#footer a {
+    margin-right: 20px;
+}
