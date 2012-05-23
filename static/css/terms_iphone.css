@@ -1,0 +1,57 @@
+/* In-app styles
+------------------------------------------------------------ */
+
+body {
+    font: 15px / 1.3em 'Frutiger Lite Regular', 'Helvetica Neue', Helvetica, sans-serif;
+    background: #e7e4df;
+    color: #2e2e2e;
+    -webkit-font-smoothing: antialiased;
+    text-shadow: 0 1px rgba(255, 255, 255, 0.8);
+}
+
+@font-face {
+    font-family: 'Frutiger Lite Regular';
+    src: url('/static/fonts/frutiger_ce_45_light-webfont.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Frutiger Bold';
+    src: url('/static/fonts/frutiger_ce_65_bold-webfont.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+.centered {
+    width: inherit;
+}
+
+h1 {
+    display: none;
+}
+
+h2 {
+    font-family: 'Frutiger Bold';
+    color: #2e2e2e;
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    line-height: 1.4em;
+}
+
+p {
+    margin: 10px 0;
+}
+
+p:last-child {
+    margin-bottom: 0;
+}
+
+.group {
+    padding: 15px;
+    margin: 0;
+    text-align: left;
+    border-bottom: 1px solid #b6afa5;
+    -webkit-box-shadow: 0 1px rgba(255, 255, 255, 0.7);
+    box-shadow: 0 1px rgba(255, 255, 255, 0.7);
+}

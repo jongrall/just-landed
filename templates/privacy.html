@@ -2,8 +2,13 @@
 
 {% block page_title %}Privacy Policy &middot; Just Landed{% endblock %}
 
+{% block extra_head %}
+    <meta id="viewport" name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+{% endblock %}
+
 {% block extra_css %}
     <link rel="stylesheet" href="/static/css/terms.css?v={{ version }}" />
+    <link rel="stylesheet" media="only screen and (max-device-width: 480px)" href="/static/css/terms_iphone.css?v={{ version }}" />
 {% endblock %}
 
 {% block page_content %}
