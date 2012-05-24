@@ -20,8 +20,8 @@
 
 #iphone {
     position: relative;
+    background-repeat: no-repeat;
     float: left;
-    background: url('../images/homepage/iphone.png');
     width: 310px;
     height: 675px; /* iPhone graphic is 715px tall */
     -o-perspective: 600px;
@@ -34,7 +34,7 @@
 
 #iphone #iphone-glare {
     position: absolute;
-    background: url('../images/homepage/iphone_glare.png');
+    background-repeat: no-repeat;
     top: 0;
     left: 0;
     width: 310px;
@@ -69,7 +69,7 @@
 
 #details h1#logo a {
     display: block;
-    background: url('../images/logo.png') no-repeat;
+    background-repeat: no-repeat;
     width: 356px;
     height: 57px;
     text-indent: -9999px;
@@ -80,7 +80,8 @@
 
 #details h2#tagline {
     display: block;
-    background: url('../images/tagline.png') no-repeat right;
+    background-repeat: no-repeat;
+    background-position: right;
     width: 351px;
     height: 36px;
     text-indent: -9999px;

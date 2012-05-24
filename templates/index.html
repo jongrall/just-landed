@@ -7,23 +7,23 @@
 {% block clouds_content %}
     <div class="centered clear">
         <!-- iPHONE PREVIEW -->
-        <div id="iphone">
-            <div id="iphone-glare"></div>
-            <video width="261" autoplay="autoplay" loop="loop" poster="/static/movies/poster.jpg">
-                <source src="/static/movies/screencast.mp4" type="video/mp4" />
-                <source src="/static/movies/screencast.ogv" type="video/ogg" />
+        <div id="iphone" style="background-image: url('/static/images/homepage/iphone.png?v={{ version }}');">
+            <div id="iphone-glare" style="background-image: url('/static/images/homepage/iphone_glare.png?v={{ version }}');"></div>
+            <video width="261" autoplay="autoplay" loop="loop" poster="/static/movies/poster.jpg?v={{ version }}">
+                <source src="/static/movies/screencast.mp4?v={{ version }}" type="video/mp4" />
+                <source src="/static/movies/screencast.ogv?v={{ version }}" type="video/ogg" />
             </video>
             
             <!-- SCREENSHOT FALLBACK -->
-            <img src="/static/images/homepage/app_screenshot.png" width="310" height="715" style="display: none;" />
+            <img src="/static/images/homepage/app_screenshot.png?v={{ version }}" width="310" height="715" style="display: none;" />
         </div>
         
         <!-- APP DETAILS -->
         <div id="details">
-            <h1 id="logo"><a href="/">Just Landed</a></h1>
-            <h2 id="tagline">&ellip;getting you there on time</h2>
+            <h1 id="logo" style="background-image: url('/static/images/logo.png?v={{ version }}');"><a href="/">Just Landed</a></h1>
+            <h2 id="tagline" style="background-image: url('/static/images/tagline.png?v={{ version }}');">&ellip;getting you there on time</h2>
             
-            <a href="#" class="app-store-button"><img src="/static/images/homepage/app_store_button_text_retina.png" width="350" height="67" alt="Download!" /></a>
+            <a href="#" class="app-store-button"><img src="/static/images/homepage/app_store_button_text_retina.png?v={{ version }}" width="350" height="67" alt="Download!" /></a>
         </div>
     </div>
 {% endblock %}
