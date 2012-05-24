@@ -44,8 +44,12 @@
     top: 124px;
     left: 45px;
     z-index: 98;
+    -moz-transform-origin: 50% 0;
     -webkit-transform-origin: 0 0;
+    transform-origin: 0 0;
+    -moz-transform: translateX(-6px) translateY(22px) scaleX(0.965) scaleY(1.188) rotateY(9deg) skewY(6deg);
     -webkit-transform: scaleY(1.188) rotateY(9deg) skewY(4.7deg);
+    transform: scaleY(1.188) rotateY(9deg) skewY(4.7deg);
 }
 
 /* App Details
