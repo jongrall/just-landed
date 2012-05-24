@@ -8,12 +8,12 @@
 {% block page_content %}
     <!-- TOP CONTENT -->
     <div id="main-content">
-        <div class="clouds-foreground"></div>
-        <div class="clouds-midground"></div>
+        <div class="clouds-foreground" style="background-image: url('/static/images/homepage/clouds_foreground.png?v={{ version }}');"></div>
+        <div class="clouds-midground" style="background-image: url('/static/images/homepage/clouds_midground.png?v={{ version }}');"></div>
         
         <!-- Lots of nested divs because there's a lot of things happening behind the monolith iPhone -->
-        <div class="plane">
-            <div class="clouds-background">
+        <div class="plane" style="background-image: url('/static/images/plane_contrail.png?v={{ version }}');">
+            <div class="clouds-background" style="background-image: url('/static/images/homepage/clouds_background_tall.png?v={{ version }}');">
                 {% block clouds_content %}{% endblock %}
             </div>
         </div>

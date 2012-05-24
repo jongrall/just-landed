@@ -165,7 +165,8 @@ a.app-store-button:active {
 .clouds-foreground {
     position: absolute;
     bottom: 0;
-    background: url('../images/homepage/clouds_foreground.png') repeat-x 0 100%;
+    background-repeat: repeat-x;
+    background-position: 0 100%;
     width: 100%;
     height: 200px;
     z-index: 999;
@@ -174,19 +175,21 @@ a.app-store-button:active {
 .clouds-midground {
     position: absolute;
     bottom: 0;
-    background: url('../images/homepage/clouds_midground.png') repeat-x 0 100%;
+    background-repeat: repeat-x;
+    background-position: 0 100%;
     width: 100%;
     height: 200px;
     z-index: 998;
 }
 
 .clouds-background {
-    background: url('../images/homepage/clouds_background_tall.png') repeat-x;
+    background-repeat: repeat-x;
 }
 
 /* Plane Contrail
 ------------------------------------------------------------ */
 
 .plane {
-    background: url('../images/plane_contrail.png') no-repeat -1012px 15%;
+    background-repeat: no-repeat;
+    background-position: -1012px 15%;
 }
