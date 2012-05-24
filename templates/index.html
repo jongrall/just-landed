@@ -9,8 +9,8 @@
         <!-- iPHONE PREVIEW -->
         <div id="iphone">
             <div id="iphone-glare"></div>
-            <video width="261" autoplay="autoplay" loop="loop">
-                <source src="/static/movies/preview2.mov" type="video/mp4" />
+            <video width="261" autoplay="autoplay" loop="loop" poster="/static/movies/poster.jpg">
+                <source src="/static/movies/screencast.mp4" type="video/mp4" />
             </video>
             
             <!-- SCREENSHOT FALLBACK -->
@@ -48,4 +48,19 @@
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    
+    <script type="text/javascript">
+        $('#iphone').click(function(){
+            if ($('video').get(0).paused) {
+                $('video').get(0).play();
+            }
+            else {
+                $('video').get(0).pause();
+            }
+        });
+    </script>
 {% endblock %}
