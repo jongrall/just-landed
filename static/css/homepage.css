@@ -172,7 +172,7 @@ a.app-store-button:active {
 }
 
 .clouds-background {
-    background: url('../images/homepage/clouds_background.png') repeat-x 0 100%;
+    background: url('../images/homepage/clouds_background_tall.png') repeat-x;
 }
 
 /* Plane Contrail
