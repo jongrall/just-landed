@@ -24,7 +24,7 @@
 }
 
 #details h1#logo a {
-    background-image: url('../images/logo@2x.png');
+    background-image: url('../images/logo_retina.png');
     width: 320px;
     margin: 0;
     background-size: 90%;
@@ -32,7 +32,7 @@
 }
 
 #details h2#tagline {
-    background-image: url('../images/tagline@2x.png');
+    background-image: url('../images/tagline_retina.png');
     width: 320px;
     background-size: 80%;
     background-position-x: center;
