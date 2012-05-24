@@ -15,7 +15,7 @@
             </video>
             
             <!-- SCREENSHOT FALLBACK -->
-            <img src="/static/images/homepage/app_screenshot.png" width="310" height="715" />
+            <img src="/static/images/homepage/app_screenshot.png" width="310" height="715" style="display: none;" />
         </div>
         
         <!-- APP DETAILS -->
@@ -55,6 +55,15 @@
     {{ block.super }}
     
     <script type="text/javascript">
+        $(document).ready(function() {
+            // Show the fallback image only if the browser doesn't support <video>
+            if (Modernizr.video) {
+                $('#iphone img').hide();
+            } else {
+                $('#iphone img').show()
+            }
+        });
+
         $('#iphone').click(function(){
             if ($('video').get(0).paused) {
                 $('video').get(0).play();

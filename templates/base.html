@@ -13,6 +13,7 @@
     <!-- JAVASCRIPT -->
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
     <script type="text/javascript">Rot13={map:null,convert:function(a){Rot13.init();var b="";for(i=0;i<a.length;i++){var c=a.charAt(i);b+=c>="A"&&c<="Z"||c>="a"&&c<="z"?Rot13.map[c]:c}return b},init:function(){if(Rot13.map!=null)return;var a=new Array;var b="abcdefghijklmnopqrstuvwxyz";for(i=0;i<b.length;i++)a[b.charAt(i)]=b.charAt((i+13)%26);for(i=0;i<b.length;i++)a[b.charAt(i).toUpperCase()]=b.charAt((i+13)%26).toUpperCase();Rot13.map=a},write:function(a){document.write(Rot13.convert(a))}}</script>
+    <script type="text/javascript" src="/static/javascript/modernizer.js?v={{ version }}"></script>
     <script type="text/javascript">
         var _gaq = _gaq || [];
         _gaq.push(['_setAccount', '{{ ga_account }}']);

@@ -24,7 +24,10 @@
     background: url('../images/homepage/iphone.png');
     width: 310px;
     height: 675px; /* iPhone graphic is 715px tall */
-    -webkit-perspective: 600;
+    -o-perspective: 600px;
+    -moz-perspective: 600px;
+    -webkit-perspective: 600px;
+    perspective: 600px;
     overflow: hidden;
     cursor: pointer;
 }
@@ -44,10 +47,11 @@
     top: 124px;
     left: 45px;
     z-index: 98;
-    -moz-transform-origin: 50% 0;
+    -o-transform-origin: 0 0;
+    -moz-transform-origin: 0 0;
     -webkit-transform-origin: 0 0;
     transform-origin: 0 0;
-    -moz-transform: translateX(-6px) translateY(22px) scaleX(0.965) scaleY(1.188) rotateY(9deg) skewY(6deg);
+    -moz-transform: scaleY(1.188) rotateY(10deg) skewY(5.3deg);
     -webkit-transform: scaleY(1.188) rotateY(9deg) skewY(4.7deg);
     transform: scaleY(1.188) rotateY(9deg) skewY(4.7deg);
 }
