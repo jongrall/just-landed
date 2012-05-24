@@ -446,9 +446,9 @@ class iOSUser(_User):
             leave_now_body = 'Leave now for %s. Flight %s arrives soon.' % (
                                 dest_name, flight_num)
 
-        # Calculate the reminder times (cron=True accounts for cron delay)
-        leave_soon_time = utils.leave_soon_time(flight, driving_time, cron=True)
-        leave_now_time = utils.leave_now_time(flight, driving_time, cron=True)
+        # Calculate the reminder times
+        leave_soon_time = utils.leave_soon_time(flight, driving_time)
+        leave_now_time = utils.leave_now_time(flight, driving_time)
 
         # If they have no reminders for this flight, set them (even if they were supposed to fire in the past)
         if not reminders:
