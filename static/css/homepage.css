@@ -3,8 +3,13 @@
 
 #main-content {
     position: relative;
-    background-color: #77a0bf;
-    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #21347f), color-stop(0.6, #77a0bf), color-stop(1.0, #cddbe7));
+    background: #77a0bf;
+    background: -moz-linear-gradient(top, #21347f 0%, #77a0bf 60%, #cddbe7 100%);
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #21347f), color-stop(60%, #77a0bf), color-stop(100%, #cddbe7));
+    background: -webkit-linear-gradient(top, #21347f 0%, #77a0bf 60%, #cddbe7 100%);
+    background: -o-linear-gradient(top, #21347f 0%, #77a0bf 60%, #cddbe7 100%);
+    background: -ms-linear-gradient(top, #21347f 0%, #77a0bf 60%, #cddbe7 100%);
+    background: linear-gradient(top, #21347f 0%, #77a0bf 60%, #cddbe7 100%);
     background-size: 100% 100%;
     background-repeat: no-repeat;
     padding: 50px 0 0 0;
