@@ -22,11 +22,8 @@
     position: relative;
     background-repeat: no-repeat;
     float: left;
-    width: 310px;
+    width: 330px;
     height: 675px; /* iPhone graphic is 715px tall */
-    -o-perspective: 600px;
-    -moz-perspective: 600px;
-    -webkit-perspective: 600px;
     perspective: 600px;
     overflow: hidden;
     cursor: pointer;
@@ -37,23 +34,16 @@
     background-repeat: no-repeat;
     top: 0;
     left: 0;
-    width: 310px;
-    height: 715px;
+    width: 330px;
+    height: 675px;
     z-index: 99;
 }
 
 #iphone video {
     position: absolute;
-    top: 124px;
-    left: 45px;
+    top: 115px;
+    left: 28px;
     z-index: 98;
-    -o-transform-origin: 0 0;
-    -moz-transform-origin: 0 0;
-    -webkit-transform-origin: 0 0;
-    transform-origin: 0 0;
-    -moz-transform: scaleY(1.188) rotateY(10deg) skewY(5.3deg);
-    -webkit-transform: scaleY(1.188) rotateY(9deg) skewY(4.7deg);
-    transform: scaleY(1.188) rotateY(9deg) skewY(4.7deg);
 }
 
 /* App Details
