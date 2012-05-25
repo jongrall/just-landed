@@ -5,6 +5,10 @@
     background-image: none !important; /* Don't want the plane to fly by on these pages */
 }
 
+.centered {
+    width: 640px;
+}
+
 .clouds-background {
     background-image: url('../images/homepage/clouds_background.png') !important;
 }
