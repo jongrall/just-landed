@@ -244,7 +244,7 @@ config['flightaware'] = {
     'flight_from_lookup_cache_time' : 120,
 
     # Cache expiration time for flight data from /track
-    'flight_cache_time' : 1800,
+    'flight_cache_time' : 3600,
 
     # Alert endpoint
     'alert_endpoint' : fa_alert_url(),

@@ -914,7 +914,7 @@ class FlightAwareSource (FlightDataSource):
             yield ndb.transaction_async(untrack_txn, xg=True)
 
             # Cache freshness: clear lookup cache if nobody is tracking the flight ident anymore
-            if user_flight_num and clear_lookup_cache:
+            if clear_lookup_cache:
                 FlightAwareSource.clear_flight_lookup_cache([user_flight_num])
         else:
             raise CapabilityDisabledError('Datastore is in read-only mode.')
