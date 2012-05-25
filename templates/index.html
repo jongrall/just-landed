@@ -10,19 +10,19 @@
         <div id="iphone" style="background-image: url('/static/images/homepage/iphone.png?v={{ version }}');">
             <div id="iphone-glare" style="background-image: url('/static/images/homepage/iphone_glare.png?v={{ version }}');"></div>
             <video width="280" autoplay="autoplay" loop="loop" poster="/static/movies/poster.jpg?v={{ version }}">
-                <source src="http://content.getjustlanded.com/static/movies/jl_screencast.mp4?v={{ version }}" type="video/mp4" />
-                <source src="http://content.getjustlanded.com/static/movies/jl_screencast.ogv?v={{ version }}" type="video/ogg" />
+                <source src="http://content.getjustlanded.com/static/movies/jl_screencast.mp4" type="video/mp4" />
+                <source src="http://content.getjustlanded.com/static/movies/jl_screencast.ogv" type="video/ogg" />
             </video>
-            
+
             <!-- SCREENSHOT FALLBACK -->
             <img src="/static/images/homepage/app_screenshot.png?v={{ version }}" width="310" height="715" style="display: none;" />
         </div>
-        
+
         <!-- APP DETAILS -->
         <div id="details">
             <h1 id="logo" style="background-image: url('/static/images/logo.png?v={{ version }}');"><a href="/">Just Landed</a></h1>
             <h2 id="tagline" style="background-image: url('/static/images/tagline.png?v={{ version }}');">&ellip;getting you there on time</h2>
-            
+
             <a href="#" class="app-store-button"><img src="/static/images/homepage/app_store_button_text_retina.png?v={{ version }}" width="350" height="67" alt="Download!" /></a>
         </div>
     </div>
@@ -37,12 +37,12 @@
                 <h2>Easy Airport Pickup</h2>
                 <p>The perfect companion to help you pick up friends and family from the airport &ndash; right on time.</p>
             </div>
-            
+
             <div class="feature">
                 <h2>Get Notified</h2>
                 <p>Our smart push notifications tell you when to leave so you arrive at the airport right on time.</p>
             </div>
-            
+
             <div class="feature">
                 <h2>Be Prepared</h2>
                 <p>Get all the essential info about a flight like when it lands, and the arrival gate and terminal.</p>
@@ -53,7 +53,7 @@
 
 {% block extra_js %}
     {{ block.super }}
-    
+
     <script type="text/javascript">
         $(document).ready(function() {
             // Show the fallback image only if the browser doesn't support <video>
