@@ -9,7 +9,39 @@
 
 {% block clouds_content %}
     <div class="centered clear">
-        <div id="error">
+        <!-- AVATARS -->
+        <div class="avatars clear">
+            <div class="avatar">
+                <img src="/static/images/about/jon.png?v={{ version }}" width="130" height="130" alt="Jon Grall, Engineering" />
+                <h2>Jon Grall</h2>
+                <strong>Engineering</strong>
+            </div>
+            
+            <div class="avatar">
+                <img src="/static/images/about/graham.png?v={{ version }}" width="130" height="130" alt="Graham Beer, Design" />
+                <h2>Graham Beer</h2>
+                <strong>Design</strong>
+            </div>
+            
+            <div class="avatar" style="margin-right: 0;">
+                <img src="/static/images/about/sean.png?v={{ version }}" width="130" height="130" alt="Sean Nelson, Design" />
+                <h2>Sean Nelson</h2>
+                <strong>Design</strong>
+            </div>
+        </div>
+    </div>
+        
+{% endblock %}
+
+{% block more_clouds_content %}
+    <!-- BOTTOM CONTENT -->
+    <div class="centered" style="width: 660px;">
+        <!-- ABOUT COPY -->
+        <div id="sub-content" class="clear">
+            <h2 style="font-size: 26px; text-align: center; margin: 0 0 25px 0;">"I just landed. Are you here?"</h2>
+            <p>Just Landed began when one of us got a call: "I'm waiting in the terminal. Where are you?" If this has ever happened to you, then you know how embarrassing it is and how it made you feel like a jerk for leaving your friend or loved one stranded at the airport. Alternatively, perhaps you've had the joy of pacing the arrival area for hours because you didn't realize the flight was delayed. What is needed is a self-updating alarm to leave for the airport at just the right time.</p>
+            <p>After trying a dozen flight tracking apps, we realized that nobody was solving this problem. As it turns out, there wasn't an app for that. So we built one &ndash; Just Landed &dash; with the goal of giving you supernaturally good airport pickup timing.</p>
+            <p>In addition to tracking incoming flights in real-time, Just Landed also tracks your location and monitors current traffic conditions &ndash; even when the app isn't open. It intelligently figures out when to notify you to leave for the airport so that you'll arrive just in time to park and meet someone. You'll never be late (or early) to pick someone up at the airport again.</p>
         </div>
     </div>
 {% endblock %}

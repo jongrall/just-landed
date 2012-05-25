@@ -2,7 +2,7 @@
 ------------------------------------------------------------ */
 
 .plane {
-    background-image: none; /* Don't want the plane to fly by on these pages */
+    background-image: none !important; /* Don't want the plane to fly by on these pages */
 }
 
 /* Page Errors
@@ -15,4 +15,33 @@
 
 #error img {
     margin: 140px 0 0 0;
+}
+
+/* About Page
+------------------------------------------------------------ */
+
+.avatars {
+    height: 340px;
+    width: 490px;
+    color: #fff;
+    margin: 0 auto;
+    text-shadow: 0 1px 2px rgba(0, 0, 30, 0.3);
+}
+
+.avatars .avatar {
+    float: left;
+    width: 130px;
+    margin: 0 50px 0 0;
+    text-align: center;
+}
+
+.avatars .avatar img {
+    display: block;
+    margin: 0 0 10px 0;
+}
+
+.avatars .avatar h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 18px;
 }

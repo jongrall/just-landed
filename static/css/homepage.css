@@ -23,7 +23,7 @@
     background-repeat: no-repeat;
     float: left;
     width: 330px;
-    height: 675px; /* iPhone graphic is 715px tall */
+    height: 630px;
     perspective: 600px;
     overflow: hidden;
     cursor: pointer;
@@ -175,6 +175,7 @@ a.app-store-button:active {
 
 .clouds-background {
     background-repeat: repeat-x;
+    background-position: 0 100%;
 }
 
 /* Plane Contrail
