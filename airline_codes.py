@@ -678,7 +678,7 @@ airline_code_mapping = {
     'ST' : 'GMI',
     'SU' : 'AFL',
     'SV' : 'SVA',
-    'SW' : 'NMB',
+    'SW' : 'SWA',
     'SY' : 'SCX',
     'SZ' : 'WOW',
     'T2' : 'TCG',
