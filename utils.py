@@ -22,6 +22,7 @@ from google.appengine.api import memcache, capabilities
 from config import config, api_secret, on_production
 from lib.twilio.rest import TwilioRestClient
 from lib import ipaddr, pysolar
+from airline_codes import airline_code_mapping
 
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
@@ -216,6 +217,7 @@ def is_old_fa_flight(raw_fa_flight_data):
 
 # Flight number format is xx(a)n(n)(n)(n)(a)
 FLIGHT_NUMBER_RE = re.compile('\A[A-Z0-9]{2}[A-Z]{0,1}[0-9]{1,4}[A-Z]{0,1}\Z')
+AIRLINE_CODE_RE = re.compile('\A[A-Z0-9]{2}[A-Z]{0,1}')
 
 def valid_flight_number(f_num):
     """Tests whether the argument is a valid flight number."""
@@ -228,7 +230,7 @@ def valid_flight_number(f_num):
 
 def sanitize_flight_number(f_num):
     """Cleans up a flight number - strips leading zeros from flight number, extra
-    spaces, uppercases everything.
+    spaces, uppercases everything, performs some IATA to ICAO code translation.
 
     """
     f_num = f_num.upper().replace(' ', '')
@@ -242,6 +244,17 @@ def sanitize_flight_number(f_num):
                 strip = False
         chars.append(c)
     return ''.join(chars)
+
+def translate_flight_number(f_num):
+    if valid_flight_number(f_num):
+        f_num_san = sanitize_flight_number(f_num)
+        matched_code = AIRLINE_CODE_RE.match(f_num_san)
+        if matched_code:
+            matching_code = matched_code.group(0)
+            translated_code = airline_code_mapping.get(matching_code)
+            if translated_code:
+                return translated_code + f_num_san[len(matching_code):]
+    return None
 
 def is_valid_icao(icao_code):
     """Tests whether the argument could be a valid ICAO airport code."""

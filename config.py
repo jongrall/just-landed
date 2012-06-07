@@ -75,7 +75,7 @@ config['flight_old_hours'] = 2
 config['touchdown_to_terminal'] = 540
 
 # Time to allow from tires down landing to baggage claim (international)
-config['touchdown_to_terminal_intl'] = 1140
+config['touchdown_to_terminal_intl'] = 1740
 
 # Supported flight data sources
 config['data_sources'] = Enum([

@@ -46,7 +46,16 @@ class SearchHandler(AuthenticatedAPIHandler):
         if not utils.valid_flight_number(flight_number):
             raise InvalidFlightNumberException(flight_number)
 
-        flights = yield source.lookup_flights(flight_number)
+        try:
+            flights = yield source.lookup_flights(flight_number)
+
+        except FlightNotFoundException as e:
+            # Flight lookup failed, see if we can translate their airline code
+            translated_f_num = utils.translate_flight_number(flight_number)
+            if not translated_f_num:
+                raise e
+            flights = yield source.lookup_flights(translated_f_num)
+
         flight_data = [f.dict_for_client() for f in flights]
         self.respond(flight_data)
 
