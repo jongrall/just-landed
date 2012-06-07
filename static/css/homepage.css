@@ -46,6 +46,13 @@
     z-index: 98;
 }
 
+#iphone img {
+    display: block;
+    position: absolute;
+    top: 114px;
+    left: 27px;
+}
+
 /* App Details
 ------------------------------ */
 
