@@ -17,7 +17,7 @@ LIB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib')
 if LIB_DIR not in sys.path:
   sys.path[0:0] = [LIB_DIR]
 
-from google.appengine.ext import webapp, ndb, ereporter
+from google.appengine.ext import webapp, ndb, ereporter, deferred
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.runtime.apiproxy_errors import (OverQuotaError,
@@ -94,10 +94,9 @@ class BaseHandler(webapp.RequestHandler):
                 utils.try_reporting_outage(disabled_services)
 
             # Logged exceptions get automatically picked up by ereporter
-            @ndb.non_transactional
-            def log_exc():
-                logging.exception(exception)
-            log_exc()
+            def log_exc(e):
+                logging.exception(e)
+            deferred.defer(log_exc, exception)
 
         unrecoverable_errors = (OverQuotaError, CapabilityDisabledError,
                                 FeatureNotEnabledError)
