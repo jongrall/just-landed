@@ -32,7 +32,7 @@ from config import config, on_development, on_staging, google_analytics_account
 import utils
 
 # Ereporter doesn't work well with the development server
-if not on_development():
+if False and not on_development():
     ereporter.register_logger()
 Route = webapp.Route
 
