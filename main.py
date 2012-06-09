@@ -95,10 +95,7 @@ class BaseHandler(webapp.RequestHandler):
                 utils.try_reporting_outage(disabled_services)
 
             # Logged exceptions get automatically picked up by ereporter
-            @ndb.non_transactional
-            def log_exc():
-                logging.exception(exception)
-            log_exc()
+            logging.exception(exception)
 
         unrecoverable_errors = (OverQuotaError, CapabilityDisabledError,
                                 FeatureNotEnabledError)
