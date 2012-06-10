@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+
+"""extract_airline_codes.py: Script that builds a CSV of airline codes."""
+
+__author__ = "Jon Grall"
+__copyright__ = "Copyright 2012, Just Landed LLC"
+__email__ = "jon@getjustlanded.com"
+
+import sys
+import logging
+import csv
+
+def main():
+    # Load the files
+    src_file = open('all_airlines.csv', 'rU')
+    dest_file = open('airlines.csv', 'w')
+    airline_data = csv.reader(src_file)
+    sanitized_airline_data = csv.writer(dest_file)
+    count = 0
+    wrote_count = 0
+
+    try:
+        for airline in airline_data:
+            # Process airline
+            count += 1
+            airline = [part.decode('utf-8').replace('"','') for part in airline]
+            airline = [part.replace('\N','').replace('N/A','') for part in airline]
+            airline = [part.replace('\\','') for part in airline]
+            _, name, __, iata, icao, ___, ____, active = airline
+
+            if active == 'Y' and len(icao) > 0:
+                wrote_count += 1
+                new_info = [icao, iata or '', name]
+                new_airline = [part.encode('utf-8') for part in new_info]
+                sanitized_airline_data.writerow(new_airline)
+    finally:
+        src_file.close()
+        dest_file.close()
+        print '\nPROCESSED: %d AIRLINES' % count
+        print '\nKEPT %d AIRLINES' % wrote_count
+
+if __name__ == '__main__':
+    main()
