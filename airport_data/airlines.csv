@@ -1,3 +1,4 @@
+icao,iata,name
 RNX,1T,1Time Airline
 MLA,Q5,40-Mile Air
 AAA,AN,Ansett Australia
@@ -438,7 +439,6 @@ GEC,LH,Lufthansa Cargo
 CLH,CL,Lufthansa CityLine
 LTR,L5,Lufttransport
 LGL,LG,Luxair
-LPR,MJ,L
 MAA,M7,MasAir
 MAK,IN,MAT Macedonian Airlines
 MGL,OM,MIAT Mongolian Airlines
@@ -718,9 +718,9 @@ MKU,WP,Island Air
 UIA,B7,Uni Air
 RWZ,WZ,Red Wings
 FXX,FU,Felix Airways
-KOQ,K1,Kostromskie avialinii
+KOQ,K1,Kostromskie Avialinii
 GFY,XX,Greenfly
-ELK,--,ELK Airways
+ELK,,ELK Airways
 GBK,GY,Gabon Airlines
 MCA,,MCA Airlines
 MAV,ML,Maldivo Airlines
