@@ -422,8 +422,7 @@ class iOSUser(_User):
 
         flight_num = self.flight_num_for_flight_id(flight_id)
         dest_terminal = flight.destination.terminal
-        dest_name = (flight.destination.name or flight.destination.iata_code or
-                    flight.destination.icao_code)
+        dest_name = flight.destination.best_name
         leave_soon_interval = config['leave_soon_seconds_before']
         leave_soon_pretty_interval = utils.pretty_time_interval(leave_soon_interval, round_days=True)
 

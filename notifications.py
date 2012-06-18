@@ -320,10 +320,11 @@ class FlightDivertedAlert(_FlightAlert):
     """A push notification indicating a flight has been diverted."""
     @property
     def message(self):
-        # TODO: Figure out what airport it was diverted to
-        return 'Flight %s from %s has been diverted to another airport.' % (
+        # Destination should now reflected new diverted destination (test)
+        return 'Flight %s from %s has been diverted to %s.' % (
             self._user_flight_num,
-            self._origin_city_or_airport)
+            self._origin_city_or_airport,
+            self._destination_city_or_airport)
 
     @property
     def notification_type(self):

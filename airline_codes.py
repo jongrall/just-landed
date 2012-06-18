@@ -662,7 +662,7 @@ airline_code_mapping = {
     'SB' : 'ACI',
     'SC' : 'CDG',
     'SD' : 'SUD',
-    'SE' : 'SEU',
+    'SE' : 'XLF',
     'SF' : 'DTH',
     'SG' : 'SEJ',
     'SH' : 'FLY',
