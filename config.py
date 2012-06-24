@@ -238,13 +238,13 @@ config['flightaware'] = {
     ],
 
     # Cache expiration for flight data from /search
-    'flight_lookup_cache_time' : 3600,
+    'flight_lookup_cache_time' : 1800,
 
     # Cache expiration for fight data from /search that will be used by /track
     'flight_from_lookup_cache_time' : 120,
 
     # Cache expiration time for flight data from /track
-    'flight_cache_time' : 7200,
+    'flight_cache_time' : 3600,
 
     # Alert endpoint
     'alert_endpoint' : fa_alert_url(),
@@ -324,7 +324,7 @@ config['close_to_airport'] = 1.0
 config['far_from_airport'] = 200.0
 
 # Cache expiration for driving route data when using real-time traffic
-config['traffic_cache_time'] = 3600
+config['traffic_cache_time'] = 900
 
 # Bing Maps Credentials
 config['bing_maps'] = {
