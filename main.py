@@ -85,7 +85,8 @@ class BaseHandler(webapp.RequestHandler):
                                       PushNotificationsUnauthorizedError,
                                       PushNotificationsUnknownError,
                                       CampaignMonitorUnauthorizedError,
-                                      CampaignMonitorUnavailableError)):
+                                      CampaignMonitorUnavailableError,
+                                      AirportNotFoundException)):
                 utils.sms_report_exception(exception)
 
             # Reliability: detect and report service outages if possible
