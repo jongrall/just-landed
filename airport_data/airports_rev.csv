@@ -2888,7 +2888,7 @@ NLWW,WLS,Wallis Island Airport,Wallis,Wallis and Futuna,-13.233333,-176.16667,79
 NONE,TSS,Midtown Skyport,New York,United States,40.735125,-73.972889,10,-5,A,America/New_York
 NSFA,APW,Faleolo International Airport,Faleolo,Samoa,-13.83045,-172.00811,58,-11,U,Pacific/Apia
 NSFI,FGI,Fagali'i Airport,Apia,Samoa,-13.848333,-171.741667,25,-11,U,Pacific/Apia
-NSFQ,FTI,Fitiuta Airport,Fiti\\'uta,American Samoa,-14.215418,-169.424322,110,-11,U,Pacific/Pago_Pago
+NSFQ,FTI,Fitiuta Airport,Fiti'uta,American Samoa,-14.215418,-169.424322,110,-11,U,Pacific/Pago_Pago
 NSMA,MXS,Maota Airport,Savaii Island,Samoa,-13.742456,-172.25799,0,-11,U,Pacific/Apia
 NSTU,PPG,Tafuna International Airport,Pago Pago,American Samoa,-14.331389,-170.711389,32,-11,U,Pacific/Pago_Pago
 NTAA,PPT,Faaa International Airport,Papeete,French Polynesia,-17.555652,-149.60936,7,-10,U,Pacific/Tahiti
@@ -4616,7 +4616,7 @@ WSAP,QPG,Paya Lebar Air Base,Paya Lebar,Singapore,1.360417,103.909531,65,8,U,Asi
 WSSL,XSP,Seletar Airport,Singapore,Singapore,1.416749,103.86738,36,8,U,Asia/Singapore
 WSSS,SIN,Changi International Airport,Singapore,Singapore,1.3568,103.9891,22,8,U,Asia/Singapore
 WURZ,WZB,Wurzburg HBF,Wurzburg,Germany,49.7999,9.95555,1000,2,E,Europe/Berlin
-XS46,S46,Port O\\'Connor Airfield,Port O\\'Connor,United States,28.429977,-96.442859,10,-6,A,America/Chicago
+XS46,S46,Port O'Connor Airfield,Port O'Connor,United States,28.429977,-96.442859,10,-6,A,America/Chicago
 YABA,ALH,Albany Airport,Albany,Australia,-34.944881,117.804241,233,8,O,Australia/Perth
 YARG,GYL,Argyle Airport,,Australia,-16.639048,128.451619,522,8,O,Australia/Perth
 YARM,ARM,Armidale Airport,Armidale,Australia,-30.532127,151.614587,3556,10,O,Australia/Sydney
@@ -4858,7 +4858,7 @@ ZLIC,INC,Yinchuan,Yinchuan,China,38.481944,106.009167,3600,8,U,Asia/Chongqing
 ZLJQ,JGN,Jiayuguan Airport,Jiayuguan,China,39.861993,98.341486,0,8,N,Asia/Chongqing
 ZLLL,ZGC,Lanzhou Zhongchuan Airport,Lanzhou,China,36.507676,103.617574,6388,8,U,Asia/Chongqing
 ZLQY,IQN,Qingyang Airport,Qingyang,China,35.800932,107.610612,0,8,U,Asia/Chongqing
-ZLSN,SIA,Xi\\'An Xiguan,Xi\\'AN,China,34.3767,109.12,0,8,U,Asia/Chongqing
+ZLSN,SIA,Xi'An Xiguan,Xi'An,China,34.3767,109.12,0,8,U,Asia/Chongqing
 ZLXN,XNN,Xining Airport,Xining,China,36.526012,102.040026,0,8,U,Asia/Chongqing
 ZLXY,XIY,Xi'an Xianyang International Airport,Xi'an,China,34.441064,108.760345,1572,8,U,Asia/Chongqing
 ZLYA,ENY,Yan'an Airport,Yan'an,China,36.6369,109.554,0,8,U,Asia/Chongqing

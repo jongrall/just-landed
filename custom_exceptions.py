@@ -45,8 +45,8 @@ class TerminalsUnknownException(Exception):
         self.code = 404 # Not found
 
 class AirportNotFoundException(Exception):
-    def __init__(self, airport=''):
-        self.message = 'Airport not found: %s' % airport
+    def __init__(self, airport='', flight_num=''):
+        self.message = 'Airport not found: %s for flight %s' % (airport, flight_num)
         self.code = 404 # Not found
 
 class OldFlightException(Exception):

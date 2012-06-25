@@ -273,7 +273,7 @@ class FlightAwareSource (FlightDataSource):
             destination_code = data['destination']
 
             # Optimization: fetch in parallel
-            origin_info, destination_info = yield self.airport_info(origin_code), self.airport_info(destination_code)
+            origin_info, destination_info = yield self.airport_info(origin_code, sanitized_flight_num), self.airport_info(destination_code, sanitized_flight_num)
             origin, destination = Origin(origin_info), Destination(destination_info)
 
             flight = Flight(data)
@@ -282,9 +282,7 @@ class FlightAwareSource (FlightDataSource):
             flight.destination = destination
 
             # Convert flight duration to integer number of seconds
-            flight_duration = data['scheduledFlightDuration'].split(':')
-            secs = (int(flight_duration[0]) * 3600) + (int(flight_duration[1]) * 60)
-            flight.scheduled_flight_duration = secs
+            flight.scheduled_flight_duration = utils.fa_flight_ete_to_duration(data['scheduledFlightDuration'])
 
             # Convert aircraft type
             flight.aircraft_type = aircraft_types.type_to_major_type(data.get('aircraftType'))
@@ -300,7 +298,7 @@ class FlightAwareSource (FlightDataSource):
             raise tasklets.Return(flight)
 
     @ndb.tasklet
-    def airport_info(self, airport_code):
+    def airport_info(self, airport_code, flight_num=''):
         """Looks up information about an airport using its ICAO or IATA code."""
         assert utils.is_valid_icao(airport_code) or utils.is_valid_iata(airport_code)
 
@@ -337,7 +335,7 @@ class FlightAwareSource (FlightDataSource):
                 report_event(reporting.FA_AIRPORT_INFO)
 
                 if result.get('error'):
-                    raise AirportNotFoundException(airport_code)
+                    raise AirportNotFoundException(airport_code, flight_num)
                 else:
                     airport = result['AirportInfoResult']
 
@@ -369,7 +367,7 @@ class FlightAwareSource (FlightDataSource):
 
                     raise tasklets.Return(airport)
         else:
-            raise AirportNotFoundException(airport_code)
+            raise AirportNotFoundException(airport_code, flight_num)
 
     @ndb.tasklet
     def register_alert_endpoint(self, **kwargs):

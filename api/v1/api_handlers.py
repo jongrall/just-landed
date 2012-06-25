@@ -43,7 +43,8 @@ class SearchHandler(AuthenticatedAPIHandler):
         This handler responds to the client using JSON.
 
         """
-        if not utils.valid_flight_number(flight_number):
+        sanitized_f_num = utils.sanitize_flight_number(flight_number)
+        if not utils.valid_flight_number(sanitized_f_num):
             raise InvalidFlightNumberException(flight_number)
 
         try:
@@ -169,10 +170,10 @@ class TrackHandler(AuthenticatedAPIHandler):
                 if isinstance(e, (DrivingTimeUnavailableError, MalformedDrivingDataException,
                                 DrivingAPIQuotaException, DrivingTimeUnauthorizedException)):
                     utils.sms_report_exception(e)
-                logging.exception(e)
 
                 # As long as it wasn't a NoDrivingRouteException, use the fallback datasource
                 if not isinstance(e, NoDrivingRouteException):
+                    logging.exception(e)
                     try:
                         driving_time = yield fallback_distance_source.driving_time(latitude,
                                                                                    longitude,
@@ -182,11 +183,15 @@ class TrackHandler(AuthenticatedAPIHandler):
                         if isinstance(e2, (DrivingTimeUnavailableError, MalformedDrivingDataException,
                                             DrivingAPIQuotaException, DrivingTimeUnauthorizedException)):
                             utils.sms_report_exception(e2)
-                        logging.exception(e2)
 
                         # As long as it wasn't a NoDrivingRouteException, re-raise the exception and terminate the request
                         if not isinstance(e2, NoDrivingRouteException):
+                            logging.exception(e2)
                             raise DrivingTimeUnavailableError()
+                        else:
+                            logging.warn(e2) # No route is a warn
+                else:
+                    logging.warn(e) # No route is a warn
 
         response = flight.dict_for_client()
 

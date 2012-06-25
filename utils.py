@@ -189,6 +189,12 @@ def is_trusted_flightaware_host(host_ip):
             return True
     return False
 
+def fa_flight_ete_to_duration(filed_ete):
+    flight_duration = filed_ete.split(':')
+    if len(flight_duration) < 2: # Safeguard against bad data
+        return 0
+    return (int(flight_duration[0] or 0) * 3600) + (int(flight_duration[1] or 0) * 60)
+
 def is_old_fa_flight(raw_fa_flight_data):
     """Tests whether a FlightAware flight is old or not."""
     arrival_timestamp = raw_fa_flight_data['actualarrivaltime']
@@ -202,8 +208,7 @@ def is_old_fa_flight(raw_fa_flight_data):
 
     # Flight was cancelled, see if it is old cancellation
     elif departure_timestamp == -1:
-        flight_duration = raw_fa_flight_data['filed_ete'].split(':')
-        duration_secs = (int(flight_duration[0]) * 3600) + (int(flight_duration[1]) * 60)
+        duration_secs = fa_flight_ete_to_duration(raw_fa_flight_data['filed_ete'])
         sched_arrival = datetime.utcfromtimestamp(departure_timestamp + duration_secs)
         return sched_arrival < hours_ago
 
@@ -331,6 +336,67 @@ def timestamp(date=None):
   assert isinstance(date, datetime), 'Expected a datetime object'
   return int(time.mktime(date.timetuple()))
 
+ZERO = timedelta(0)
+HOUR = timedelta(hours=1)
+
+# A complete implementation of current DST rules for major US time zones.
+def first_sunday_on_or_after(dt):
+  days_to_go = 6 - dt.weekday()
+  if days_to_go:
+      dt += timedelta(days_to_go)
+  return dt
+
+# In the US, DST starts at 2am (standard time) on the first Sunday in April.
+DSTSTART = datetime(1, 4, 1, 2)
+# and ends at 2am (DST time; 1am standard time) on the last Sunday of Oct.
+# which is the first Sunday on or after Oct 25.
+DSTEND = datetime(1, 10, 25, 1)
+
+class USTimeZone(tzinfo):
+
+  def __init__(self, hours, reprname, stdname, dstname):
+      self.stdoffset = timedelta(hours=hours)
+      self.reprname = reprname
+      self.stdname = stdname
+      self.dstname = dstname
+
+  def __repr__(self):
+      return self.reprname
+
+  def tzname(self, dt):
+      if self.dst(dt):
+          return self.dstname
+      else:
+          return self.stdname
+
+  def utcoffset(self, dt):
+      return self.stdoffset + self.dst(dt)
+
+  def dst(self, dt):
+      if dt is None or dt.tzinfo is None:
+          # An exception may be sensible here, in one or both cases.
+          # It depends on how you want to treat them.  The default
+          # fromutc() implementation (called by the default astimezone()
+          # implementation) passes a datetime with dt.tzinfo is self.
+          return ZERO
+      assert dt.tzinfo is self
+
+      # Find first Sunday in April & the last in October.
+      start = first_sunday_on_or_after(DSTSTART.replace(year=dt.year))
+      end = first_sunday_on_or_after(DSTEND.replace(year=dt.year))
+
+      # Can't compare naive to aware objects, so strip the timezone from
+      # dt first.
+      if start <= dt.replace(tzinfo=None) < end:
+          return HOUR
+      else:
+          return ZERO
+
+Eastern  = USTimeZone(-5, "Eastern",  "EST", "EDT")
+Central  = USTimeZone(-6, "Central",  "CST", "CDT")
+Mountain = USTimeZone(-7, "Mountain", "MST", "MDT")
+Pacific  = USTimeZone(-8, "Pacific",  "PST", "PDT")
+
 def pretty_time_interval(num_secs, round_days=False):
     """Returns a human readable string describing the amount of time represented
     by the input number of seconds.
@@ -396,6 +462,8 @@ def leave_soon_time(flight, driving_time):
     leave_soon_interval = config['leave_soon_seconds_before']
     leave_now = timestamp(leave_now_time(flight, driving_time))
     return datetime.utcfromtimestamp(leave_now - leave_soon_interval)
+
+
 
 ###############################################################################
 """Night / Day Utilities"""

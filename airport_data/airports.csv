@@ -1899,7 +1899,7 @@ KMTJ,MTJ,Montrose Regional Airport,Montrose CO,United States,38.509794,-107.8942
 KMUI,MUI,Muir Aaf,Muir,United States,40.434811,-76.569411,489,-5,A
 KMUO,MUO,Mountain Home Afb,Mountain Home,United States,43.043603,-115.872431,2996,-7,A
 KMVL,MVL,Morrisville Stowe State Airport,Morrisville,United States,44.535,-72.614,732,-5,A
-KMVY,MVY,Martha\\'s Vineyard,Vineyard Haven MA,United States,41.391667,-70.615278,67,-5,A
+KMVY,MVY,Martha's Vineyard,Vineyard Haven MA,United States,41.391667,-70.615278,67,-5,A
 KMWA,MWA,Williamson Country Regional Airport,Marion,United States,37.7549569,-89.0110936,472,-5,A
 KMWC,MWC,Lawrence J Timmerman Airport,Milwaukee,United States,43.1103889,-88.0344167,745,-6,A
 KMWH,MWH,Grant Co Intl,Grant County Airport,United States,47.207708,-119.32019,1185,-8,A
@@ -2887,11 +2887,11 @@ NLWF,FUT,Pointe Vele Airport,Futuna Island,Wallis and Futuna,-14.3114,-178.066,2
 NLWW,WLS,Wallis,Wallis,Wallis and Futuna,-13.238281,-176.199228,79,12,U
 NONE,TSS,East 34th Street Heliport,New York,United States,40.7425,-73.971944,10,-5,A
 NSFA,APW,Faleolo Intl,Faleolo,Samoa,-13.829969,-172.008336,58,-11,U
-NSFI,FGI,Fagali\\'i,Apia,Samoa,-13.84861111,-171.74083333,25,-11,U
-NSFQ,FTI,Fitiuta Airport,Fiti\\'uta,American Samoa,-14.216111,-169.423611,110,-11,U
+NSFI,FGI,Fagali'i,Apia,Samoa,-13.84861111,-171.74083333,25,-11,U
+NSFQ,FTI,Fitiuta Airport,Fiti'uta,American Samoa,-14.216111,-169.423611,110,-11,U
 NSMA,MXS,Maota Airport,Savaii Island,Samoa,-13.733,-172.3,0,-11,U
 NSTU,PPG,Pago Pago Intl,Pago Pago,American Samoa,-14.331,-170.7105,32,-11,U
-NTAA,PPT,Faa\\'a International,Papeete,French Polynesia,-17.556667,-149.611389,7,-10,U
+NTAA,PPT,Faa'a International,Papeete,French Polynesia,-17.556667,-149.611389,7,-10,U
 NTAM,RMT,Rimatara,Rimatara,French Polynesia,-22.637253,-152.805192,56,-10,U
 NTAR,RUR,Rurutu,Rurutu,French Polynesia,-22.434069,-151.360614,18,-10,U
 NTAT,TUB,Tubuai,Tubuai,French Polynesia,-23.365353,-149.524072,7,-10,U
@@ -4616,7 +4616,7 @@ WSAP,QPG,Paya Lebar,Paya Lebar,Singapore,1.360417,103.90953,65,8,U
 WSSL,XSP,Seletar,Singapore,Singapore,1.41695,103.867653,36,8,U
 WSSS,SIN,Changi Intl,Singapore,Singapore,1.350189,103.994433,22,8,U
 WURZ,WZB,Wurzburg HBF,Wurzburg,Germany,49.7999,9.95555,1000,2,E
-XS46,S46,Port O\\'Connor Airfield,Port O\\'Connor,United States,28.429977,-96.442859,10,-6,A
+XS46,S46,Port O'Connor Airfield,Port O'Connor,United States,28.429977,-96.442859,10,-6,A
 YABA,ALH,Albany Airport,Albany,Australia,-34.9433,117.809,233,8,O
 YARG,GYL,Argyle Airport,,Australia,-16.6369,128.451,522,8,O
 YARM,ARM,Armidale,Armidale,Australia,-30.528056,151.617222,3556,10,O
@@ -4858,7 +4858,7 @@ ZLIC,INC,Yinchuan,Yinchuan,China,38.481944,106.009167,3600,8,U
 ZLJQ,JGN,Jiayuguan Airport,Jiayuguan,China,39.8569,98.3414,0,8,N
 ZLLL,ZGC,Zhongchuan,Lanzhou,China,36.515242,103.620775,6388,8,U
 ZLQY,IQN,Qingyang Airport,Qingyang,China,35.7997,107.603,0,8,U
-ZLSN,SIA,Xi\\'An Xiguan,Xi\\'AN,China,34.3767,109.12,0,8,U
+ZLSN,SIA,Xi'An Xiguan,Xi'AN,China,34.3767,109.12,0,8,U
 ZLXN,XNN,Xining Caojiabu Airport,Xining,China,36.5275,102.043,0,8,U
 ZLXY,XIY,Xianyang,Xi'an,China,34.447119,108.751592,1572,8,U
 ZLYA,ENY,Yan'an Airport,Yan'an,China,36.6369,109.554,0,8,U
