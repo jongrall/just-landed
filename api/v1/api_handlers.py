@@ -7,7 +7,7 @@ requests by Just Landed clients are routed through here.
 
 __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed LLC"
-__email__ = "jon@getjustlanded.com"
+__email__ = "jon@littledetails.net"
 
 import logging
 import json

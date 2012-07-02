@@ -7,7 +7,7 @@ when bulk uploading from airports.csv to the datastore.
 
 __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed LLC"
-__email__ = "jon@getjustlanded.com"
+__email__ = "jon@littledetails.net"
 
 from google.appengine.ext import db
 
