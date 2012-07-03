@@ -540,7 +540,8 @@ class iOSUser(_User):
                         # FIXME: Assumes FlightAware is not being used alongside another data source
                         tracked_f_num = utils.flight_num_from_fa_flight_id(f.flight.string_id())
                         needs_alert = tracked_f_num == untracking_flight_num
-                        break # Optimization: stop as soon as we find one
+                        if needs_alert:
+                            break # Optimization: stop as soon as we find one
 
                 if not needs_alert:
                     to_remove = []
