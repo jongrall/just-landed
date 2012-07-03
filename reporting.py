@@ -83,7 +83,7 @@ class MixpanelService(ReportingService):
 
     """
     def __init__(self):
-        self._report_url = 'https://api.mixpanel.com/track/?data='
+        self._report_url = 'http://api.mixpanel.com/track/?data=' # HTTPS supported but not used
 
         if on_development():
             self._token = config['mixpanel']['development']['token']
@@ -112,7 +112,7 @@ class MixpanelService(ReportingService):
         url = self._report_url + data
 
         try:
-            result = urlfetch.fetch(url=url, validate_certificate=True)
+            result = urlfetch.fetch(url=url, validate_certificate=url.startswith('https'))
             if result.status_code != 200:
                 # Log, don't raise
                 logging.exception(ReportEventFailedException(status_code=result.status_code,

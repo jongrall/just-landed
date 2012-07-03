@@ -35,7 +35,7 @@ def main():
     dest_file = open('airports_rev.csv', 'a')
     airport_data = csv.reader(src_file)
     revised_airport_data = csv.writer(dest_file)
-    google_places = Connection('https://maps.googleapis.com/maps/api/place')
+    google_places = Connection('http://maps.googleapis.com/maps/api/place')
     geo_names = Connection('http://api.geonames.org')
     count = 0
     left_alone = 0

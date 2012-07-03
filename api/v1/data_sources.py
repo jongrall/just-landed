@@ -205,7 +205,7 @@ class FlightAwareSource (FlightDataSource):
 
     @property
     def base_url(self):
-        return "https://flightxml.flightaware.com/json/FlightXML2"
+        return "http://flightxml.flightaware.com/json/FlightXML2" # HTTPS supported but not used
 
     @property
     def api_key_mapping(self):
@@ -257,7 +257,7 @@ class FlightAwareSource (FlightDataSource):
         yield ctx.urlfetch(full_track_url,
                             headers=headers,
                             deadline=120,
-                            validate_certificate=(not on_development()))
+                            validate_certificate=full_track_url.startswith('https'))
 
     @ndb.tasklet
     def raw_flight_data_to_flight(self, data, sanitized_flight_num):
@@ -968,7 +968,7 @@ class GoogleDistanceSource (DrivingTimeDataSource):
     """
     @property
     def base_url(self):
-        return 'https://maps.googleapis.com/maps/api/distancematrix'
+        return 'http://maps.googleapis.com/maps/api/distancematrix' # HTTPS supported but not used
 
     def __init__(self):
         self.conn = Connection(self.base_url)
@@ -1043,7 +1043,7 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
     """
     @property
     def base_url(self):
-        return 'https://dev.virtualearth.net/REST/v1'
+        return 'http://dev.virtualearth.net/REST/v1' # HTTPS supported but not used
 
     def __init__(self):
         self.conn = Connection(self.base_url)

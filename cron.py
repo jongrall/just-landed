@@ -55,7 +55,7 @@ class UntrackOldFlightsWorker(BaseHandler):
                     users_qry = iOSUser.users_tracking_flight_qry(flight_id)
 
                     # Generate the URL and API signature
-                    url_scheme = (not on_development() and 'https') or 'http'
+                    url_scheme = (on_development() and 'http') or 'https'
                     to_sign = self.uri_for('untrack', flight_id=flight_id)
                     sig = utils.api_query_signature(to_sign, client='Server')
                     untrack_url = self.uri_for('untrack',
@@ -73,7 +73,7 @@ class UntrackOldFlightsWorker(BaseHandler):
                         yield ctx.urlfetch(untrack_url,
                                            headers=headers,
                                            deadline=120,
-                                           validate_certificate=not on_development())
+                                           validate_certificate=untrack_url.startswith('https'))
 
                     yield users_qry.map_async(user_cbk, keys_only=True)
 
