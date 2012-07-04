@@ -124,16 +124,6 @@ class PushNotificationsUnavailableError(Exception):
         self.message = 'Push notifications are unavailable.'
         self.code = 503 # Service unavailable
 
-class PushNotificationsUnauthorizedError(Exception):
-    def __init__(self):
-        self.message = 'Push notification unauthorized.'
-        self.code = 401 # Unauthorized
-
-class PushNotificationsUnknownError(Exception):
-    def __init__(self, status_code=500, message=''):
-        self.message = message
-        self.code = status_code
-
 class UrbanAirshipUnavailableError(PushNotificationsUnavailableError):
     def __init__(self):
         super(UrbanAirshipUnavailableError, self).__init__()
@@ -144,16 +134,30 @@ class StackMobUnavailableError(PushNotificationsUnavailableError):
         super(StackMobUnavailableError, self).__init__()
         self.message = 'StackMob is unavailable.'
 
-###############################################################################
-"""Mailing List Exceptions"""
-###############################################################################
-
-class CampaignMonitorUnavailableError(Exception):
+class PushNotificationsUnauthorizedError(Exception):
     def __init__(self):
-        self.message = 'Mailing list is unavailable.'
-        self.code = 503 # Service unavailable
-
-class CampaignMonitorUnauthorizedError(Exception):
-    def __init__(self):
-        self.message = 'Mailing list unauthorized.'
+        self.message = 'Push notification unauthorized.'
         self.code = 401 # Unauthorized
+
+class UrbanAirshipUnauthorizedError(PushNotificationsUnauthorizedError):
+    def __init__(self):
+        super(UrbanAirshipUnauthorizedError, self).__init__()
+        self.message = 'Urban Airship request is unauthorized.'
+
+class StackMobUnauthorizedError(PushNotificationsUnauthorizedError):
+    def __init__(self):
+        super(StackMobUnauthorizedError, self).__init__()
+        self.message = 'StackMob request is unauthorized.'
+
+class PushNotificationsUnknownError(Exception):
+    def __init__(self, status_code=500, message=''):
+        self.message = message
+        self.code = status_code
+
+class UrbanAirshipUnknownError(PushNotificationsUnknownError):
+    def __init__(self, status_code=500, message=''):
+        super(UrbanAirshipUnknownError, self).__init__(status_code, message)
+
+class StackMobUnknownError(PushNotificationsUnknownError):
+    def __init__(self, status_code=500, message=''):
+        super(StackMobUnknownError, self).__init__(status_code, message)

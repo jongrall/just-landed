@@ -144,9 +144,6 @@ config['flight_states'] = Enum([
     'EARLY',
 ])
 
-# Cache expiration time for exceptions for so that they don't trigger flood of reports
-config['exception_cache_time'] = 3600
-
 # Number of seconds that we should set a 'leave soon' reminder before they should leave for the airport
 config['leave_soon_seconds_before'] = 300
 
@@ -369,9 +366,11 @@ config['urbanairship'] = {
   },
 }
 
+def ua_credentials():
+    app_mode = config['app']['mode']
+    return config['urbanairship'][app_mode]
 
 config['stackmob'] = {
-    'app_name' : 'just-landed',
     'development': {
         'public_key' : 'df6126cd-906e-4ee7-b09b-d12208646bb5',
         'private_key' : 'fe2a94b0-d732-4639-90d1-c6b80a4a9bc0',
@@ -389,32 +388,9 @@ config['stackmob'] = {
     },
 }
 
-
-###############################################################################
-"""Campaign Monitor Settings & API Keys"""
-###############################################################################
-
-config['campaignmonitor'] = {
-    # Credentials
-    'key' : '5bd221f998c1e9712f209eed6a7ce5dc',
-
-    # Subscriber list ids used to record mailing list members
-    'development' : {
-      'subscriber_list_id' : 'e0df0058fb3d482a890ef41ba4adfbeb',
-    },
-
-    'staging' : {
-      'subscriber_list_id' : '488414d044f6cff3d98fd5d822147599',
-    },
-
-    'production' : {
-      'subscriber_list_id' : '768e47891d6f304673e16c299fdf1f91',
-    },
-}
-
-def subscriber_list_id():
+def stackmob_credentials():
     app_mode = config['app']['mode']
-    return config['campaignmonitor'][app_mode]['subscriber_list_id']
+    return config['stackmob'][app_mode]
 
 ###############################################################################
 """Twilio Configuration"""
@@ -445,3 +421,22 @@ config['google_analytics'] = {
 def google_analytics_account():
     app_mode = config['app']['mode']
     return config['google_analytics'][app_mode]['account_id']
+
+###############################################################################
+"""Outage Detection & Exception Reporting Settings"""
+###############################################################################
+
+# Phone numbers of admins to notify via SMS
+config['admin_phones'] = ['16176425619']
+
+# Cache expiration time for exceptions for so that they don't trigger flood of reports
+config['exception_cache_time'] = 3600
+
+# Threshold high error rate per second for outage detection (currently 5 per minute)
+config['high_error_rate'] = 5.0 / 60.0
+
+# Min number of observed errors threshold to qualify as an outage
+config['min_outage_errors'] = 10
+
+# Min amount of time since last error before outage declared over (currently 5 min)
+config['outage_over_wait'] = 300

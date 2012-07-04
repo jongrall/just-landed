@@ -18,7 +18,7 @@ from lib import stackmob
 
 from custom_exceptions import *
 from main import BaseHandler
-from config import config, on_development, on_staging
+from config import config, on_development, ua_credentials, stackmob_credentials
 import utils
 
 # Enable to log informational messages about push notification activity
@@ -53,13 +53,7 @@ class UrbanAirshipService(PushNotificationService):
 
     """
     def __init__(self):
-        if on_development():
-            ua_creds = config['urbanairship']['development']
-        elif on_staging():
-            ua_creds = config['urbanairship']['staging']
-        else:
-            ua_creds = config['urbanairship']['production']
-
+        ua_creds = ua_credentials()
         self._UA = urbanairship.Airship(**ua_creds)
 
     def call_ua_func(self, func, *args, **kwargs):
@@ -67,9 +61,9 @@ class UrbanAirshipService(PushNotificationService):
         try:
             func(*args, **kwargs)
         except urbanairship.Unauthorized:
-            raise PushNotificationsUnauthorizedError()
+            raise UrbanAirshipUnauthorizedError()
         except urbanairship.AirshipFailure as e:
-            raise PushNotificationsUnknownError(status_code=e.args[0], message=e.args[1])
+            raise UrbanAirshipUnknownError(status_code=e.args[0], message=e.args[1])
         except Exception:
             raise UrbanAirshipUnavailableError()
 
@@ -87,13 +81,7 @@ class StackMobService(PushNotificationService):
     """Concrete implementation of a PushNotificationService using StackMob."""
 
     def __init__(self):
-        if on_development():
-            creds = config['stackmob']['development']
-        elif on_staging():
-            creds = config['stackmob']['staging']
-        else:
-            creds = config['stackmob']['production']
-
+        creds = stackmob_credentials()
         kwargs = {
             'production' : not on_development(),
         }
@@ -105,10 +93,10 @@ class StackMobService(PushNotificationService):
         try:
             func(*args, **kwargs)
         except stackmob.Unauthorized:
-            raise PushNotificationsUnauthorizedError()
+            raise StackMobUnauthorizedError()
         except stackmob.StackMobFailure as e:
-            raise PushNotificationsUnknownError(status_code=e.code, message='StackMob Failure')
-        except Exception as e:
+            raise StackMobUnknownError(status_code=e.code, message='StackMob Failure')
+        except Exception:
             raise StackMobUnavailableError()
 
     def register_token(self, device_token):
@@ -193,10 +181,10 @@ class PushWorker(BaseHandler):
             del(kwds['force'])
 
         if debug_push:
-            if method == 'register':
+            if method == 'register_token':
                 token = args[0]
                 logging.info('REGISTERING DEVICE TOKEN: %s' % token)
-            elif method == 'deregister':
+            elif method == 'deregister_token':
                 token = args[0]
                 logging.info('DE-REGISTERING DEVICE TOKEN: %s' % token)
             elif method == 'push':
@@ -207,31 +195,31 @@ class PushWorker(BaseHandler):
                 logging.info('PUSHING MESSAGE TO %s: \n%s' % (token, message))
 
         # Reliability: check that the push service supports the method we want to call
-        func = getattr(push_service, method, None)
+        try:
+            func = getattr(push_service, method, None)
+            func(*args, **kwds)
 
-        if func:
-            try:
-                func(*args, **kwds)
+            if method == 'register_token':
+                push_token = args[0]
+                # Optimization: cache push token registration so it doesn't happen every time
+                if not memcache.set(push_token, True, config['max_push_token_age']):
+                    logging.error('Unable to cache push token: %s' % push_token)
 
-                if method == 'register_token':
-                    push_token = args[0]
-                    # Optimization: cache push token registration so it doesn't happen every time
-                    if not memcache.set(push_token, True, config['max_push_token_age']):
-                        logging.error('Unable to cache push token: %s' % push_token)
+        # Reliability: don't allow push notification exceptions to propagate
+        except Exception as e:
+            logging.exception(e) # Log all primary push service exceptions
 
-            # Reliability: don't allow push notification exceptions to propagate
-            except Exception as e:
-                # Reliability: call the fallback service for pushing messages only
-                if method == 'push':
-                    utils.sms_report_exception(e)
-                    logging.exception(e)
+            if isinstance(e, PushNotificationsUnavailableError):
+                utils.report_service_error(e) # Outages delayed reporting
+            else:
+                utils.sms_report_exception(e) # Other errors are reported immediately
 
-                    # Register and push to the fallback service (the device is
-                    # probably not previously registered)
-                    fallback_push_service.register_token(kwds['device_tokens'][0])
-                    fallback_push_service.push(*args, **kwds)
-                else:
-                    raise # Re-raise only for methods other than push
+            # Reliability: call the fallback service for pushing messages only
+            if method == 'push':
+                fallback_push_service.register_token(kwds['device_tokens'][0])
+                fallback_push_service.push(*args, **kwds)
+            else:
+                raise # Re-raise only for methods other than push
 
 
 ###############################################################################

@@ -120,7 +120,7 @@ class MixpanelService(ReportingService):
 
         # Reliability: don't allow reporting exceptions to propagate
         except Exception as e:
-            utils.sms_report_exception(MixpanelUnavailableError())
+            utils.report_service_error(MixpanelUnavailableError())
             logging.exception(e)
 
 ###############################################################################

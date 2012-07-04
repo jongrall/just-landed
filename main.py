@@ -67,29 +67,43 @@ class BaseHandler(webapp.RequestHandler):
         """
         gae_outage = False
 
-        # Some exceptions are not serious and should be logged as info
-        if isinstance(exception, (InvalidFlightNumberException,
-                                  FlightNotFoundException,
-                                  OldFlightException)):
-            logging.info(exception.message)
+        informational_errors = (InvalidFlightNumberException,
+                                FlightNotFoundException,
+                                OldFlightException)
 
+        outage_errors = (FlightAwareUnavailableError,
+                         DrivingTimeUnavailableError,
+                         PushNotificationsUnavailableError,
+                         MixpanelUnavailableError)
+
+        urgent_errors = (OverQuotaError,
+                         CapabilityDisabledError,
+                         FeatureNotEnabledError,
+                         DeadlineExceededError,
+                         PushNotificationsUnauthorizedError,
+                         PushNotificationsUnknownError,
+                         MalformedDrivingDataException,
+                         DrivingAPIQuotaException,
+                         DrivingTimeUnauthorizedException,
+                         AirportNotFoundException)
+
+        unrecoverable_errors = (OverQuotaError,
+                                CapabilityDisabledError,
+                                FeatureNotEnabledError)
+
+        # Some exceptions are not serious and should be logged as info
+        if isinstance(exception, informational_errors):
+            logging.info(exception.message)
         else:
-            # Reliability: some exceptions should trigger SMS notifications to the admin
-            if utils.url_fetch_enabled() and isinstance(exception, (FlightAwareUnavailableError,
-                                      DrivingTimeUnavailableError,
-                                      OverQuotaError,
-                                      CapabilityDisabledError,
-                                      FeatureNotEnabledError,
-                                      DeadlineExceededError,
-                                      PushNotificationsUnavailableError,
-                                      PushNotificationsUnauthorizedError,
-                                      PushNotificationsUnknownError,
-                                      CampaignMonitorUnauthorizedError,
-                                      CampaignMonitorUnavailableError,
-                                      AirportNotFoundException)):
+            # Reliability: some exceptions should trigger immediate SMS notifications
+            if isinstance(exception, urgent_errors):
                 utils.sms_report_exception(exception)
 
-            # Reliability: detect and report service outages if possible
+            # Outage-type errors are delayed to verify outage
+            if isinstance(exception, outage_errors):
+                utils.report_service_error(exception)
+
+            # Reliability: detect and report GAE service outages if possible
             disabled_services = utils.disabled_services()
             gae_outage = len(disabled_services) > 0
             if gae_outage:
@@ -97,9 +111,6 @@ class BaseHandler(webapp.RequestHandler):
 
             # Logged exceptions get automatically picked up by ereporter
             logging.exception(exception)
-
-        unrecoverable_errors = (OverQuotaError, CapabilityDisabledError,
-                                FeatureNotEnabledError)
 
         # Use response status to indicate to clients what happened
         if gae_outage or isinstance(exception, unrecoverable_errors):
@@ -200,6 +211,7 @@ routes = [
         Route('/untrack_old_flights', 'UntrackOldFlightsWorker'),
         Route('/send_reminders', 'SendRemindersWorker'),
         Route('/clear_orphaned_alerts', 'ClearOrphanedAlertsWorker'),
+        Route('/detect_finished_outages', 'OutageCheckerWorker'),
         ]),
     ]),
     PathPrefixRoute('/_ah', [
@@ -214,7 +226,6 @@ routes = [
     ]),
     Route('/', handler=StaticHandler),
     HandlerPrefixRoute('web_handlers.', [
-        Route('/mailing-list/subscribe', handler="CampaignMonitorHandler"),
         Route('/mu-ddc4496d-5d1fac34-63470606-c5358264', handler='BlitzHandler'),
     ]),
     Route('/<page_name:[^/]+>', handler=StaticHandler),

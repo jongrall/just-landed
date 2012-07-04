@@ -27,7 +27,6 @@ from airline_codes import airline_code_mapping
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
 
-ADMIN_PHONES = ['16176425619']
 twilio_client = TwilioRestClient(config['twilio']['account_sid'],
                                  config['twilio']['auth_token'])
 
@@ -541,7 +540,7 @@ def send_sms(to, body, from_phone=config['twilio']['just_landed_phone']):
 
 def sms_alert_admin(message):
     """Send an SMS alert to the admins. Intended purpose: report 500 errors."""
-    for phone in ADMIN_PHONES:
+    for phone in config['admin_phones']:
         send_sms(to=phone, body=message)
 
 def sms_report_exception(exception):
@@ -552,7 +551,8 @@ def sms_report_exception(exception):
     traceback_as_string = traceback.format_exc()
     exception_memcache_key = 'exception_%s' % adler32(traceback_as_string)
 
-    if on_production() and not memcache.get(exception_memcache_key):
+    #if on_production() and not memcache.get(exception_memcache_key):
+    if not memcache.get(exception_memcache_key):
         memcache.set(exception_memcache_key, exception, config['exception_cache_time'])
         sms_alert_admin("[%s] Just Landed %s\n%s" %
                         (datetime.now(Pacific).strftime('%T'),
@@ -611,3 +611,87 @@ def try_reporting_outage(disabled_services):
         if not memcache.get(outage_cache_key):
             memcache.set(outage_cache_key, outage_message, config['exception_cache_time'])
             sms_alert_admin(outage_message)
+
+###############################################################################
+"""Outage Detection & Reporting Utilities"""
+###############################################################################
+
+def error_rate(error_dates, sample_endpoint=None):
+    """Calculate the error rate within a list of errors represented by a list
+    of dates.
+
+    Keywords:
+    'sample_endpoint' : Use this date as the endpoint of the sample window to determine
+    error rate. If not specified, uses the last error date provided.
+
+    """
+    for d in error_dates:
+        assert isinstance(d, datetime)
+    error_dates = sorted(error_dates)
+    startpoint = error_dates[0]
+    endpoint = (isinstance(sample_endpoint, datetime) and sample_endpoint) or error_dates[-1]
+    sample_duration = abs(endpoint - startpoint).total_seconds()
+    return len(error_dates) / sample_duration
+
+
+def is_error_rate_high(error_dates, sample_endpoint=None):
+    """Returns true if the error rate, represented by a list of dates, is too high."""
+    assert isinstance(error_dates, list)
+    num_errors = len(error_dates)
+    if (num_errors >= config['min_outage_errors'] and
+        error_rate(error_dates, sample_endpoint=sample_endpoint) > config['high_error_rate']):
+        return True
+    else:
+        return False
+
+def service_error_cache_key(exception):
+    return 'service_error_' + type(exception).__name__
+
+def report_service_error(exception):
+    """Given an error, decides whether or not the affected service is having
+    an outage based on frequency of recent errors per second. Caches errors,
+    and only reports an outage once the service outage threshold has been crossed."""
+    error_name = type(exception).__name__
+    error_cache_key = service_error_cache_key(exception)
+    send_sms = False
+    rate = 0.0
+    now = datetime.utcnow()
+    client = memcache.Client()
+    retries = 0
+
+    while retries < 20: # Retry loop for CAS
+        report = client.gets(error_cache_key)
+        if report is None:
+            # 1st report of this service error
+            report = {
+                'alert_sent' : False,
+                'error_dates' : [now]
+            }
+            client.set(error_cache_key, report) # Required for CAS to work
+            break
+        else:
+            # Update existing report of recent errors for this service
+            error_dates = report['error_dates']
+            assert isinstance(error_dates, list)
+            # Keep the last min_outage_errors
+            error_dates.append(now)
+            error_dates = sorted(error_dates)
+            report['error_dates'] = error_dates[-config['min_outage_errors']:]
+
+            # Figure out if we need to send an sms notification to admins
+            send_sms = not report['alert_sent'] and is_error_rate_high(report['error_dates'])
+            if send_sms:
+                rate = error_rate(report['error_dates'])
+                report['alert_sent'] = True # We will be sending the alert shortly
+
+            if client.cas(error_cache_key, report):
+                break # Write was successful
+            else:
+                retries += 1
+
+    if send_sms:
+        sms_alert_admin("[%s] %s\n%s\nRate: %.2f / min" %
+                        (datetime.now(Pacific).strftime('%T'),
+                        error_name,
+                        exception.message,
+                        rate * 60.0))

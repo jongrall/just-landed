@@ -8,6 +8,7 @@ __email__ = "jon@littledetails.net"
 
 import urllib
 import json
+import logging
 
 import oauth2 as oauth
 from httplib2 import Http
@@ -60,6 +61,7 @@ class StackMob(object):
         version = (self.is_production and 1) or 0
         headers.update({
             'Accept' : 'application/vnd.stackmob+json; version=%d' % version,
+            'Content-Type' : content_type,
         })
 
         self.headers, response = self.http.request(url, method, body=body, headers=headers)

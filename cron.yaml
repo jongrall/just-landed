@@ -18,6 +18,11 @@ cron:
     url: /cron/clear_orphaned_alerts
     schedule: every 2 hours
 
+  # Checks whether outages have ended or not
+  - description: outage over detection
+    url: /cron/detect_finished_outages
+    schedule: every 5 minutes
+
   # Sends admins an email digest of any exceptions occurring in the last day
   - description: daily exception report
     url: /_ereporter?sender=webmaster@getjustlanded.com&versions=latest

@@ -159,39 +159,30 @@ class TrackHandler(AuthenticatedAPIHandler):
                                         longitude,
                                         dest_latitude,
                                         dest_longitude)):
+
             # Fail gracefully if we can't get driving distance
-            try:
-                driving_time = yield distance_source.driving_time(latitude,
-                                                                  longitude,
-                                                                  dest_latitude,
-                                                                  dest_longitude)
-            except Exception as e:
-                # Tell the admin about Bing Maps outages / unexpected errors
-                if isinstance(e, (DrivingTimeUnavailableError, MalformedDrivingDataException,
-                                DrivingAPIQuotaException, DrivingTimeUnauthorizedException)):
-                    utils.sms_report_exception(e)
+            for driving_source in [distance_source, fallback_distance_source]:
+                try:
+                    driving_time = yield driving_source.driving_time(latitude,
+                                                                     longitude,
+                                                                     dest_latitude,
+                                                                     dest_longitude)
+                    break
 
-                # As long as it wasn't a NoDrivingRouteException, use the fallback datasource
-                if not isinstance(e, NoDrivingRouteException):
-                    logging.exception(e)
-                    try:
-                        driving_time = yield fallback_distance_source.driving_time(latitude,
-                                                                                   longitude,
-                                                                                   dest_latitude,
-                                                                                   dest_longitude)
-                    except Exception as e2:
-                        if isinstance(e2, (DrivingTimeUnavailableError, MalformedDrivingDataException,
-                                            DrivingAPIQuotaException, DrivingTimeUnauthorizedException)):
-                            utils.sms_report_exception(e2)
-
-                        # As long as it wasn't a NoDrivingRouteException, re-raise the exception and terminate the request
-                        if not isinstance(e2, NoDrivingRouteException):
-                            logging.exception(e2)
-                            raise DrivingTimeUnavailableError()
-                        else:
-                            logging.warn(e2) # No route is a warn
-                else:
-                    logging.warn(e) # No route is a warn
+                except Exception as e:
+                    if isinstance(e, NoDrivingRouteException):
+                        logging.warn(e) # No route is a warn, skip fallback service
+                        break
+                    if driving_source == fallback_distance_source:
+                        raise # Give up, re-raise
+                    else:
+                        logging.exception(e)
+                        if isinstance(e, DrivingTimeUnavailableError):
+                            utils.report_service_error(e) # Outage reporting delayed
+                        elif isinstance(e, (MalformedDrivingDataException,
+                                            DrivingAPIQuotaException,
+                                            DrivingTimeUnauthorizedException)):
+                            utils.sms_report_exception(e) # Unexpected errors reported immediately
 
         response = flight.dict_for_client()
 

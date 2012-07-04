@@ -10,6 +10,7 @@ import logging
 from datetime import datetime, timedelta
 
 from google.appengine.ext import ndb
+from google.appengine.api import memcache
 
 from main import BaseHandler
 from config import on_development, config
@@ -141,3 +142,56 @@ class ClearOrphanedAlertsWorker(BaseHandler):
         if orphaned_alerts:
             logging.info('DELETING %d ORPHANED ALERTS' % len(orphaned_alerts))
             yield source.delete_alerts(valid_alert_ids, orphaned=True)
+
+
+class OutageCheckerWorker(BaseHandler):
+    """Cron worker for checking whether possible outages have finished."""
+    def get(self):
+        possible_outages = [
+            FlightAwareUnavailableError(),
+            BingMapsUnavailableError(),
+            GoogleDistanceAPIUnavailableError(),
+            UrbanAirshipUnavailableError(),
+            StackMobUnavailableError(),
+            MixpanelUnavailableError(),
+        ]
+
+        client = memcache.Client()
+
+        for e in possible_outages:
+            error_name = type(e).__name__
+            error_cache_key = utils.service_error_cache_key(e)
+            retries = 0
+            send_outage_over_sms = False
+            last_error_date = None
+
+            while retries < 20: # Retry loop for CAS
+                report = client.gets(error_cache_key)
+                if not report or not report['alert_sent']:
+                    break # No need to detect finished outage
+                else:
+                    # An alert was previously sent for this type of outage
+                    error_dates = report['error_dates']
+                    error_dates = sorted(error_dates)
+                    now = datetime.utcnow()
+                    last_error_date = error_dates[-1]
+
+                    if (len(error_dates) == 0 or
+                       last_error_date < now - timedelta(seconds=config['outage_over_wait'])):
+                       # Outage is over, prime system to detect another outage
+                       report['alert_sent'] = False
+                       if client.cas(error_cache_key, report):
+                           send_outage_over_sms = True
+                           break # Write was successful
+                       else:
+                           retries += 1
+                    else:
+                        break # Outage in progress, not over
+
+            if send_outage_over_sms:
+                now = datetime.utcnow()
+                last_error_seconds_ago = abs(now - last_error_date).total_seconds()
+                utils.sms_alert_admin("[%s] Outage over.\n%s stopped %s ago" %
+                                    (datetime.now(utils.Pacific).strftime('%T'),
+                                    error_name,
+                                    utils.pretty_time_interval(last_error_seconds_ago)))
