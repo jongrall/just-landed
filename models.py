@@ -460,7 +460,8 @@ class iOSUser(_User):
             leave_soon = FlightReminder(fire_time=leave_soon_time,
                                         reminder_type=reminder_types.LEAVE_SOON,
                                         flight=flight_key,
-                                        body=leave_soon_body)
+                                        body=leave_soon_body,
+                                        sent=leave_soon_time < datetime.utcnow())
 
             # Set a leave now reminder
             leave_now = FlightReminder(fire_time=leave_now_time,
