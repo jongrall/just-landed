@@ -433,8 +433,8 @@ config['admin_phones'] = ['16176425619']
 # Cache expiration time for exceptions for so that they don't trigger flood of reports
 config['exception_cache_time'] = 3600
 
-# Threshold high error rate per second for outage detection (currently 3 per minute)
-config['high_error_rate'] = 3.0 / 60.0
+# Threshold high error rate per second for outage detection (currently 5 per minute)
+config['high_error_rate'] = 5.0 / 60.0
 
 # Min number of observed errors threshold to qualify as an outage
 config['min_outage_errors'] = 10
