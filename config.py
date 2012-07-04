@@ -103,6 +103,7 @@ config['flight_fields'] = [
 
 # Fields to send for an Airport in the JSON response
 config['airport_fields'] = [
+    'name',
     'bagClaim',
     'city',
     'country',
