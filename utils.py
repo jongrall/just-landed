@@ -540,8 +540,9 @@ def send_sms(to, body, from_phone=config['twilio']['just_landed_phone']):
 
 def sms_alert_admin(message):
     """Send an SMS alert to the admins. Intended purpose: report 500 errors."""
-    for phone in config['admin_phones']:
-        send_sms(to=phone, body=message)
+    if on_production():
+        for phone in config['admin_phones']:
+            send_sms(to=phone, body=message)
 
 def sms_report_exception(exception):
     """Alert admins to 500 errors via SMS at most once every 30 mins for
@@ -551,7 +552,6 @@ def sms_report_exception(exception):
     traceback_as_string = traceback.format_exc()
     exception_memcache_key = 'exception_%s' % adler32(traceback_as_string)
 
-    #if on_production() and not memcache.get(exception_memcache_key):
     if not memcache.get(exception_memcache_key):
         memcache.set(exception_memcache_key, exception, config['exception_cache_time'])
         sms_alert_admin("[%s] Just Landed %s\n%s" %

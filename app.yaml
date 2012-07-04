@@ -41,12 +41,6 @@ handlers:
   login: admin
   secure: always
 
-# Exception reporting
-- url: /_ereporter.*
-  script: lib.ereporter.report_generator.application
-  login: admin
-  secure: always
-
 # Everything else
 - url: /.*
   script: main.app

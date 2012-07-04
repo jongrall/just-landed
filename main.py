@@ -25,15 +25,11 @@ from google.appengine.runtime.apiproxy_errors import (OverQuotaError,
 
 # Optimization: path prefix speeds up request routing
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
-from lib import ereporter
 
 from custom_exceptions import *
 from config import config, on_development, on_staging, google_analytics_account
 import utils
 
-# Ereporter doesn't work well with the development server
-if not on_development():
-    ereporter.register_logger()
 Route = webapp.Route
 
 # Optimization: allow browsers to cache content indefinitely, use version string
@@ -109,7 +105,7 @@ class BaseHandler(webapp.RequestHandler):
             if gae_outage:
                 utils.try_reporting_outage(disabled_services)
 
-            # Logged exceptions get automatically picked up by ereporter
+            # Log exceptions
             logging.exception(exception)
 
         # Use response status to indicate to clients what happened

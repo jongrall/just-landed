@@ -22,8 +22,3 @@ cron:
   - description: outage over detection
     url: /cron/detect_finished_outages
     schedule: every 5 minutes
-
-  # Sends admins an email digest of any exceptions occurring in the last day
-  - description: daily exception report
-    url: /_ereporter?sender=webmaster@getjustlanded.com&versions=latest
-    schedule: every day 05:00
