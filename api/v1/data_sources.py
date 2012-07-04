@@ -287,7 +287,7 @@ class FlightAwareSource (FlightDataSource):
             # Convert aircraft type
             flight.aircraft_type = aircraft_types.type_to_major_type(data.get('aircraftType'))
 
-            # Clean up airport names
+            # Clean up airport names (take FlightAware's, dump ours)
             flight.origin.name = utils.proper_airport_name(data['originName'])
             flight.destination.name = utils.proper_airport_name(data['destinationName'])
 
