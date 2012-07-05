@@ -64,7 +64,7 @@ class UntrackOldFlightsWorker(BaseHandler):
                                                 _full=True,
                                                 _scheme=url_scheme)
                     ctx = ndb.get_context()
-                    report_event(reporting.UNTRACKED_OLD_FLIGHT)
+                    # report_event(reporting.UNTRACKED_OLD_FLIGHT)
 
                     @ndb.tasklet
                     def user_cbk(u_key):
