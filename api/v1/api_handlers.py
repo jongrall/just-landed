@@ -43,8 +43,7 @@ class SearchHandler(AuthenticatedAPIHandler):
         This handler responds to the client using JSON.
 
         """
-        sanitized_f_num = utils.sanitize_flight_number(flight_number)
-        if not utils.valid_flight_number(sanitized_f_num):
+        if not utils.valid_flight_number(flight_number):
             raise InvalidFlightNumberException(flight_number)
 
         try:
@@ -249,8 +248,13 @@ class AlertWorker(BaseHandler):
         if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
             return
 
-        alert_body = json.loads(self.request.body)
-        assert isinstance(alert_body, dict)
+        try:
+            alert_body = json.loads(self.request.body)
+            assert isinstance(alert_body, dict)
+        except:
+            logging.info(self.request.body)
+            raise InvalidAlertCallbackException()
+
         yield source.process_alert(alert_body, self)
 
 

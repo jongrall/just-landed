@@ -191,7 +191,7 @@ def is_trusted_flightaware_host(host_ip):
 def fa_flight_ete_to_duration(filed_ete):
     flight_duration = filed_ete.split(':')
     if len(flight_duration) < 2: # Safeguard against bad data
-        return 0
+        raise ValueError()
     return (int(flight_duration[0] or 0) * 3600) + (int(flight_duration[1] or 0) * 60)
 
 def is_old_fa_flight(raw_fa_flight_data):
@@ -222,15 +222,8 @@ def is_old_fa_flight(raw_fa_flight_data):
 # Flight number format is xx(a)n(n)(n)(n)(a)
 FLIGHT_NUMBER_RE = re.compile('\A[A-Z0-9]{2}[A-Z]{0,1}[0-9]{1,4}[A-Z]{0,1}\Z')
 AIRLINE_CODE_RE = re.compile('\A[A-Z0-9]{2}[A-Z]{0,1}')
-
-def valid_flight_number(f_num):
-    """Tests whether the argument is a valid flight number."""
-    f_num = f_num.upper().replace(' ', '')
-    matching_nums = FLIGHT_NUMBER_RE.findall(f_num)
-    if len(matching_nums):
-        return matching_nums[0]
-    else:
-        return False
+IATA_CODE_RE = re.compile('\A[A-Z0-9]{2}\Z')
+ICAO_CODE_RE = re.compile('\A[A-Z0-9]{3}\Z')
 
 def sanitize_flight_number(f_num):
     """Cleans up a flight number - strips leading zeros from flight number, extra
@@ -249,6 +242,15 @@ def sanitize_flight_number(f_num):
         chars.append(c)
     return ''.join(chars)
 
+def valid_flight_number(f_num):
+    """Tests whether the argument is a valid flight number."""
+    f_num_san = sanitize_flight_number(f_num)
+    matching_nums = FLIGHT_NUMBER_RE.findall(f_num_san)
+    if len(matching_nums):
+        return matching_nums[0]
+    else:
+        return False
+
 def translate_flight_number(f_num):
     if valid_flight_number(f_num):
         f_num_san = sanitize_flight_number(f_num)
@@ -257,7 +259,11 @@ def translate_flight_number(f_num):
             matching_code = matched_code.group(0)
             translated_code = airline_code_mapping.get(matching_code)
             if translated_code:
-                return translated_code + f_num_san[len(matching_code):]
+                new_f_num = translated_code + f_num_san[len(matching_code):]
+                if valid_flight_number(new_f_num):
+                    return new_f_num
+                else:
+                    return None
     return None
 
 def is_valid_icao(icao_code):
@@ -280,13 +286,12 @@ def is_valid_fa_alert_body(alert_body):
     """Tests whether a FlightAware alert body is valid."""
     if not isinstance(alert_body, dict):
         return False
-    event_code = alert_body.get('eventcode')
-    flight_data = alert_body.get('flight')
-    flight_id = flight_data.get('faFlightID')
-    origin = flight_data.get('origin')
-    destination = flight_data.get('destination')
-    return (is_valid_fa_flight_id(flight_id) and isinstance(event_code, basestring)
-        and len(event_code) > 0 and origin and destination)
+    event_code = alert_body.get('eventcode', None)
+    alert_id = alert_body.get('alert_id', None)
+    flight_id = alert_body.get('flight',{}).get('faFlightID', None)
+    return (is_valid_fa_flight_id(flight_id) and
+            isinstance(event_code, basestring) and
+            alert_id is not None)
 
 def proper_airport_name(name):
     """Replaces 'International' with 'Int'l.' in an airport name."""

@@ -260,47 +260,60 @@ class FlightAwareSource (FlightDataSource):
                             validate_certificate=full_track_url.startswith('https'))
 
     @ndb.tasklet
-    def raw_flight_data_to_flight(self, data, sanitized_flight_num):
-        if data and utils.valid_flight_number(sanitized_flight_num):
-            # Keep a subset of the response fields
-            fields = config['flightaware']['flight_info_fields']
-            data = utils.sub_dict_strict(data, fields)
+    def raw_flight_data_to_flight(self, data, sanitized_flight_num, return_none_on_error=False):
+        try:
+            if data and utils.valid_flight_number(sanitized_flight_num):
+                # Keep a subset of the response fields
+                fields = config['flightaware']['flight_info_fields']
+                data = utils.sub_dict_strict(data, fields)
 
-            # Map the response dict keys
-            data = utils.map_dict_keys(data, self.api_key_mapping)
+                # Map the response dict keys
+                data = utils.map_dict_keys(data, self.api_key_mapping)
 
-            origin_code = data['origin']
-            destination_code = data['destination']
+                origin_code = data['origin']
+                destination_code = data['destination']
 
-            # Optimization: fetch in parallel
-            origin_info, destination_info = yield self.airport_info(origin_code, sanitized_flight_num), self.airport_info(destination_code, sanitized_flight_num)
-            origin, destination = Origin(origin_info), Destination(destination_info)
+                # Optimization: fetch in parallel
+                origin_info, destination_info = yield self.airport_info(origin_code, sanitized_flight_num), self.airport_info(destination_code, sanitized_flight_num)
+                origin, destination = Origin(origin_info), Destination(destination_info)
 
-            flight = Flight(data)
-            flight.flight_number = sanitized_flight_num
-            flight.origin = origin
-            flight.destination = destination
+                flight = Flight(data)
+                flight.flight_number = sanitized_flight_num
+                flight.origin = origin
+                flight.destination = destination
 
-            # Convert flight duration to integer number of seconds
-            flight.scheduled_flight_duration = utils.fa_flight_ete_to_duration(data['scheduledFlightDuration'])
+                # Convert flight duration to integer number of seconds
+                ete = data['scheduledFlightDuration']
+                try:
+                    flight.scheduled_flight_duration = utils.fa_flight_ete_to_duration(ete)
+                except ValueError:
+                    raise FlightDurationUnknown(flight_id=flight.flight_id, ete=ete)
 
-            # Convert aircraft type
-            flight.aircraft_type = aircraft_types.type_to_major_type(data.get('aircraftType'))
+                # Convert aircraft type
+                flight.aircraft_type = aircraft_types.type_to_major_type(data.get('aircraftType'))
 
-            # Clean up airport names (take FlightAware's, dump ours)
-            flight.origin.name = utils.proper_airport_name(data['originName'])
-            flight.destination.name = utils.proper_airport_name(data['destinationName'])
+                # Clean up airport names (take FlightAware's, dump ours)
+                flight.origin.name = utils.proper_airport_name(data['originName'])
+                flight.destination.name = utils.proper_airport_name(data['destinationName'])
 
-            # Dispose of states e.g. 'San Francisco, CA' => 'San Francisco'
-            flight.origin.city = flight.origin.city.split(', ')[0]
-            flight.destination.city = flight.destination.city.split(', ')[0]
+                # Dispose of states e.g. 'San Francisco, CA' => 'San Francisco'
+                flight.origin.city = flight.origin.city.split(', ')[0]
+                flight.destination.city = flight.destination.city.split(', ')[0]
 
-            raise tasklets.Return(flight)
+                raise tasklets.Return(flight)
+        except (FlightDurationUnknown, AirportNotFoundException) as e:
+            if return_none_on_error:
+                logging.exception(e) # Report it, but recover gracefully
+                utils.sms_report_exception(e)
+                raise tasklets.Return()
+            else:
+                raise # Re-raise the exception
 
     @ndb.tasklet
     def airport_info(self, airport_code, flight_num=''):
         """Looks up information about an airport using its ICAO or IATA code."""
-        assert utils.is_valid_icao(airport_code) or utils.is_valid_iata(airport_code)
+        if not (utils.is_valid_icao(airport_code) or utils.is_valid_iata(airport_code)):
+            raise AirportNotFoundException(airport_code, flight_num)
 
         # Optimization: check the DB first (faster, cheaper than FA)
         airport = ((yield Airport.get_by_icao_code(airport_code)) or
@@ -533,8 +546,15 @@ class FlightAwareSource (FlightDataSource):
             # Filter out old flights before conversion to Flight
             flight_data = [data for data in flight_data if not utils.is_old_fa_flight(data)]
 
-            # Convert raw flight data to instances of Flight
-            flights = yield [self.raw_flight_data_to_flight(data, sanitized_f_num) for data in flight_data]
+            # Convert raw flight data to instances of Flight, return none on error
+            # prevents a single flight with bad data from spoiling whole bunch of results
+            flights = yield [self.raw_flight_data_to_flight(data, sanitized_f_num, return_none_on_error=True)
+                                for data in flight_data]
+            flights = [f for f in flights if f is not None] # Filter out bad results
+
+            # If there are no good flights left, raise FlightNotFound
+            if len(flights) == 0:
+                raise FlightNotFoundException(sanitized_f_num)
 
             # Optimization: cache flight info so /track doesn't have cache miss on selecting a flight
             flights_to_cache = {}
@@ -562,13 +582,13 @@ class FlightAwareSource (FlightDataSource):
 
     @ndb.tasklet
     def process_alert(self, alert_body, request):
-        assert utils.is_valid_fa_alert_body(alert_body)
-        alert_id = alert_body.get('alert_id')
-        event_code = alert_body.get('eventcode')
-        flight_data = alert_body.get('flight')
-        flight_id = flight_data.get('faFlightID')
-        origin = flight_data.get('origin')
-        destination = flight_data.get('destination')
+        if not utils.is_valid_fa_alert_body(alert_body):
+            logging.info(alert_body)
+            raise InvalidAlertCallbackException()
+
+        alert_id = alert_body['alert_id']
+        event_code = alert_body['eventcode']
+        flight_id = alert_body['flight']['faFlightID']
         report_event(reporting.FA_FLIGHT_ALERT_CALLBACK)
 
         # Cache freshness: clear memcache keys for flight info
@@ -584,8 +604,16 @@ class FlightAwareSource (FlightDataSource):
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
 
             # Optimization: parallel fetch
-            alerted_flight, stored_flight = yield (self.flight_info(flight_id=flight_id, flight_number=flight_num),
-                                                    FlightAwareTrackedFlight.get_flight_by_id(flight_id))
+            alerted_flight = None
+            stored_flight = None
+
+            if event_code == 'cancelled':
+                # Canceled flights can't be looked up
+                stored_flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
+                alerted_flight = stored_flight # Use the stored flight data
+            else:
+                alerted_flight, stored_flight = yield (self.flight_info(flight_id=flight_id, flight_number=flight_num),
+                                                        FlightAwareTrackedFlight.get_flight_by_id(flight_id))
 
             if alerted_flight and stored_flight:
                 # Reconstruct the flight from the datastore so we can compare before/after alert

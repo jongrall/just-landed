@@ -49,6 +49,16 @@ class AirportNotFoundException(Exception):
         self.message = 'Airport not found: %s for flight %s' % (airport, flight_num)
         self.code = 404 # Not found
 
+class FlightDurationUnknown(Exception):
+    def __init__(self, flight_id='', ete=''):
+        self.message = 'Unknown duration %s for flight %s' % (ete, flight_id)
+        self.code = 404 # Not found
+
+class InvalidAlertCallbackException(Exception):
+    def __init__(self):
+        self.message = 'Invalid alert callback.'
+        self.code = 400 # Bad request
+
 class OldFlightException(Exception):
     def __init__(self, flight_number='', flight_id=''):
         self.message = 'Old flight: %s %s' % (flight_number, flight_id)

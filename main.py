@@ -81,7 +81,9 @@ class BaseHandler(webapp.RequestHandler):
                          MalformedDrivingDataException,
                          DrivingAPIQuotaException,
                          DrivingTimeUnauthorizedException,
-                         AirportNotFoundException)
+                         AirportNotFoundException,
+                         FlightDurationUnknown,
+                         InvalidAlertCallbackException)
 
         unrecoverable_errors = (OverQuotaError,
                                 CapabilityDisabledError,
