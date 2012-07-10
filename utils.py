@@ -268,11 +268,11 @@ def translate_flight_number(f_num):
 
 def is_valid_icao(icao_code):
     """Tests whether the argument could be a valid ICAO airport code."""
-    return isinstance(icao_code, basestring) and len(icao_code) == 4
+    return isinstance(icao_code, basestring) and ICAO_CODE_RE.match(icao_code)
 
 def is_valid_iata(iata_code):
     """Tests whether the argument could be a valid IATA airport code."""
-    return isinstance(iata_code, basestring) and len(iata_code) == 3
+    return isinstance(iata_code, basestring) and IATA_CODE_RE.match(iata_code)
 
 def is_valid_flight_id(flight_id):
     """Forgiving test for non-empty flight id."""
@@ -300,7 +300,7 @@ def proper_airport_name(name):
 
 def flight_num_from_fa_flight_id(flight_id):
     """Extracts a flight number from a FlightAware flight id."""
-    if flight_id:
+    if is_valid_fa_flight_id(flight_id):
         return flight_id.split('-')[0]
 
 def too_close_or_far(orig_lat, orig_lon, dest_lat, dest_lon):

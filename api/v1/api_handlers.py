@@ -138,7 +138,7 @@ class TrackHandler(AuthenticatedAPIHandler):
         flight = yield source.flight_info(flight_id=flight_id,
                                           flight_number=flight_number)
 
-        # FIXME: Assume iOS device for now
+        # FIXME: Assumes iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
         push_token = self.request.params.get('push_token')
 
@@ -225,7 +225,7 @@ class UntrackHandler(AuthenticatedAPIHandler):
         if not utils.is_valid_flight_id(flight_id):
             raise FlightNotFoundException(flight_id)
 
-        # FIXME: Assume iOS device for now
+        # FIXME: Assumes iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
         self.respond({'untracked' : flight_id})
 
