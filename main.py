@@ -139,6 +139,8 @@ class StaticHandler(BaseHandler):
         context.update(template_context)
         try:
             self.response.write(template.render(template_path, context))
+            self.response.headers.add_header('Cache-Control','public, max-age=7200') # 2hr cache
+            self.response.headers.add_header('Pragma','Public')
         except Exception as e:
             handle_404(self.request, self.response, e)
 

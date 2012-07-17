@@ -17,11 +17,13 @@ libraries:
 - name: webob
   version: "1.1.1"
 
+default_expiration: "14d"
+
 handlers:
 # robots.txt and favicon.ico
 - url: /(robots\.txt|favicon\.ico)
   static_files: static/\1
-  expiration: "30d"
+  expiration: "14d"
   upload: static/(.*)
 
 # Static content directory
