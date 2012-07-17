@@ -7,23 +7,23 @@
 {% block clouds_content %}
     <div class="centered clear">
         <!-- iPHONE PREVIEW -->
-        <div id="iphone" style="background-image: url('/static/images/homepage/iphone.png?v={{ version }}');">
-            <div id="iphone-glare" style="background-image: url('/static/images/homepage/iphone_glare.png?v={{ version }}');"></div>
-            <video width="280" height="420" autoplay="autoplay" loop="loop" poster="/static/movies/poster.jpg?v={{ version }}">
-                <source src="/static/movies/jl_screencast.mp4?v={{ version }}" type="video/mp4" />
-                <source src="/static/movies/jl_screencast.ogv?v={{ version }}" type="video/ogg" />
+        <div id="iphone" style="background-image: url('/static/images/homepage/{{ version }}/iphone.png');">
+            <div id="iphone-glare" style="background-image: url('/static/images/homepage/{{ version }}/iphone_glare.png');"></div>
+            <video width="280" height="420" preload="auto" autoplay="autoplay" loop="loop" poster="/static/movies/{{ version }}/poster.jpg">
+                <source src="/static/movies/{{ version }}/jl_screencast.mp4" type="video/mp4" />
+                <source src="/static/movies/{{ version }}/jl_screencast.ogv" type="video/ogg" />
             </video>
 
             <!-- SCREENSHOT FALLBACK -->
-            <img src="/static/images/homepage/app_screenshot.png?v={{ version }}" width="281" height="421" style="display: none;" />
+            <img src="/static/images/homepage/{{ version }}/app_screenshot.png" width="281" height="421" style="display: none;" />
         </div>
 
         <!-- APP DETAILS -->
         <div id="details">
-            <h1 id="logo"><a href="/" style="background-image: url('/static/images/logo.png?v={{ version }}');">Just Landed</a></h1>
-            <h2 id="tagline" style="background-image: url('/static/images/tagline.png?v={{ version }}');">&ellip;getting you there on time</h2>
+            <h1 id="logo"><a href="/" style="background-image: url('/static/images/{{ version }}/logo.png');">Just Landed</a></h1>
+            <h2 id="tagline" style="background-image: url('/static/images/{{ version }}/tagline.png');">&ellip;getting you there on time</h2>
 
-            <a href="http://itunes.com/apps/littledetailsllc/justlanded" target="_blank" class="app-store-button"><img src="/static/images/homepage/app_store_button_text_retina.png?v={{ version }}" width="350" height="67" alt="Download!" /></a>
+            <a href="http://itunes.com/apps/littledetailsllc/justlanded" target="_blank" class="app-store-button"><img src="/static/images/homepage/{{ version }}/app_store_button_text_retina.png" width="350" height="67" alt="Download!" /></a>
         </div>
     </div>
 {% endblock %}

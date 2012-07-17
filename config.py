@@ -77,6 +77,9 @@ config['touchdown_to_terminal'] = 540
 # Time to allow from tires down landing to baggage claim (international)
 config['touchdown_to_terminal_intl'] = 1740
 
+# Maximum number of results returned by /search
+config['max_lookup_results'] = 45
+
 # Supported flight data sources
 config['data_sources'] = Enum([
     'FlightAware',

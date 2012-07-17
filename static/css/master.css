@@ -75,7 +75,7 @@ ul li {
 #grid {
     display: none;
     position: absolute;
-    background: url('../images/grid860.png') repeat-y top left;
+    background: url('../../images/grid860.png') repeat-y top left;
     width: 770px;
     height: 100%;
     opacity: 0.3;

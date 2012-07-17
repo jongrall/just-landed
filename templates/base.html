@@ -1,19 +1,19 @@
 <!doctype html>
 <html>
 <head>
-    <title>{% block page_title%}Just Landed &nbsp; &middot; &nbsp; Making airport pickup easy{% endblock %}</title>
+    <title>{% block page_title%}Just Landed&nbsp;&nbsp;&middot;&nbsp;&nbsp;Making airport pickup easy{% endblock %}</title>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
     <meta property="og:title" content="Just Landed - Making airport pickup easy." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="http://www.getjustlanded.com/">
-    <meta property="og:image" content="http://www.getjustlanded.com/static/images/just_landed_lg.png?v={{ version }}" />
+    <meta property="og:image" content="http://www.getjustlanded.com/static/images/{{ version }}/just_landed_lg.png" />
     <meta property="og:site_name" content="Just Landed" />
     <meta property="og:description" content="Just Landed makes it easy to pick someone up at the airport on time - just enter their flight number and we'll alert you when you need to leave for the airport." />
     <meta name="description" content="Just Landed makes it easy to pick someone up at the airport on time - just enter their flight number and we'll alert you when you need to leave for the airport." />
     <meta name="keywords" content="flight track, track flight, flight alert, airport, landing, arrivals, airport pickup, airport reminder, pickup" />
 
     <!-- CSS -->
-    <link rel="stylesheet" type="text/css" href="/static/css/master.css?v={{ version }}" />
+    <link rel="stylesheet" type="text/css" href="/static/css/{{ version }}/master.css" />
     <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Open+Sans:400,600" />
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
@@ -21,7 +21,7 @@
     <!-- JAVASCRIPT -->
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
     <script type="text/javascript">Rot13={map:null,convert:function(a){Rot13.init();var b="";for(i=0;i<a.length;i++){var c=a.charAt(i);b+=c>="A"&&c<="Z"||c>="a"&&c<="z"?Rot13.map[c]:c}return b},init:function(){if(Rot13.map!=null)return;var a=new Array;var b="abcdefghijklmnopqrstuvwxyz";for(i=0;i<b.length;i++)a[b.charAt(i)]=b.charAt((i+13)%26);for(i=0;i<b.length;i++)a[b.charAt(i).toUpperCase()]=b.charAt((i+13)%26).toUpperCase();Rot13.map=a},write:function(a){document.write(Rot13.convert(a))}}</script>
-    <script type="text/javascript" src="/static/javascript/modernizer.js?v={{ version }}"></script>
+    <script type="text/javascript" src="/static/javascript/{{ version }}/modernizer.js"></script>
     <script type="text/javascript">
         var _gaq = _gaq || [];
         _gaq.push(['_setAccount', '{{ ga_account }}']);
@@ -58,7 +58,7 @@
     {% endblock %}
 
     <!-- JAVASCRIPT -->
-    <script type="text/javascript" src="/static/javascript/master.js?v={{ version }}"></script>
+    <script type="text/javascript" src="/static/javascript/{{ version }}/master.js"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -56,6 +56,7 @@ FLIGHT_STATES = config['flight_states']
 DATA_SOURCES = config['data_sources']
 debug_cache = on_development() and False
 debug_alerts = on_development() and False
+memcache_client = memcache.Client()
 
 ###############################################################################
 """Flight Data Sources"""
@@ -259,8 +260,7 @@ class FlightAwareSource (FlightDataSource):
                             deadline=120,
                             validate_certificate=full_track_url.startswith('https'))
 
-    @ndb.tasklet
-    def raw_flight_data_to_flight(self, data, sanitized_flight_num, return_none_on_error=False):
+    def raw_flight_data_to_flight(self, data, sanitized_flight_num, airport_info={}, return_none_on_error=False):
         try:
             if data and utils.valid_flight_number(sanitized_flight_num):
                 # Keep a subset of the response fields
@@ -274,7 +274,13 @@ class FlightAwareSource (FlightDataSource):
                 destination_code = data['destination']
 
                 # Optimization: fetch in parallel
-                origin_info, destination_info = yield self.airport_info(origin_code, sanitized_flight_num), self.airport_info(destination_code, sanitized_flight_num)
+                origin_info = airport_info.get(origin_code)
+                destination_info = airport_info.get(destination_code)
+
+                # Give up if the origin or destination is missing
+                if origin_info is None or destination_info is None:
+                    return
+
                 origin, destination = Origin(origin_info), Destination(destination_info)
 
                 flight = Flight(data)
@@ -300,87 +306,95 @@ class FlightAwareSource (FlightDataSource):
                 flight.origin.city = flight.origin.city.split(', ')[0]
                 flight.destination.city = flight.destination.city.split(', ')[0]
 
-                raise tasklets.Return(flight)
-        except (FlightDurationUnknown, AirportNotFoundException) as e:
+                return flight
+
+        except FlightDurationUnknown as e:
             if return_none_on_error:
                 logging.exception(e) # Report it, but recover gracefully
                 utils.sms_report_exception(e)
-                raise tasklets.Return()
+                return
             else:
                 raise # Re-raise the exception
 
     @ndb.tasklet
-    def airport_info(self, airport_code, flight_num=''):
+    def airport_info(self, airport_code, flight_num='', raise_not_found=True):
         """Looks up information about an airport using its ICAO or IATA code."""
-        if not (utils.is_valid_icao(airport_code) or utils.is_valid_iata(airport_code)):
-            raise AirportNotFoundException(airport_code, flight_num)
+        try:
+            if not (utils.is_valid_icao(airport_code) or utils.is_valid_iata(airport_code)):
+                raise AirportNotFoundException(airport_code, flight_num)
 
-        # Optimization: check the DB first (faster, cheaper than FA)
-        airport = ((yield Airport.get_by_icao_code(airport_code)) or
-                    (yield Airport.get_by_iata_code(airport_code)))
+            # Optimization: check the DB first (faster, cheaper than FA)
+            airport = ((yield Airport.get_by_icao_code(airport_code)) or
+                        (yield Airport.get_by_iata_code(airport_code)))
 
-        if airport:
-            raise tasklets.Return(airport.dict_for_client())
+            if airport:
+                raise tasklets.Return(airport.dict_for_client())
 
-        elif utils.is_valid_icao(airport_code):
-            logging.warning('AIRPORT NOT IN DB: %s', airport_code)
+            elif utils.is_valid_icao(airport_code):
+                logging.warning('AIRPORT NOT IN DB: %s', airport_code)
 
-            # Check FlightAware for the AiportInfo
-            airport_cache_key = FlightAwareSource.airport_info_cache_key(airport_code)
+                # Check FlightAware for the AiportInfo
+                airport_cache_key = FlightAwareSource.airport_info_cache_key(airport_code)
 
-            # Optimization: check memcache for the airport info
-            airport = memcache.get(airport_cache_key)
+                # Optimization: check memcache for the airport info
+                airport = memcache.get(airport_cache_key)
 
-            if airport is not None:
-                if debug_cache:
-                    logging.info('AIRPORT INFO CACHE HIT')
-                raise tasklets.Return(airport)
-            else:
-                if debug_cache:
-                    logging.info('AIRPORT INFO CACHE MISS')
-
-                try:
-                    result = yield self.conn.get_json('/AirportInfo',
-                                                    args={'airportCode':airport_code})
-                except DownloadError:
-                    raise FlightAwareUnavailableError()
-
-                # report_event(reporting.FA_AIRPORT_INFO)
-
-                if result.get('error'):
-                    raise AirportNotFoundException(airport_code, flight_num)
-                else:
-                    airport = result['AirportInfoResult']
-
-                    # Filter out fields we don't want
-                    fields = config['flightaware']['airport_info_fields']
-                    airport = utils.sub_dict_strict(airport, fields)
-
-                    # Map field names
-                    airport = utils.map_dict_keys(airport, self.api_key_mapping)
-
-                    # Add ICAO code back in (we don't have IATA)
-                    airport['icaoCode'] = airport_code
-                    airport['iataCode'] = None
-
-                    # Add placeholder altitude (AirportInfo doesn't support it)
-                    airport['altitude'] = 0
-
-                    # Make sure the name is well formed
-                    airport['name'] = utils.proper_airport_name(airport['name'])
-
-                    # Round lat & long
-                    airport['latitude'] = utils.round_coord(airport['latitude'])
-                    airport['longitude'] = utils.round_coord(airport['longitude'])
-
-                    if not memcache.set(airport_cache_key, airport):
-                        logging.error("Unable to cache airport info!")
-                    elif debug_cache:
-                        logging.info('AIRPORT INFO CACHE SET')
-
+                if airport is not None:
+                    if debug_cache:
+                        logging.info('AIRPORT INFO CACHE HIT')
                     raise tasklets.Return(airport)
-        else:
-            raise AirportNotFoundException(airport_code, flight_num)
+                else:
+                    if debug_cache:
+                        logging.info('AIRPORT INFO CACHE MISS')
+
+                    try:
+                        result = yield self.conn.get_json('/AirportInfo',
+                                                        args={'airportCode':airport_code})
+                    except DownloadError:
+                        raise FlightAwareUnavailableError()
+
+                    # report_event(reporting.FA_AIRPORT_INFO)
+
+                    if result.get('error'):
+                        raise AirportNotFoundException(airport_code, flight_num)
+                    else:
+                        airport = result['AirportInfoResult']
+
+                        # Filter out fields we don't want
+                        fields = config['flightaware']['airport_info_fields']
+                        airport = utils.sub_dict_strict(airport, fields)
+
+                        # Map field names
+                        airport = utils.map_dict_keys(airport, self.api_key_mapping)
+
+                        # Add ICAO code back in (we don't have IATA)
+                        airport['icaoCode'] = airport_code
+                        airport['iataCode'] = None
+
+                        # Add placeholder altitude (AirportInfo doesn't support it)
+                        airport['altitude'] = 0
+
+                        # Make sure the name is well formed
+                        airport['name'] = utils.proper_airport_name(airport['name'])
+
+                        # Round lat & long
+                        airport['latitude'] = utils.round_coord(airport['latitude'])
+                        airport['longitude'] = utils.round_coord(airport['longitude'])
+
+                        if not memcache.set(airport_cache_key, airport):
+                            logging.error("Unable to cache airport info!")
+                        elif debug_cache:
+                            logging.info('AIRPORT INFO CACHE SET')
+
+                        raise tasklets.Return(airport)
+            else:
+                raise AirportNotFoundException(airport_code, flight_num)
+        except AirportNotFoundException as e:
+            if raise_not_found:
+                raise # Re-raise
+            else:
+                raise tasklets.Return() # Return none
+
 
     @ndb.tasklet
     def register_alert_endpoint(self, **kwargs):
@@ -477,7 +491,12 @@ class FlightAwareSource (FlightDataSource):
 
                 # First flight returned is the match
                 flight_data = flight_data['FlightInfoExResult']['flights'][0]
-                flight = yield self.raw_flight_data_to_flight(flight_data, sanitized_f_num)
+
+                # Get information on all the airports involved
+                airport_codes = [flight_data['origin'], flight_data['destination']]
+                airports = yield [self.airport_info(code, sanitized_f_num) for code in airport_codes]
+                airport_info = dict(zip(airport_codes, airports))
+                flight = self.raw_flight_data_to_flight(flight_data, sanitized_f_num, airport_info)
 
             # We now have flight and airline_data
             fields = config['flightaware']['airline_flight_info_fields']
@@ -529,26 +548,59 @@ class FlightAwareSource (FlightDataSource):
             if debug_cache:
                 logging.info('LOOKUP CACHE MISS')
 
-            try:
-                flight_data = yield self.conn.get_json('/FlightInfoEx',
-                                            args={'ident': sanitized_f_num,
-                                                  'howMany': 15})
-            except DownloadError:
-                raise FlightAwareUnavailableError()
+            flight_data = []
+            offset = 0
 
-            # report_event(reporting.FA_FLIGHT_INFO_EX)
+            while len(flight_data) % 15 == 0 and len(flight_data) < config['max_lookup_results']:
+                try:
+                    data = yield self.conn.get_json('/FlightInfoEx',
+                                                    args={'ident': sanitized_f_num,
+                                                    'howMany': 15,
+                                                    'offset' : offset})
+                except DownloadError:
+                    raise FlightAwareUnavailableError()
 
-            if flight_data.get('error'):
-                raise FlightNotFoundException(sanitized_f_num)
+                # report_event(reporting.FA_FLIGHT_INFO_EX)
 
-            flight_data = flight_data['FlightInfoExResult']['flights']
+                if data.get('error'):
+                    raise FlightNotFoundException(sanitized_f_num)
 
-            # Filter out old flights before conversion to Flight
-            flight_data = [data for data in flight_data if not utils.is_old_fa_flight(data)]
+                data = data['FlightInfoExResult']['flights']
 
-            # Convert raw flight data to instances of Flight, return none on error
-            # prevents a single flight with bad data from spoiling whole bunch of results
-            flights = yield [self.raw_flight_data_to_flight(data, sanitized_f_num, return_none_on_error=True)
+                # Filter out old flights before conversion to Flight
+                current_flights = [f for f in data if not utils.is_old_fa_flight(f)]
+                flight_data.extend(current_flights)
+
+                # If we have some old flights, or less than 15 flights, we're done
+                if len(current_flights) < 15:
+                    break
+                else:
+                    offset += 15
+
+            # Get information on all the airports involved
+            airport_codes = set()
+            for data in flight_data:
+                airport_codes.add(data['origin'])
+                airport_codes.add(data['destination'])
+            airport_codes = list(airport_codes)
+
+            # Optimization: yield all the airports in parallel, don't raise on not found
+            airports = yield [self.airport_info(code, sanitized_f_num, raise_not_found=False)
+                                for code in airport_codes]
+            airport_info = dict(zip(airport_codes, airports))
+
+            # Detect missing airports and report them
+            for code, airport in airport_info.iteritems():
+                if airport is None:
+                    e = AirportNotFoundException(code, sanitized_f_num)
+                    logging.exception(e)
+                    utils.sms_report_exception(e)
+
+            # Convert raw flight data to instances of Flight
+            flights = [self.raw_flight_data_to_flight(data,
+                                                      sanitized_f_num,
+                                                      airport_info,
+                                                      return_none_on_error=True)
                                 for data in flight_data]
             flights = [f for f in flights if f is not None] # Filter out bad results
 
@@ -562,12 +614,10 @@ class FlightAwareSource (FlightDataSource):
                 cache_key = FlightAwareSource.flight_result_cache_key(f.flight_id)
                 flights_to_cache[cache_key] = f
 
-            # Optimization: set multiple memcache keys in one rpc
-            if memcache.set_multi(flights_to_cache, # Return value of set_multi is list of keys NOT set
-                time=config['flightaware']['flight_from_lookup_cache_time']):
-                logging.error('Unable to cache some flight info on lookup.')
-            elif debug_cache:
-                logging.info('CACHED %d FLIGHTS FROM LOOKUP', len(flights))
+            # Optimization: set multiple memcache keys in one async rpc
+            cache_flights_rpc = memcache_client.set_multi_async(
+                flights_to_cache,
+                time=config['flightaware']['flight_from_lookup_cache_time'])
 
             # Sort by departure date (earliest first)
             flights.sort(key=lambda f: f.scheduled_departure_time)
@@ -577,6 +627,18 @@ class FlightAwareSource (FlightDataSource):
                 logging.error('Unable to cache lookup response!')
             elif debug_cache:
                 logging.info('LOOKUP CACHE SET')
+
+            def flights_cached_successfully():
+                result = cache_flights_rpc.get_result()
+                if result is None:
+                    return False
+                status_set = set(result.values())
+                return ('ERROR' not in status_set) and ('NOT_STORED' not in status_set)
+
+            if not flights_cached_successfully():
+                logging.error('Unable to cache some flight info on lookup.')
+            elif debug_cache:
+                logging.info('CACHED %d FLIGHTS FROM LOOKUP', len(flights))
 
             raise tasklets.Return(flights)
 

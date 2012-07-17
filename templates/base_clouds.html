@@ -1,24 +1,24 @@
 {% extends "base.html" %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="/static/css/homepage.css?v={{ version }}" />
-    <link rel="stylesheet" media="only screen and (max-device-width: 480px)" href="/static/css/iphone.css?v={{ version }}" />
+    <link rel="stylesheet" href="/static/css/{{ version }}/homepage.css" />
+    <link rel="stylesheet" media="only screen and (max-device-width: 480px)" href="/static/css/{{ version }}/iphone.css" />
 {% endblock %}
 
 {% block page_content %}
     <!-- TOP CONTENT -->
     <div id="main-content">
-        <div class="clouds-foreground" style="background-image: url('/static/images/homepage/clouds_foreground.png?v={{ version }}');"></div>
-        <div class="clouds-midground" style="background-image: url('/static/images/homepage/clouds_midground.png?v={{ version }}');"></div>
-        
+        <div class="clouds-foreground" style="background-image: url('/static/images/homepage/{{ version }}/clouds_foreground.png');"></div>
+        <div class="clouds-midground" style="background-image: url('/static/images/homepage/{{ version }}/clouds_midground.png');"></div>
+
         <!-- Lots of nested divs because there's a lot of things happening behind the monolith iPhone -->
-        <div class="plane" style="background-image: url('/static/images/plane_contrail.png?v={{ version }}');">
-            <div class="clouds-background" style="background-image: url('/static/images/homepage/clouds_background_tall.png?v={{ version }}');">
+        <div class="plane" style="background-image: url('/static/images/{{ version }}/plane_contrail.png');">
+            <div class="clouds-background" style="background-image: url('/static/images/homepage/{{ version }}/clouds_background_tall.png');">
                 {% block clouds_content %}{% endblock %}
             </div>
         </div>
     </div>
-    
+
     {% block more_clouds_content %}{% endblock %}
 {% endblock %}
 
@@ -29,22 +29,22 @@
             // $('.clouds-foreground').css('background-position-x', '0').animate({ 'background-position-x': '-2250px' }, 90000, 'linear', moveForeground);
             $('.clouds-foreground').css('background-position', '0 100%').animate({ 'background-position': '-2250px' }, 90000, 'linear', moveForeground);
         }
-        
+
         function moveMidground() {
             // 2250px is the width of the clouds graphic. Does one whole loop before calling itself again to start again
             $('.clouds-midground').css('background-position', '0 100%').animate({ 'background-position': '-2250px' }, 150000, 'linear', moveMidground);
         }
-        
+
         function moveBackground() {
             $('.clouds-background').css('background-position', '0 100%').animate({ 'background-position': '-2250px' }, 300000, 'linear', moveBackground);
         }
-        
+
         $(document).ready(function() {
             // Clouds
             moveForeground();
             moveMidground();
             moveBackground();
-            
+
             // Plane in background
             $('.plane').delay(10000).css('background-position-x', '-1012px').animate({ 'background-position-x': '2024px' }, 140000, 'linear');
         });

@@ -18,6 +18,7 @@ if LIB_DIR not in sys.path:
   sys.path[0:0] = [LIB_DIR]
 
 from google.appengine.ext import webapp, ndb
+from google.appengine.api import memcache
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.runtime.apiproxy_errors import (OverQuotaError,
@@ -121,9 +122,20 @@ class BaseHandler(webapp.RequestHandler):
 
 class StaticHandler(BaseHandler):
     """Generic handler for static pages on the website driven by templates."""
-    def get(self, page_name="", context={}):
-        template_name = page_name
+    def static_response(self, content):
+        self.response.write(content)
+        self.response.headers['Cache-Control'] = 'public, max-age=7200' # 2hr cache
+        self.response.headers['Pragma'] = 'Public'
 
+    def get(self, page_name="", context={}):
+        # Optimization: use memcache to cache static page content
+        page_cache_key = '%s_%s' % (page_name, VERSION_CHKSM)
+        cached_page = memcache.get(page_cache_key)
+        if cached_page:
+            self.static_response(cached_page)
+            return
+
+        template_name = page_name
         if not page_name or page_name.count('index'):
             template_name = 'index.html'
             template_path = os.path.join(template_dir, template_name)
@@ -138,9 +150,9 @@ class StaticHandler(BaseHandler):
         # Add in the version context
         context.update(template_context)
         try:
-            self.response.write(template.render(template_path, context))
-            self.response.headers.add_header('Cache-Control','public, max-age=7200') # 2hr cache
-            self.response.headers.add_header('Pragma','Public')
+            rendered_content = template.render(template_path, context)
+            memcache.set(page_cache_key, rendered_content)
+            self.static_response(rendered_content)
         except Exception as e:
             handle_404(self.request, self.response, e)
 

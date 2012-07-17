@@ -1,5 +1,5 @@
 application: just-landed
-version: 1-2-8
+version: 1-2-9
 runtime: python27
 api_version: 1
 threadsafe: true
@@ -17,19 +17,23 @@ libraries:
 - name: webob
   version: "1.1.1"
 
-default_expiration: "14d"
-
 handlers:
 # robots.txt and favicon.ico
 - url: /(robots\.txt|favicon\.ico)
   static_files: static/\1
-  expiration: "14d"
+  expiration: "7d"
   upload: static/(.*)
 
-# Static content directory
-- url: /static
-  expiration: "14d"
-  static_dir: static
+# Static content
+- url: /static/(.*)/([^/]+)/([^/]+)
+  expiration: "7d"
+  static_files: static/\1/\3
+  upload: static/.*
+
+- url: /static/(.*)
+  expiration: "7d"
+  static_files: static/\1
+  upload: static/.*
 
 # Admin methods that require admin credentials
 - url: /admin/.*

@@ -4,13 +4,13 @@
 
 {% block extra_css %}
     {{ block.super }}
-    <link rel="stylesheet" href="/static/css/extras.css?v={{ version }}" />
+    <link rel="stylesheet" href="/static/css/{{ version }}/extras.css" />
 {% endblock %}
 
 {% block clouds_content %}
     <div class="centered clear">
         <div id="error">
-            <a href="/"><img src="/static/images/404.png?v={{ version }}" width="345" height="212" alt="404 Page Not Found" /></a>
+            <a href="/"><img src="/static/images/{{ version }}/404.png" width="345" height="212" alt="404 Page Not Found" /></a>
         </div>
     </div>
 {% endblock %}

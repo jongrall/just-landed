@@ -222,8 +222,8 @@ def is_old_fa_flight(raw_fa_flight_data):
 # Flight number format is xx(a)n(n)(n)(n)(a)
 FLIGHT_NUMBER_RE = re.compile('\A[A-Z0-9]{2}[A-Z]{0,1}[0-9]{1,4}[A-Z]{0,1}\Z')
 AIRLINE_CODE_RE = re.compile('\A[A-Z0-9]{2}[A-Z]{0,1}')
-IATA_CODE_RE = re.compile('\A[A-Z0-9]{2}\Z')
-ICAO_CODE_RE = re.compile('\A[A-Z0-9]{3}\Z')
+IATA_CODE_RE = re.compile('\A[A-Z0-9]{3}\Z')
+ICAO_CODE_RE = re.compile('\A[A-Z0-9]{4}\Z')
 
 def sanitize_flight_number(f_num):
     """Cleans up a flight number - strips leading zeros from flight number, extra
