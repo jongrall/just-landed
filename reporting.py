@@ -42,6 +42,7 @@ FLIGHT_LANDED = 'Flight.Landed'
 FLIGHT_CANCELED = 'Flight.Canceled'
 FLIGHT_DIVERTED = 'Flight.Diverted'
 FLIGHT_CHANGE = 'Flight.Change'
+FLIGHT_TERMINAL_CHANGE = 'Flight.TerminalChange'
 
 ###############################################################################
 """Cron Counters"""

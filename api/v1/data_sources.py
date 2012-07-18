@@ -689,7 +689,10 @@ class FlightAwareSource (FlightDataSource):
 
                 # Reporting (once per callback)
                 if event_code in ['change', 'minutes_out']:
-                    report_event(reporting.FLIGHT_CHANGE)
+                    if terminal_changed:
+                        report_event(reporting.FLIGHT_TERMINAL_CHANGE)
+                    else:
+                        report_event(reporting.FLIGHT_CHANGE)
                 elif event_code == 'departure':
                     report_event(reporting.FLIGHT_TAKEOFF)
                 elif event_code == 'arrival':

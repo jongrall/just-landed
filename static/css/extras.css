@@ -10,7 +10,7 @@
 }
 
 .clouds-background {
-    background-image: url('../images/homepage/clouds_background.png') !important;
+    background-image: url('/static/images/homepage/clouds_background.png') !important;
 }
 
 #sub-content h2 {
