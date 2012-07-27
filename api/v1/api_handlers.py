@@ -44,7 +44,12 @@ class SearchHandler(AuthenticatedAPIHandler):
 
         """
         if not utils.valid_flight_number(flight_number):
-            raise InvalidFlightNumberException(flight_number)
+            sanitized_f_num = utils.sanitize_flight_number(flight_number)
+            # Temp hack until iOS version fixes flight number alert
+            if utils.is_int(sanitized_f_num):
+                raise FlightNotFoundException(flight_number)
+            else:
+                raise InvalidFlightNumberException(flight_number)
 
         try:
             flights = yield source.lookup_flights(flight_number)
@@ -248,13 +253,8 @@ class AlertWorker(BaseHandler):
         if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
             return
 
-        try:
-            alert_body = json.loads(self.request.body)
-            assert isinstance(alert_body, dict)
-        except:
-            logging.info(self.request.body)
-            raise InvalidAlertCallbackException()
-
+        # Alert body already been validated in AlertHandler
+        alert_body = json.loads(self.request.body)
         yield source.process_alert(alert_body, self)
 
 
@@ -267,10 +267,19 @@ class AlertHandler(BaseAPIHandler):
     def post(self):
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
+            try:
+                alert_body = json.loads(self.request.body)
+                assert utils.is_valid_fa_alert_body(alert_body)
+            except:
+                logging.info(self.request.body)
+                raise InvalidAlertCallbackException()
+
             # Optimization: defer processing the alert
             task = taskqueue.Task(payload=self.request.body)
             taskqueue.Queue('process-alert').add(task)
+            self.respond({'alert_id' : alert_body.get('alert_id')})
         else:
             logging.error('Unknown user-agent or host posting alert: (%s, %s)' %
                             (self.request.environ.get('HTTP_USER_AGENT'),
                             self.request.remote_addr))
+            self.response.set_status(403) # Forbidden host posting alert

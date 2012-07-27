@@ -127,13 +127,14 @@ class StaticHandler(BaseHandler):
         self.response.headers['Cache-Control'] = 'public, max-age=7200' # 2hr cache
         self.response.headers['Pragma'] = 'Public'
 
-    def get(self, page_name="", context={}):
+    def get(self, page_name="", context={}, use_cache=True):
         # Optimization: use memcache to cache static page content
-        page_cache_key = '%s_%s' % (page_name, VERSION_CHKSM)
-        cached_page = memcache.get(page_cache_key)
-        if cached_page:
-            self.static_response(cached_page)
-            return
+        if use_cache:
+            page_cache_key = '%s_%s' % (page_name, VERSION_CHKSM)
+            cached_page = memcache.get(page_cache_key)
+            if cached_page:
+                self.static_response(cached_page)
+                return
 
         template_name = page_name
         if not page_name or page_name.count('index'):
@@ -151,8 +152,11 @@ class StaticHandler(BaseHandler):
         context.update(template_context)
         try:
             rendered_content = template.render(template_path, context)
-            memcache.set(page_cache_key, rendered_content)
-            self.static_response(rendered_content)
+            if use_cache:
+                memcache.set(page_cache_key, rendered_content)
+                self.static_response(rendered_content)
+            else:
+                self.response.write(rendered_content)
         except Exception as e:
             handle_404(self.request, self.response, e)
 

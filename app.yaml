@@ -25,15 +25,15 @@ handlers:
   upload: static/(.*)
 
 # Static content
-- url: /static/(.*)/([^/]+)/([^/]+)
+- url: /static/(.*)/([0-9]+)/([^/]+)
   expiration: "7d"
   static_files: static/\1/\3
   upload: static/.*
 
-- url: /static/(.*)
+# Static content directory
+- url: /static
   expiration: "7d"
-  static_files: static/\1
-  upload: static/.*
+  static_dir: static
 
 # Admin methods that require admin credentials
 - url: /admin/.*

@@ -41,8 +41,10 @@ class FlightAwareAdminHandler(StaticHandler):
                        users_tracking_count=users_tracking_count,
                        db_consistent=consistent)
 
+        # Flight Aware Admin Handlers shouldn't be cached
         super(FlightAwareAdminHandler, self).get(page_name="fa_admin.html",
-                                                 context=context)
+                                                 context=context,
+                                                 use_cache=False)
 
 
 class FlightAwareAdminAPIHandler(BaseAPIHandler):

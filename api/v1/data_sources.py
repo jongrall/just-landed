@@ -571,7 +571,7 @@ class FlightAwareSource (FlightDataSource):
                 current_flights = [f for f in data if not utils.is_old_fa_flight(f)]
                 flight_data.extend(current_flights)
 
-                # If we have some old flights, or less than 15 flights, we're done
+                # If we have some old flights, or less than 15 flights for this batch, we're done
                 if len(current_flights) < 15:
                     break
                 else:
@@ -644,10 +644,7 @@ class FlightAwareSource (FlightDataSource):
 
     @ndb.tasklet
     def process_alert(self, alert_body, request):
-        if not utils.is_valid_fa_alert_body(alert_body):
-            logging.info(alert_body)
-            raise InvalidAlertCallbackException()
-
+        # Note: alert_body has already been validated
         alert_id = alert_body['alert_id']
         event_code = alert_body['eventcode']
         flight_id = alert_body['flight']['faFlightID']
@@ -661,19 +658,17 @@ class FlightAwareSource (FlightDataSource):
 
         # Only process the alert if we still care about it and we have the necessary data
         if alert and alert.is_enabled:
-
-            # Get current flight information for the flight mentioned by the alert
             flight_num = utils.flight_num_from_fa_flight_id(flight_id)
-
-            # Optimization: parallel fetch
             alerted_flight = None
             stored_flight = None
 
+            # Get current and last flight information for the flight mentioned by the alert
             if event_code == 'cancelled':
                 # Canceled flights can't be looked up
                 stored_flight = yield FlightAwareTrackedFlight.get_flight_by_id(flight_id)
-                alerted_flight = stored_flight # Use the stored flight data
+                alerted_flight = stored_flight and Flight.from_dict(stored_flight.last_flight_data) # Use the stored flight data
             else:
+                # Optimization: parallel fetch
                 alerted_flight, stored_flight = yield (self.flight_info(flight_id=flight_id, flight_number=flight_num),
                                                         FlightAwareTrackedFlight.get_flight_by_id(flight_id))
 
