@@ -175,6 +175,8 @@ class BaseAPIHandler(BaseHandler):
         If 'debug' is set to true, the output is nicely formatted and indented
         for reading in the browser.
         """
+        self.response.headers['Cache-Control'] = 'no-cache' # Caching not allowed
+
         if debug or self.request.GET.get('debug'):
             # Pretty print JSON to be read as HTML
             self.response.content_type = 'text/html'
