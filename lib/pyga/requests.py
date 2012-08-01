@@ -71,10 +71,6 @@ class GIFRequest(object):
             headers['Content-Type'] = 'text/plain'
             headers['Content-Length'] = len(query_string)
 
-        logger.debug(url)
-        if post:
-            logger.debug(post)
-
         return urllib2.Request(url, post, headers)
 
     def build_parameters(self):
