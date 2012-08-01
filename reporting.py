@@ -132,10 +132,9 @@ class GoogleAnalyticsService(ReportingService):
     provided by Google Analytics."""
     def __init__(self):
         from pyga.requests import Tracker
-        from pyga.entities import Visitor, Session
+        from pyga.entities import Visitor
         from pyga.entities import Event
         self._visitor = Visitor()
-        self._session = Session()
         self._eventClass = Event
         self._tracker = Tracker(account_id=google_analytics_account(),
                                 domain_name=domain_name())
@@ -143,6 +142,7 @@ class GoogleAnalyticsService(ReportingService):
     def report(self, event_name, **properties):
         """Reports an event to Google Analytics."""
         assert isinstance(event_name, basestring) and len(event_name)
+        from pyga.entities import Session
 
         if debug_reporting:
             logging.info('Reporting event: %s' % event_name)
@@ -154,7 +154,7 @@ class GoogleAnalyticsService(ReportingService):
                                  noninteraction=True) # Shouldn't impact bounce rate
 
         try:
-            self._tracker.track_event(event, self._session, self._visitor)
+            self._tracker.track_event(event, Session(), self._visitor)
 
         # Reliability: don't allow reporting exceptions to propagate
         except Exception as e:
