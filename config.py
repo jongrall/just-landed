@@ -157,6 +157,17 @@ config['max_reminder_age'] = 120
 # Push token freshness requirement (don't register tokens that we've registered as recently as this)
 config['max_push_token_age'] = 7200
 
+# Domain names
+config['domain_name'] = {
+    'development' : 'c-98-207-175-25.hsd1.ca.comcast.net',
+    'staging' : 'staging.getjustlanded.com',
+    'production' : 'www.getjustlanded.com',
+}
+
+def domain_name():
+    app_mode = config['app']['mode']
+    return config['domain_name'][app_mode]
+
 # Server urls and api credentials that are used to sign requests
 config['server_url'] = {
     'development' : 'http://c-98-207-175-25.hsd1.ca.comcast.net',

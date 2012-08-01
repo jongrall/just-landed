@@ -353,7 +353,7 @@ class FlightAwareSource (FlightDataSource):
                     except DownloadError:
                         raise FlightAwareUnavailableError()
 
-                    # report_event(reporting.FA_AIRPORT_INFO)
+                    report_event(reporting.FA_AIRPORT_INFO)
 
                     if result.get('error'):
                         raise AirportNotFoundException(airport_code, flight_num)
@@ -461,7 +461,7 @@ class FlightAwareSource (FlightDataSource):
                     airline_data = yield self.conn.get_json('/AirlineFlightInfo',
                                                         args={'faFlightID': flight_id,
                                                               'howMany': 1})
-                    # report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
+                    report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
                 except DownloadError:
                     raise FlightAwareUnavailableError()
 
@@ -479,8 +479,8 @@ class FlightAwareSource (FlightDataSource):
                 try:
                     # Optimization: parallel fetch
                     flight_data, airline_data = yield to_fetch
-                    # report_event(reporting.FA_FLIGHT_INFO_EX)
-                    # report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
+                    report_event(reporting.FA_FLIGHT_INFO_EX)
+                    report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
                 except DownloadError:
                     raise FlightAwareUnavailableError()
 
@@ -560,7 +560,7 @@ class FlightAwareSource (FlightDataSource):
                 except DownloadError:
                     raise FlightAwareUnavailableError()
 
-                # report_event(reporting.FA_FLIGHT_INFO_EX)
+                report_event(reporting.FA_FLIGHT_INFO_EX)
 
                 if data.get('error'):
                     raise FlightNotFoundException(sanitized_f_num)
@@ -766,7 +766,7 @@ class FlightAwareSource (FlightDataSource):
         alert_id = result.get('SetAlertResult')
 
         if not error and alert_id:
-            # report_event(reporting.FA_SET_ALERT)
+            report_event(reporting.FA_SET_ALERT)
             if debug_alerts:
                 logging.info('REGISTERED NEW ALERT')
 
@@ -786,7 +786,7 @@ class FlightAwareSource (FlightDataSource):
         except DownloadError:
             raise FlightAwareUnavailableError()
 
-        # report_event(reporting.FA_GET_ALERTS)
+        report_event(reporting.FA_GET_ALERTS)
         error = result.get('error')
         alert_info = result.get('GetAlertsResult')
 
@@ -806,7 +806,7 @@ class FlightAwareSource (FlightDataSource):
         except DownloadError:
             raise FlightAwareUnavailableError()
 
-        # report_event(reporting.FA_DELETED_ALERT)
+        report_event(reporting.FA_DELETED_ALERT)
         error = result.get('error')
         success = result.get('DeleteAlertResult')
 
@@ -831,8 +831,8 @@ class FlightAwareSource (FlightDataSource):
 
             # Optimization: parallel yield
             yield futs
-            # if orphaned:
-            #     report_event(reporting.DELETED_ORPHANED_ALERT)
+            if orphaned:
+                report_event(reporting.DELETED_ORPHANED_ALERT)
 
     @ndb.tasklet
     def clear_all_alerts(self):
@@ -1090,7 +1090,7 @@ class GoogleDistanceSource (DrivingTimeDataSource):
             except DownloadError:
                 raise GoogleDistanceAPIUnavailableError()
 
-            # report_event(reporting.GOOG_FETCH_DRIVING_TIME)
+            report_event(reporting.GOOG_FETCH_DRIVING_TIME)
             status = data.get('status')
 
             if status == 'OK':
@@ -1166,7 +1166,7 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
             except DownloadError:
                 raise BingMapsUnavailableError()
 
-            # report_event(reporting.BING_FETCH_DRIVING_TIME)
+            report_event(reporting.BING_FETCH_DRIVING_TIME)
             status = data.get('statusCode')
 
             if status == 200:

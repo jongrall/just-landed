@@ -280,7 +280,7 @@ airline_code_mapping = {
     'EV' : 'ASQ',
     'EW' : 'EWG',
     'EX' : 'SDO',
-    'EY' : 'EFL',
+    'EY' : 'ETD',
     'EZ' : 'EIA',
     'F2' : 'FLM',
     'F3' : 'FSW',

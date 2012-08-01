@@ -25,9 +25,11 @@ from google.appengine.api import urlfetch
 from google.appengine.api.urlfetch import DownloadError
 
 from main import BaseHandler
-from config import config, on_development, on_staging
+from config import config, on_development, on_staging, google_analytics_account, domain_name
 from custom_exceptions import *
 import utils
+
+from lib import pyga
 
 # Enable to log informational messages about reported events
 debug_reporting = on_development() and False
@@ -124,6 +126,42 @@ class MixpanelService(ReportingService):
             utils.report_service_error(MixpanelUnavailableError())
             logging.exception(e)
 
+
+class GoogleAnalyticsService(ReportingService):
+    """A concrete implementation of an event reporting service. Service is
+    provided by Google Analytics."""
+    def __init__(self):
+        from pyga.requests import Tracker
+        from pyga.entities import Visitor, Session
+        from pyga.entities import Event
+        self._visitor = Visitor()
+        self._session = Session()
+        self._eventClass = Event
+        self._tracker = Tracker(account_id=google_analytics_account(),
+                                domain_name=domain_name())
+
+    def report(self, event_name, **properties):
+        """Reports an event to Google Analytics."""
+        assert isinstance(event_name, basestring) and len(event_name)
+
+        if debug_reporting:
+            logging.info('Reporting event: %s' % event_name)
+
+        props = (properties and unicode(properties)) or None
+        event = self._eventClass(category='GAE Server',
+                                 action=event_name,
+                                 label=props,
+                                 noninteraction=True) # Shouldn't impact bounce rate
+
+        try:
+            self._tracker.track_event(event, self._session, self._visitor)
+
+        # Reliability: don't allow reporting exceptions to propagate
+        except Exception as e:
+            utils.report_service_error(GoogleAnalyticsUnavailableError())
+            logging.exception(e)
+
+
 ###############################################################################
 """Report Helper Methods"""
 ###############################################################################
@@ -153,7 +191,7 @@ def report_event_transactionally(event_name, **properties):
 """Reporting Handler"""
 ###############################################################################
 
-service = MixpanelService()
+service = GoogleAnalyticsService()
 
 class ReportWorker(BaseHandler):
     """Worker that actually reports events to the 3rd party reporting service."""

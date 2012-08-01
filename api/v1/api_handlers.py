@@ -268,9 +268,10 @@ class AlertHandler(BaseAPIHandler):
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
             try:
-                alert_body = json.loads(self.request.body)
+                alert_body = json.loads(unicode(self.request.body, 'utf-8'))
                 assert utils.is_valid_fa_alert_body(alert_body)
-            except:
+            except Exception as e:
+                logging.exception(e)
                 logging.info(self.request.body)
                 raise InvalidAlertCallbackException()
 

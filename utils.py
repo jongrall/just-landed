@@ -672,6 +672,7 @@ def report_service_error(exception):
             # 1st report of this service error
             report = {
                 'alert_sent' : False,
+                'outage_start_date' : None,
                 'error_dates' : [now]
             }
             client.set(error_cache_key, report) # Required for CAS to work
@@ -690,6 +691,7 @@ def report_service_error(exception):
             if send_sms:
                 rate = error_rate(report['error_dates'])
                 report['alert_sent'] = True # We will be sending the alert shortly
+                report['outage_start_date'] = error_dates[0]
 
             if client.cas(error_cache_key, report):
                 break # Write was successful
@@ -697,8 +699,7 @@ def report_service_error(exception):
                 retries += 1
 
     if send_sms:
-        sms_alert_admin("[%s] %s\n%s\nRate: %.2f / min" %
+        sms_alert_admin("[%s] %s\nError rate: %.2f/min" %
                         (datetime.now(Pacific).strftime('%T'),
-                        error_name,
                         exception.message,
                         rate * 60.0))

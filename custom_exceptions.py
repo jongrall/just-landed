@@ -15,6 +15,11 @@ class MixpanelUnavailableError(Exception):
         self.message = 'Mixpanel API is unavailable.'
         self.code = 503 # Service unavailable
 
+class GoogleAnalyticsUnavailableError(Exception):
+    def __init__(self):
+        self.message = 'Google Analytics is unavailable.'
+        self.code = 503 # Service unavailable
+
 class ReportEventFailedException(Exception):
     def __init__(self, status_code=403, event_name=''):
         self.message = 'Unable to report event: %s' % event_name

@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 from google.appengine.ext import ndb
 from google.appengine.api import memcache
+from google.appengine.api import taskqueue
 
 from main import BaseHandler
 from config import on_development, config
@@ -36,47 +37,36 @@ class UntrackOldFlightsWorker(BaseHandler):
             flight = Flight.from_dict(f.last_flight_data)
 
             try:
-                # Optimization prevents overzealous checking
+                # Optimization: prevents overzealous checking
                 if flight.is_old_flight:
                     # We are certain it is old
                     raise OldFlightException(flight_number=flight_num,
                                              flight_id=flight_id)
-                elif flight.is_probably_old: # Based on est_arrival_time
-                  # Probably old, just make sure (flight_info will yield OldFlightException)
+                else:
+                  # Could be old, let's check
                   yield source.flight_info(flight_id=flight_id,
                                            flight_number=flight_num)
 
-                else:
-                    # Do nothing for flights that aren't old or landed
-                    raise tasklets.Return(True)
-
             except Exception as e:
-                if isinstance(e, OldFlightException): # Only care about old flights
-                    # We should untrack this flight for each user who was tracking it
-                    users_qry = iOSUser.users_tracking_flight_qry(flight_id)
-
-                    # Generate the URL and API signature
-                    url_scheme = (on_development() and 'http') or 'https'
-                    to_sign = self.uri_for('untrack', flight_id=flight_id)
-                    sig = utils.api_query_signature(to_sign, client='Server')
-                    untrack_url = self.uri_for('untrack',
-                                                flight_id=flight_id,
-                                                _full=True,
-                                                _scheme=url_scheme)
-                    ctx = ndb.get_context()
-                    # report_event(reporting.UNTRACKED_OLD_FLIGHT)
-
+                # If we see one of these exceptions, we should untrack the flight
+                untrack_with_exceptions = (OldFlightException,
+                                            InvalidFlightNumberException,
+                                            FlightNotFoundException,
+                                            AssertionError)
+                if isinstance(e, untrack_with_exceptions):
                     @ndb.tasklet
                     def user_cbk(u_key):
-                        headers = {'X-Just-Landed-UUID' : u_key.string_id(),
-                                   'X-Just-Landed-Signature' : sig}
+                        # Optimization: defer untracking the flight
+                        task = taskqueue.Task(params = {
+                            'flight_id' : flight_id,
+                            'uuid' : u_key.string_id(),
+                        })
+                        taskqueue.Queue('untrack').add(task)
 
-                        yield ctx.urlfetch(untrack_url,
-                                           headers=headers,
-                                           deadline=120,
-                                           validate_certificate=untrack_url.startswith('https'))
-
+                    # We should untrack this flight for each user who was tracking it
+                    users_qry = iOSUser.users_tracking_flight_qry(flight_id)
                     yield users_qry.map_async(user_cbk, keys_only=True)
+                    report_event(reporting.UNTRACKED_OLD_FLIGHT)
 
         # Get all flights that are currently tracking
         flights_qry = FlightAwareTrackedFlight.tracked_flights_qry()
@@ -154,6 +144,7 @@ class OutageCheckerWorker(BaseHandler):
             UrbanAirshipUnavailableError(),
             StackMobUnavailableError(),
             MixpanelUnavailableError(),
+            GoogleAnalyticsUnavailableError(),
         ]
 
         client = memcache.Client()
@@ -163,6 +154,7 @@ class OutageCheckerWorker(BaseHandler):
             error_cache_key = utils.service_error_cache_key(e)
             retries = 0
             send_outage_over_sms = False
+            outage_start_date = None
             last_error_date = None
 
             while retries < 20: # Retry loop for CAS
@@ -172,6 +164,7 @@ class OutageCheckerWorker(BaseHandler):
                 else:
                     # An alert was previously sent for this type of outage
                     error_dates = report['error_dates']
+                    outage_start_date = report['outage_start_date']
                     error_dates = sorted(error_dates)
                     now = datetime.utcnow()
                     last_error_date = error_dates[-1]
@@ -180,6 +173,8 @@ class OutageCheckerWorker(BaseHandler):
                        last_error_date < now - timedelta(seconds=config['outage_over_wait'])):
                        # Outage is over, prime system to detect another outage
                        report['alert_sent'] = False
+                       report['outage_start_date'] = None
+
                        if client.cas(error_cache_key, report):
                            send_outage_over_sms = True
                            break # Write was successful
@@ -191,7 +186,9 @@ class OutageCheckerWorker(BaseHandler):
             if send_outage_over_sms:
                 now = datetime.utcnow()
                 last_error_seconds_ago = abs(now - last_error_date).total_seconds()
-                utils.sms_alert_admin("[%s] Outage over.\n%s stopped %s ago" %
+                outage_duration = abs(last_error_date - outage_start_date).total_seconds()
+                utils.sms_alert_admin("[%s] Outage over.\n%s stopped %s ago. Outage lasted %s." %
                                     (datetime.now(utils.Pacific).strftime('%T'),
                                     error_name,
-                                    utils.pretty_time_interval(last_error_seconds_ago)))
+                                    utils.pretty_time_interval(last_error_seconds_ago),
+                                    utils.pretty_time_interval(outage_duration)))
