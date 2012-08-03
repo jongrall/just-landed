@@ -60,31 +60,35 @@ class UntrackOldFlightsWorker(BaseHandler):
             @ndb.tasklet
             def check_if_old(flight_id):
                 flight_num = utils.flight_num_from_fa_flight_id(flight_id)
-                flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
-                flight_ent = yield flight_key.get_async()
 
-                if flight_ent:
-                    flight = Flight.from_dict(flight_ent.last_flight_data)
-
+                @ndb.tasklet
+                def is_definitely_old():
                     try:
-                        # Optimization: prevents overzealous checking
-                        if flight.is_old_flight:
-                            # We are certain it is old
-                            raise OldFlightException(flight_number=flight_num,
-                                                     flight_id=flight_id)
-                        else:
-                            # Could be old, let's check
-                            yield source.flight_info(flight_id=flight_id,
-                                                     flight_number=flight_num)
+                        flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
+                        flight_ent = yield flight_key.get_async()
+                        flight = Flight.from_dict(flight_ent.last_flight_data)
+                        raise tasklets.Return(flight.is_old_flight)
+                    except Exception as e: # Any exceptions should trigger a full check
+                        raise tasklets.Return(False)
 
-                    except Exception as e:
-                        # If we see one of these exceptions, we should untrack the flight
-                        untrack_with_exceptions = (OldFlightException,
-                                                    InvalidFlightNumberException,
-                                                    FlightNotFoundException,
-                                                    AssertionError)
-                        if isinstance(e, untrack_with_exceptions):
-                            raise tasklets.Return(flight_id)
+                try:
+                    if (yield is_definitely_old()):
+                        # We are certain it is old, prevents overzealous checking
+                        raise OldFlightException(flight_number=flight_num,
+                                                 flight_id=flight_id)
+                    else:
+                        # Could be old, let's check
+                        yield source.flight_info(flight_id=flight_id,
+                                                 flight_number=flight_num)
+
+                except Exception as e:
+                    # If we see one of these exceptions, we should untrack the flight
+                    untrack_with_exceptions = (OldFlightException,
+                                                InvalidFlightNumberException,
+                                                FlightNotFoundException,
+                                                AssertionError)
+                    if isinstance(e, untrack_with_exceptions):
+                        raise tasklets.Return(flight_id)
 
             results = yield [check_if_old(f_id) for f_id in batch]
             old_flight_ids.extend(results)
