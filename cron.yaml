@@ -4,7 +4,7 @@ cron:
   # Stops unnecessary tracking of old flights w/ unwanted alerts and push notifications
   - description: stop tracking old flights
     url: /cron/untrack_old_flights
-    schedule: every 15 minutes # FIXME
+    schedule: every 3 hours
 
   # Cost of task: $
   # Sends leave now / leave soon reminders to users
