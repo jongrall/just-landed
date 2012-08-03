@@ -10,6 +10,7 @@ import logging
 from datetime import datetime, timedelta
 
 from google.appengine.ext import ndb
+from google.appengine.ext.ndb import tasklets
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 
@@ -27,50 +28,80 @@ source = FlightAwareSource()
 reminder_types = config['reminder_types']
 
 class UntrackOldFlightsWorker(BaseHandler):
-    """Cron worker for untracking old flights."""
+    """Cron worker for untracking old flights (efficiently)."""
     @ndb.toplevel
     def get(self):
+        # Figure out all the users tracking flights
         @ndb.tasklet
-        def flight_cbk(f):
-            flight_id = f.key.string_id()
-            flight_num = utils.flight_num_from_fa_flight_id(flight_id)
-            flight = Flight.from_dict(f.last_flight_data)
+        def user_cbk(u):
+            flight_ids = [f.flight.string_id() for f in u.tracked_flights]
+            tups = [(u.key.string_id(), f_id) for f_id in set(flight_ids)]
+            raise tasklets.Return(tups)
 
-            try:
-                # Optimization: prevents overzealous checking
-                if flight.is_old_flight:
-                    # We are certain it is old
-                    raise OldFlightException(flight_number=flight_num,
-                                             flight_id=flight_id)
-                else:
-                  # Could be old, let's check
-                  yield source.flight_info(flight_id=flight_id,
-                                           flight_number=flight_num)
+        # Build a list of all the (uuid, flight_id) pairs for users tracking flights
+        users_qry = iOSUser.users_tracking_qry()
+        user_flight_tups = yield users_qry.map_async(user_cbk)
 
-            except Exception as e:
-                # If we see one of these exceptions, we should untrack the flight
-                untrack_with_exceptions = (OldFlightException,
-                                            InvalidFlightNumberException,
-                                            FlightNotFoundException,
-                                            AssertionError)
-                if isinstance(e, untrack_with_exceptions):
-                    @ndb.tasklet
-                    def user_cbk(u_key):
-                        # Optimization: defer untracking the flight
-                        task = taskqueue.Task(params = {
-                            'flight_id' : flight_id,
-                            'uuid' : u_key.string_id(),
-                        })
-                        taskqueue.Queue('untrack').add(task)
+        # Build a mapping of flight_ids to lists of users tracking those flight_ids
+        user_flight_tups = [item for sublist in user_flight_tups for item in sublist]
+        flight_user_map = {}
 
-                    # We should untrack this flight for each user who was tracking it
-                    users_qry = iOSUser.users_tracking_flight_qry(flight_id)
-                    yield users_qry.map_async(user_cbk, keys_only=True)
-                    report_event(reporting.UNTRACKED_OLD_FLIGHT)
+        for uuid, f_id in user_flight_tups:
+            vals = flight_user_map.setdefault(f_id, [])
+            vals.append(uuid)
 
-        # Get all flights that are currently tracking
-        flights_qry = FlightAwareTrackedFlight.tracked_flights_qry()
-        yield flights_qry.map_async(flight_cbk)
+        # Optimization: check if the flights are old in async batches
+        def chunks(l, n):
+            for i in xrange(0, len(l), n):
+                yield l[i:i+n]
+
+        old_flight_ids = []
+        for batch in chunks(flight_user_map.keys(), 20): # Batch size 20
+            @ndb.tasklet
+            def check_if_old(flight_id):
+                flight_num = utils.flight_num_from_fa_flight_id(flight_id)
+                flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
+                flight_ent = yield flight_key.get_async()
+
+                if flight_ent:
+                    flight = Flight.from_dict(flight_ent.last_flight_data)
+
+                    try:
+                        # Optimization: prevents overzealous checking
+                        if flight.is_old_flight:
+                            # We are certain it is old
+                            raise OldFlightException(flight_number=flight_num,
+                                                     flight_id=flight_id)
+                        else:
+                            # Could be old, let's check
+                            yield source.flight_info(flight_id=flight_id,
+                                                     flight_number=flight_num)
+
+                    except Exception as e:
+                        # If we see one of these exceptions, we should untrack the flight
+                        untrack_with_exceptions = (OldFlightException,
+                                                    InvalidFlightNumberException,
+                                                    FlightNotFoundException,
+                                                    AssertionError)
+                        if isinstance(e, untrack_with_exceptions):
+                            raise tasklets.Return(flight_id)
+
+            results = yield [check_if_old(f_id) for f_id in batch]
+            old_flight_ids.extend(results)
+
+        old_flight_ids = [f_id for f_id in old_flight_ids if f_id is not None]
+
+        # Optimization: batch untrack all the flights
+        untrack_tasks = []
+        for old_id in old_flight_ids:
+            uuids = flight_user_map.get(old_id)
+            untrack_tasks.extend([taskqueue.Task(params = {
+                'flight_id' : old_id,
+                'uuid' : uuid,
+            }) for uuid in uuids])
+
+        if untrack_tasks:
+            taskqueue.Queue('untrack').add(untrack_tasks)
 
 
 class SendRemindersWorker(BaseHandler):

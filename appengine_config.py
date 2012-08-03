@@ -6,7 +6,7 @@ __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed LLC"
 __email__ = "jon@littledetails.net"
 
-from config import on_production
+from config import on_production, on_staging
 
 # Numerical limits on how much information is saved for each event.
 # MAX_STACK limits the number of stack frames saved; MAX_LOCALS limits
@@ -35,3 +35,6 @@ def appstats_should_record(env):
     if env.get('PATH_INFO').startswith('/_ah/'):
         return False
     return True
+
+remoteapi_CUSTOM_ENVIRONMENT_AUTHENTICATION = ('HTTP_X_APPENGINE_INBOUND_APPID',
+['just-landed'])

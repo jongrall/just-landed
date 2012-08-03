@@ -86,6 +86,15 @@ def sorted_dict_keys(somedict):
     keys.sort()
     return keys
 
+def dictinvert(d):
+    """Inverts a dictionary, turning values into keys. Handles duplicate values
+    by creating a list of values from repeated keys."""
+    inv = {}
+    for k, v in d.iteritems():
+        keys = inv.setdefault(v, [])
+        keys.append(k)
+    return inv
+
 def sorted_request_params(somedict):
     """Returns an HTTP query string built from the keys and values supplied,
     sorted by the keys.
@@ -691,7 +700,7 @@ def report_service_error(exception):
             if send_sms:
                 rate = error_rate(report['error_dates'])
                 report['alert_sent'] = True # We will be sending the alert shortly
-                report['outage_start_date'] = error_dates[0]
+                report['outage_start_date'] = now # Use now as the outage start date
 
             if client.cas(error_cache_key, report):
                 break # Write was successful

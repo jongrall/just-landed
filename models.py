@@ -601,9 +601,13 @@ class iOSUser(_User):
         raise tasklets.Return(count == 2)
 
     @classmethod
+    def users_tracking_qry(cls):
+        return cls.query(cls.is_tracking_flights == True)
+
+    @classmethod
     @ndb.tasklet
     def count_users_tracking(cls):
-        q = cls.query(cls.is_tracking_flights == True)
+        q = cls.users_tracking_qry()
         # Optimization: count keys only
         count = yield q.count_async(keys_only=True)
         raise tasklets.Return(count)
