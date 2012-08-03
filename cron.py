@@ -51,12 +51,8 @@ class UntrackOldFlightsWorker(BaseHandler):
             vals.append(uuid)
 
         # Optimization: check if the flights are old in async batches
-        def chunks(l, n):
-            for i in xrange(0, len(l), n):
-                yield l[i:i+n]
-
         old_flight_ids = []
-        for batch in chunks(flight_user_map.keys(), 20): # Batch size 20
+        for batch in utils.chunks(flight_user_map.keys(), 20): # Batch size 20
             @ndb.tasklet
             def check_if_old(flight_id):
                 flight_num = utils.flight_num_from_fa_flight_id(flight_id)
@@ -105,7 +101,9 @@ class UntrackOldFlightsWorker(BaseHandler):
             }) for uuid in uuids])
 
         if untrack_tasks:
-            taskqueue.Queue('untrack').add(untrack_tasks)
+            logging.info('UNTRACKING %d OLD FLIGHTS' % len(untrack_tasks))
+            for task_batch in utils.chunks(untrack_tasks, 100): # Batch size 100 is max
+                taskqueue.Queue('untrack').add(task_batch)
 
 
 class SendRemindersWorker(BaseHandler):

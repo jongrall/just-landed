@@ -95,6 +95,11 @@ def dictinvert(d):
         keys.append(k)
     return inv
 
+def chunks(l, n):
+    """Splits a list into n-sized chunks."""
+    for i in xrange(0, len(l), n):
+        yield l[i:i+n]
+
 def sorted_request_params(somedict):
     """Returns an HTTP query string built from the keys and values supplied,
     sorted by the keys.
