@@ -21,6 +21,7 @@ from data_sources import FlightAwareSource, BingMapsDistanceSource, GoogleDistan
 from custom_exceptions import *
 import utils
 
+# TODO: add FlightStatsSource()
 # Currently using FlightAware for flight data
 source = FlightAwareSource()
 
@@ -45,7 +46,7 @@ class SearchHandler(AuthenticatedAPIHandler):
         """
         if not utils.valid_flight_number(flight_number):
             sanitized_f_num = utils.sanitize_flight_number(flight_number)
-            # Temp hack until iOS version fixes flight number alert
+            # FIXME: Temp hack until iOS version fixes flight number alert msg
             if utils.is_int(sanitized_f_num):
                 raise FlightNotFoundException(flight_number)
             else:
@@ -232,7 +233,6 @@ class UntrackHandler(AuthenticatedAPIHandler):
 
         # FIXME: Assumes iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
-        self.respond({'untracked' : flight_id})
 
         # Optimization: defer untracking the flight
         task = taskqueue.Task(params = {
@@ -240,6 +240,7 @@ class UntrackHandler(AuthenticatedAPIHandler):
             'uuid' : uuid,
         })
         taskqueue.Queue('untrack').add(task)
+        self.respond({'untracked' : flight_id})
 
 ###############################################################################
 """Processing Alerts"""
@@ -265,6 +266,7 @@ class AlertHandler(BaseAPIHandler):
 
     """
     def post(self):
+        # FIXME: Assumes FlightAware
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
             try:

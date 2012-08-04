@@ -16,7 +16,7 @@ from google.appengine.api import taskqueue
 
 from main import BaseHandler
 from config import on_development, config
-from models import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert, Flight
+from models.v1 import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert, Flight
 from api.v1.data_sources import FlightAwareSource
 from custom_exceptions import *
 from notifications import LeaveSoonAlert, LeaveNowAlert
@@ -24,6 +24,7 @@ import reporting
 from reporting import report_event, report_event_transactionally
 import utils
 
+# TODO: Integrate FlightStats source
 source = FlightAwareSource()
 reminder_types = config['reminder_types']
 
@@ -176,7 +177,7 @@ class OutageCheckerWorker(BaseHandler):
             GoogleDistanceAPIUnavailableError(),
             UrbanAirshipUnavailableError(),
             StackMobUnavailableError(),
-            MixpanelUnavailableError(),
+            # MixpanelUnavailableError(), # No longer used
             GoogleAnalyticsUnavailableError(),
         ]
 

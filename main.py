@@ -68,11 +68,10 @@ class BaseHandler(webapp.RequestHandler):
                                 FlightNotFoundException,
                                 OldFlightException)
 
-        outage_errors = (FlightAwareUnavailableError,
+        outage_errors = (FlightDataUnavailableError,
                          DrivingTimeUnavailableError,
                          PushNotificationsUnavailableError,
-                         MixpanelUnavailableError,
-                         GoogleAnalyticsUnavailableError)
+                         ReportingServiceUnavailableError)
 
         urgent_errors = (OverQuotaError,
                          CapabilityDisabledError,

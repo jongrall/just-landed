@@ -10,15 +10,20 @@ __email__ = "jon@littledetails.net"
 """Reporting Exceptions"""
 ###############################################################################
 
-class MixpanelUnavailableError(Exception):
+class ReportingServiceUnavailableError(Exception):
     def __init__(self):
-        self.message = 'Mixpanel API is unavailable.'
+        self.message = 'Reporting service is unavailable.'
         self.code = 503 # Service unavailable
 
-class GoogleAnalyticsUnavailableError(Exception):
+class MixpanelUnavailableError(ReportingServiceUnavailableError):
     def __init__(self):
+        super(MixpanelUnavailableError, self).__init__()
+        self.message = 'Mixpanel API is unavailable.'
+
+class GoogleAnalyticsUnavailableError(ReportingServiceUnavailableError):
+    def __init__(self):
+        super(GoogleAnalyticsUnavailableError, self).__init__()
         self.message = 'Google Analytics is unavailable.'
-        self.code = 503 # Service unavailable
 
 class ReportEventFailedException(Exception):
     def __init__(self, status_code=403, event_name=''):
@@ -29,10 +34,15 @@ class ReportEventFailedException(Exception):
 """Flight Data Source Exceptions"""
 ###############################################################################
 
-class FlightAwareUnavailableError(Exception):
+class FlightDataUnavailableError(Exception):
     def __init__(self):
-        self.message = 'FlightAware API is unavailable.'
+        self.message = 'Flight datasource is unavailable.'
         self.code = 503 # Service unavailable
+
+class FlightAwareUnavailableError(FlightDataUnavailableError):
+    def __init__(self):
+        super(FlightAwareUnavailableError, self).__init__()
+        self.message = 'FlightAware API is unavailable.'
 
 class InvalidFlightNumberException(Exception):
     def __init__(self, flight_number=''):

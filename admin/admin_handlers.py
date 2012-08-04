@@ -12,7 +12,7 @@ from google.appengine.ext import ndb
 
 from api.v1.data_sources import FlightAwareSource
 from main import StaticHandler, BaseHandler, BaseAPIHandler
-from models import FlightAwareTrackedFlight, iOSUser
+from models.v1 import FlightAwareTrackedFlight, iOSUser
 from config import config, on_development, on_staging
 
 source = FlightAwareSource()
