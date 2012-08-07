@@ -11,6 +11,7 @@ __email__ = "jon@littledetails.net"
 
 import logging
 import json
+import pickle
 from datetime import datetime
 
 from google.appengine.api import taskqueue
@@ -254,7 +255,7 @@ class AlertWorker(BaseHandler):
             return
 
         # Alert body already been validated in AlertHandler
-        alert_body = json.loads(self.request.body)
+        alert_body = pickle.loads(self.request.body)
         yield source.process_alert(alert_body, self)
 
 
@@ -268,15 +269,20 @@ class AlertHandler(BaseAPIHandler):
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):
             try:
-                alert_body = json.loads(unicode(self.request.body, 'utf-8'))
+                # Load and decode the utf-8 json bytestring
+                unicode_body = unicode(self.request.body, 'utf-8')
+                alert_body = json.loads(unicode_body, 'utf-8')
                 assert utils.is_valid_fa_alert_body(alert_body)
             except Exception as e:
                 logging.exception(e)
+                logging.info(self.request.headers)
                 logging.info(self.request.body)
                 raise InvalidAlertCallbackException()
 
             # Optimization: defer processing the alert
-            task = taskqueue.Task(payload=self.request.body)
+            task = taskqueue.Task(headers={'Content-Type': self.request.content_type},
+                                  payload=pickle.dumps(alert_body))
+            logging.info(self.request.content_type)
             taskqueue.Queue('process-alert').add(task)
             self.respond({'alert_id' : alert_body.get('alert_id')})
         else:
