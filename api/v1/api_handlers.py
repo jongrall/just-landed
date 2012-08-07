@@ -280,9 +280,9 @@ class AlertHandler(BaseAPIHandler):
                 raise InvalidAlertCallbackException()
 
             # Optimization: defer processing the alert
-            task = taskqueue.Task(headers={'Content-Type': self.request.content_type},
+            content_header = self.request.headers.get('Content-Type') or 'text/plain'
+            task = taskqueue.Task(headers={'Content-Type': content_header},
                                   payload=pickle.dumps(alert_body))
-            logging.info(self.request.content_type)
             taskqueue.Queue('process-alert').add(task)
             self.respond({'alert_id' : alert_body.get('alert_id')})
         else:
