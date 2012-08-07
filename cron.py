@@ -16,7 +16,7 @@ from google.appengine.api import taskqueue
 
 from main import BaseHandler
 from config import on_development, config
-from models.v1 import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert, Flight
+from models import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert, Flight
 from api.v1.data_sources import FlightAwareSource
 from custom_exceptions import *
 from notifications import LeaveSoonAlert, LeaveNowAlert

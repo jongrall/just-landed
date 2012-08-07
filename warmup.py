@@ -25,7 +25,7 @@ class WarmupWorker(webapp.RequestHandler):
         import cron
         import custom_exceptions
         import main
-        import models.v1
+        import models
         import notifications
         import reporting
         import utils

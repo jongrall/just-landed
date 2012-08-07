@@ -41,7 +41,7 @@ from google.appengine.runtime.apiproxy_errors import CapabilityDisabledError
 
 from config import config, on_development, flightaware_credentials
 from connections import Connection, build_url
-from models.v1 import (Airport, FlightAwareTrackedFlight, FlightAwareAlert, iOSUser,
+from models import (Airport, FlightAwareTrackedFlight, FlightAwareAlert, iOSUser,
     Origin, Destination, Flight)
 from custom_exceptions import *
 from notifications import *
