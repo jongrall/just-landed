@@ -20,7 +20,9 @@
   <tr>
     <td id="alert-count">{{ alert_count }}</td>
     <td>push alerts set</td>
-    <!--<td>&nbsp;&nbsp;<button id="clear-alerts">Clear Alerts</button></td> -->
+    {% if environment != 'Production' %}
+    <td>&nbsp;&nbsp;<button id="clear-alerts">Clear Alerts</button></td>
+    {% endif %}
     <td id="clear-result"></td>
   </tr>
 </table>

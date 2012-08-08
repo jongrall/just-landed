@@ -31,8 +31,11 @@ def webapp_add_wsgi_middleware(app):
     return app
 
 def appstats_should_record(env):
-    # Don't record admin stuff
-    if env.get('PATH_INFO').startswith('/_ah/'):
+    if env.get('PATH_INFO').startswith('/_ah/admin'):
+        # Don't record admin stuff
+        return False
+    if env.get('PATH_INFO').startswith('/_ah/queue/report-event'):
+        # Don't record event reporting
         return False
     return True
 

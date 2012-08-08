@@ -26,8 +26,8 @@ class FlightAwareAdminHandler(StaticHandler):
         """
         alerts = yield source.get_all_alerts()
         alert_count = len(alerts)
-        tracking_count = len(yield FlightAwareTrackedFlight.all_tracked_flight_ids())
-        users_tracking_count = len(yield FlightAwareTrackedFlight.all_users_tracking())
+        tracking_count = len((yield FlightAwareTrackedFlight.all_tracked_flight_ids()))
+        users_tracking_count = len((yield FlightAwareTrackedFlight.all_users_tracking()))
 
         # Database invariant under one flight per user
         consistent = alert_count <= tracking_count <= users_tracking_count

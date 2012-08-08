@@ -141,30 +141,28 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     has_unsent_reminders = ndb.ComputedProperty(lambda f: bool([r for r in f.reminders if r.sent == False]))
 
     @classmethod
-    def _get_kind():
+    def _get_kind(cls):
         return 'FlightAwareTrackedFlight_v2' # Versioned model kind
 
     @classmethod
-    def create(cls, parent, flight_id, flight_data, alert_id, driving_time=None):
+    def create(cls, parent, flight, alert_id, driving_time=None):
         assert isinstance(parent, ndb.Key)
-        assert utils.is_valid_fa_flight_id(flight_id)
-        assert isinstance(flight_data, dict)
+        assert isinstance(flight, Flight)
         assert isinstance(alert_id, (int, long))
-        from_data = Flight.from_dict(flight_data)
-        new_flight = cls(id=flight_id,
+        new_flight = cls(id=flight.flight_id,
                          parent=parent,
-                         last_flight_data=flight_data,
-                         orig_departure_time=from_data.scheduled_departure_time,
-                         orig_flight_duration=from_data.scheduled_flight_duration,
+                         last_flight_data=flight.to_dict(),
+                         orig_departure_time=flight.scheduled_departure_time,
+                         orig_flight_duration=flight.scheduled_flight_duration,
                          alert_id=alert_id,
-                         user_flight_num=from_data.flight_number)
+                         user_flight_num=flight.flight_number)
 
         # If we have driving time, update their reminders
         if driving_time is not None:
-            new_flight.set_or_update_flight_reminders(from_data, driving_time)
+            new_flight.set_or_update_flight_reminders(flight, driving_time)
 
         if debug_datastore:
-            logging.info('USER %s STARTED TRACKING FLIGHT %s' % (parent.string_id(), flight_id))
+            logging.info('USER %s STARTED TRACKING FLIGHT %s' % (parent.string_id(), flight.flight_id))
             logging.info('USER SUBSCRIBED TO ALERT %s' % alert_id)
 
         return new_flight
@@ -205,7 +203,7 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     @classmethod
     @ndb.tasklet
     def flight_ids_tracked_by_user(cls, user_key):
-        assert isinstance(parent, ndb.Key)
+        assert isinstance(user_key, ndb.Key)
         q = cls.query(ancestor=user_key)
         @ndb.tasklet
         def cbk(flight_key):
@@ -253,13 +251,14 @@ class FlightAwareTrackedFlight(_TrackedFlight):
         return cls.query(cls.has_unsent_reminders == True,
                          cls.reminders.fire_time < datetime.utcnow())
 
-    def update(self, flight_data, alert_id, driving_time=None):
-        assert isinstance(flight_data, dict)
+    def update(self, flight, alert_id, driving_time=None):
+        assert isinstance(flight, Flight)
         assert isinstance(alert_id, (int, long))
+        new_data = flight.to_dict()
 
         # Optimization: only write data if it has changed
-        if flight_data != self.last_flight_data:
-            self.last_flight_data = flight_data
+        if new_data != self.last_flight_data:
+            self.last_flight_data = new_data
             if debug_datastore:
                 logging.info('FLIGHT DATA UPDATED %s' % self.key.string_id())
         if alert_id != self.alert_id:
@@ -268,8 +267,7 @@ class FlightAwareTrackedFlight(_TrackedFlight):
                 logging.info('USER FLIGHT ALERT UPDATED %s' % alert_id)
         # If we have driving time, update their reminders
         if driving_time is not None:
-            from_data = Flight.from_dict(flight_data)
-            self.set_or_update_flight_reminders(from_data, driving_time)
+            self.set_or_update_flight_reminders(flight, driving_time)
 
     def get_unsent_reminders(self):
         unsent = []
@@ -322,20 +320,20 @@ class FlightAwareTrackedFlight(_TrackedFlight):
         if not self.reminders:
             # Set a leave soon reminder, mark it as sent if it was in the past
             leave_soon = FlightReminder(fire_time=leave_soon_time,
-                                        reminder_type=reminder_types.LEAVE_SOON,
+                                        reminder_type=REMINDER_TYPES.LEAVE_SOON,
                                         body=leave_soon_body,
                                         sent=leave_soon_time < datetime.utcnow())
 
             # Set a leave now reminder
             leave_now = FlightReminder(fire_time=leave_now_time,
-                                       reminder_type=reminder_types.LEAVE_NOW,
+                                       reminder_type=REMINDER_TYPES.LEAVE_NOW,
                                        body=leave_now_body)
             self.reminders = [leave_soon, leave_now]
         else:
             for r in self.reminders:
                 # Only update unsent reminders (stops reminders from potentially being sent again)
                 if r.sent == False:
-                    if r.reminder_type == reminder_types.LEAVE_SOON:
+                    if r.reminder_type == REMINDER_TYPES.LEAVE_SOON:
                         r.fire_time = leave_soon_time
                         r.body = leave_soon_body
                     else:
@@ -394,7 +392,7 @@ class iOSUser(_User):
     push_enabled = ndb.ComputedProperty(lambda u: bool(u.push_token))
 
     @classmethod
-    def _get_kind():
+    def _get_kind(cls):
         return 'iOSUser_v2' # Versioned model kind
 
     @classmethod
@@ -427,7 +425,6 @@ class iOSUser(_User):
             settings.append(PushNotificationSetting(name=push, value=True))
         return settings
 
-    @classmethod
     def update(self, user_latitude=None, user_longitude=None, push_token=None):
         if debug_datastore:
             logging.info('UPDATING EXISTING USER %s' % self.key.string_id())

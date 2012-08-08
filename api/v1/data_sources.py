@@ -53,8 +53,8 @@ import reporting
 from reporting import report_event, report_event_transactionally
 
 FLIGHT_STATES = config['flight_states']
-debug_cache = on_development() and False
-debug_alerts = on_development() and False
+debug_cache = on_development() and True
+debug_alerts = on_development() and True
 memcache_client = memcache.Client()
 
 ###############################################################################
@@ -876,13 +876,12 @@ class FlightAwareSource (FlightDataSource):
 
             # Create/update the flight as necessary
             if tracked_flight:
-                tracked_flight.update(flight_data,
+                tracked_flight.update(flight,
                                       alert_id,
                                       driving_time=driving_time)
             else:
                 tracked_flight = FlightAwareTrackedFlight.create(user.key,
-                                                                 flight_id,
-                                                                 flight_data,
+                                                                 flight,
                                                                  alert_id,
                                                                  driving_time=driving_time)
                 report_event_transactionally(reporting.NEW_FLIGHT)
@@ -893,7 +892,7 @@ class FlightAwareSource (FlightDataSource):
             # If they are an existing user and tracking any other flights than this one, untrack them
             if existing_user:
                 flight_ids_tracked = yield FlightAwareTrackedFlight.flight_ids_tracked_by_user(user.key)
-                other_flight_ids = [f_id for f_id in flight_ids_tracked if f_id is not flight_id]
+                other_flight_ids = [f_id for f_id in flight_ids_tracked if f_id != flight_id]
                 if other_flight_ids:
                     # Optimization: batch task add, TQ max batch size is 100
                     for batch in utils.chunks(other_flight_ids, 100):
@@ -964,7 +963,7 @@ class FlightAwareSource (FlightDataSource):
 
         @ndb.tasklet
         def untrack_txn():
-            flight = yield flight_key.get_async()
+            flight = yield f_key.get_async()
             if flight:
                 flight_num, alert_id = flight.user_flight_num, flight.alert_id
                 yield f_key.delete_async()

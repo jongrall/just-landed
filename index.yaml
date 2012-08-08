@@ -10,6 +10,11 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
+- kind: FlightAwareTrackedFlight_v2
+  properties:
+  - name: has_unsent_reminders
+  - name: reminders.fire_time
+
 - kind: iOSUser
   properties:
   - name: has_unsent_reminders
