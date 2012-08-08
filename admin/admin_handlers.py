@@ -12,7 +12,7 @@ from google.appengine.ext import ndb
 
 from api.v1.data_sources import FlightAwareSource
 from main import StaticHandler, BaseHandler, BaseAPIHandler
-from models.v1 import FlightAwareTrackedFlight, iOSUser
+from models.v2 import FlightAwareTrackedFlight
 from config import config, on_development, on_staging
 
 source = FlightAwareSource()
@@ -26,8 +26,8 @@ class FlightAwareAdminHandler(StaticHandler):
         """
         alerts = yield source.get_all_alerts()
         alert_count = len(alerts)
-        tracking_count = yield FlightAwareTrackedFlight.count_tracked_flights()
-        users_tracking_count = yield iOSUser.count_users_tracking()
+        tracking_count = len(yield FlightAwareTrackedFlight.all_tracked_flight_ids())
+        users_tracking_count = len(yield FlightAwareTrackedFlight.all_users_tracking())
 
         # Database invariant under one flight per user
         consistent = alert_count <= tracking_count <= users_tracking_count

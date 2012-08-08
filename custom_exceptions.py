@@ -100,6 +100,15 @@ class UnableToDeleteAlertException(Exception):
         self.code = 400 # Bad request
 
 ###############################################################################
+"""Model Exceptions"""
+###############################################################################
+
+class OrphanedFlightError(Exception):
+    def __init__(self, flight_id=''):
+        self.message = 'Orphaned flight: %s' % flight_id
+        self.code = 500 # Server error
+
+###############################################################################
 """Driving Time Data Source Exceptions"""
 ###############################################################################
 

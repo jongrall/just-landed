@@ -15,8 +15,8 @@ from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 
 from main import BaseHandler
-from config import on_development, config
-from models.v1 import FlightAwareTrackedFlight, iOSUser, FlightAwareAlert, Flight
+from config import config
+from models.v2 import FlightAwareTrackedFlight
 from api.v1.data_sources import FlightAwareSource
 from custom_exceptions import *
 from notifications import LeaveSoonAlert, LeaveNowAlert
@@ -32,52 +32,21 @@ class UntrackOldFlightsWorker(BaseHandler):
     """Cron worker for untracking old flights (efficiently)."""
     @ndb.toplevel
     def get(self):
-        # Figure out all the users tracking flights
-        @ndb.tasklet
-        def user_cbk(u):
-            flight_ids = [f.flight.string_id() for f in u.tracked_flights]
-            tups = [(u.key.string_id(), f_id) for f_id in set(flight_ids)]
-            raise tasklets.Return(tups)
-
-        # Build a list of all the (uuid, flight_id) pairs for users tracking flights
-        users_qry = iOSUser.users_tracking_qry()
-        user_flight_tups = yield users_qry.map_async(user_cbk)
-
-        # Build a mapping of flight_ids to lists of users tracking those flight_ids
-        user_flight_tups = [item for sublist in user_flight_tups for item in sublist]
-        flight_user_map = {}
-
-        for uuid, f_id in user_flight_tups:
-            vals = flight_user_map.setdefault(f_id, [])
-            vals.append(uuid)
+        # Figure out which flights are old and who is tracking them
+        definitely_old, maybe_old = yield FlightAwareTrackedFlight.old_flight_keys()
+        flight_ids_to_check = list(set([f_key.string_id() for f_key in maybe_old]))
 
         # Optimization: check if the flights are old in async batches
         old_flight_ids = []
-        for batch in utils.chunks(flight_user_map.keys(), 20): # Batch size 20
+
+        for batch in utils.chunks(flight_ids_to_check, 20): # Batch size 20
             @ndb.tasklet
             def check_if_old(flight_id):
                 flight_num = utils.flight_num_from_fa_flight_id(flight_id)
-
-                @ndb.tasklet
-                def is_definitely_old():
-                    try:
-                        flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id)
-                        flight_ent = yield flight_key.get_async()
-                        flight = Flight.from_dict(flight_ent.last_flight_data)
-                        raise tasklets.Return(flight.is_old_flight)
-                    except Exception as e: # Any exceptions should trigger a full check
-                        raise tasklets.Return(False)
-
                 try:
-                    if (yield is_definitely_old()):
-                        # We are certain it is old, prevents overzealous checking
-                        raise OldFlightException(flight_number=flight_num,
-                                                 flight_id=flight_id)
-                    else:
-                        # Could be old, let's check
-                        yield source.flight_info(flight_id=flight_id,
-                                                 flight_number=flight_num)
-
+                    # Could be old, let's check
+                    yield source.flight_info(flight_id=flight_id,
+                                             flight_number=flight_num)
                 except Exception as e:
                     # If we see one of these exceptions, we should untrack the flight
                     untrack_with_exceptions = (OldFlightException,
@@ -88,18 +57,16 @@ class UntrackOldFlightsWorker(BaseHandler):
                         raise tasklets.Return(flight_id)
 
             results = yield [check_if_old(f_id) for f_id in batch]
-            old_flight_ids.extend(results)
-
-        old_flight_ids = [f_id for f_id in old_flight_ids if f_id is not None]
+            old_flight_ids.extend([f_id for f_id in results if f_id is not None])
 
         # Optimization: batch untrack all the flights
+        definitely_old.extend([f_key for f_key in maybe_old if f_key.string_id() in old_flight_ids])
         untrack_tasks = []
-        for old_id in old_flight_ids:
-            uuids = flight_user_map.get(old_id)
-            untrack_tasks.extend([taskqueue.Task(params = {
-                'flight_id' : old_id,
-                'uuid' : uuid,
-            }) for uuid in uuids])
+        for old_flight_key in definitely_old:
+            untrack_tasks.append(taskqueue.Task(params = {
+                'flight_id' : old_flight_key.string_id(),
+                'uuid' : old_flight_key.parent().string_id(), # The user id
+            }))
 
         if untrack_tasks:
             logging.info('UNTRACKING %d OLD FLIGHTS' % len(untrack_tasks))
@@ -111,36 +78,50 @@ class SendRemindersWorker(BaseHandler):
     """Cron worker for sending unsent reminders."""
     @ndb.toplevel
     def get(self):
-        # Get all users who have overdue reminders
-        reminder_qry = iOSUser.users_with_overdue_reminders_qry()
+        # Get all the flights with overdue reminders
+        reminder_qry = FlightAwareTrackedFlight.flights_with_overdue_reminders_qry()
 
-        # TRANSACTIONAL REMINDER SENDING PER USER - ENSURE DUPE REMINDERS NOT SENT
+        # TRANSACTIONAL SENDING PER USER PER FLIGHT ENSURES DUPES REMINDERS NOT SENT
         @ndb.transactional
         @ndb.tasklet
-        def callback(u_key):
-            user = yield u_key.get_async()
-            unsent_reminders = user.get_unsent_reminders()
-            outbox = []
-            now = datetime.utcnow()
-            # max_age = now - timedelta(seconds=config['max_reminder_age'])
+        def callback(f_key):
+            u_key = f_key.parent()
+            user, flight = yield ndb.get_multi_async([u_key, f_key])
 
-            for r in unsent_reminders:
-                if r.fire_time <= now:
-                    # Max 5 transactional tasks per txn
-                    if len(outbox) < 6 and user.wants_notification_type(r.reminder_type):
-                        r.sent = True # Mark sent
-                        if r.reminder_type == reminder_types.LEAVE_SOON:
-                            outbox.append(LeaveSoonAlert(user.push_token, r.body))
+            if flight: # Only proceed if the flight is still being tracked
+                if not user: # Every flight must have a user
+                    f_id = f_key.string_id()
+                    error = OrphanedFlightError(flight_id=f_id)
+                    logging.exception(error) # Don't throw, just log
+                    utils.sms_report_exception(error)
+                    raise tasklets.Return()
+
+                elif not user.push_enabled: # Only send reminders to users with push enabled
+                    flight.reminders = [] # Remove the reminders from the flight
+                    yield flight.put_async()
+                    raise tasklets.Return()
+
+                outbox = []
+                now = datetime.utcnow()
+                unsent_reminders = flight.get_unsent_reminders()
+
+                for r in unsent_reminders:
+                    if r.fire_time <= now:
+                        # Max 5 transactional tasks per txn
+                        if len(outbox) <= 5 and user.wants_notification_type(r.reminder_type):
+                            r.sent = True # Mark sent
+                            if r.reminder_type == reminder_types.LEAVE_SOON:
+                                outbox.append(LeaveSoonAlert(user.push_token, r.body))
+                            else:
+                                outbox.append(LeaveNowAlert(user.push_token, r.body))
+                if outbox:
+                    yield flight.put_async() # Save the changes to the flight reminders
+                    for r in outbox:
+                        r.push(_transactional=True) # Transactional push
+                        if isinstance(r, LeaveSoonAlert):
+                            report_event_transactionally(reporting.SENT_LEAVE_SOON_NOTIFICATION)
                         else:
-                            outbox.append(LeaveNowAlert(user.push_token, r.body))
-            if outbox:
-                yield user.put_async() # Save the changes to reminders
-                for r in outbox:
-                    r.push(_transactional=True) # Transactional push
-                    if isinstance(r, LeaveSoonAlert):
-                        report_event_transactionally(reporting.SENT_LEAVE_SOON_NOTIFICATION)
-                    else:
-                        report_event_transactionally(reporting.SENT_LEAVE_NOW_NOTIFICATION)
+                            report_event_transactionally(reporting.SENT_LEAVE_NOW_NOTIFICATION)
 
         yield reminder_qry.map_async(callback, keys_only=True)
 
@@ -157,10 +138,14 @@ class ClearOrphanedAlertsWorker(BaseHandler):
 
         # Figure out which ones are no longer in use
         orphaned_alerts = []
-        for alert_id in valid_alert_ids:
-            alert = yield FlightAwareAlert.get_by_alert_id(alert_id)
-            if not alert or not alert.is_enabled:
-                orphaned_alerts.append(alert_id)
+        for batch in utils.chunks(valid_alert_ids, 20): # Batch size 20
+            f_futs = [FlightAwareTrackedFlight.flight_alert_in_use(alert_id) for alert_id in batch]
+            in_use_flags = yield f_futs
+            results = zip(batch, in_use_flags)
+
+            for alert_id, in_use in results:
+                if not in_use: # There is no flight matching that alert
+                    orphaned_alerts.append(alert_id)
 
         # Do the removal
         if orphaned_alerts:

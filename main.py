@@ -83,6 +83,7 @@ class BaseHandler(webapp.RequestHandler):
                          DrivingAPIQuotaException,
                          DrivingTimeUnauthorizedException,
                          AirportNotFoundException,
+                         UnableToSetAlertException,
                          FlightDurationUnknown,
                          InvalidAlertCallbackException)
 
