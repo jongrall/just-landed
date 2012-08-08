@@ -53,8 +53,8 @@ import reporting
 from reporting import report_event, report_event_transactionally
 
 FLIGHT_STATES = config['flight_states']
-debug_cache = on_development() and True
-debug_alerts = on_development() and True
+debug_cache = on_development() and False
+debug_alerts = on_development() and False
 memcache_client = memcache.Client()
 
 ###############################################################################

@@ -25,7 +25,7 @@ FLIGHT_STATES = config['flight_states']
 REMINDER_TYPES = config['reminder_types']
 
 # Set to true to log informational messages about datastore operations
-debug_datastore = on_development() and True
+debug_datastore = on_development() and False
 
 # Optimization: indexed=False is set for most datastore properties to improve
 # write performance of entities. Also, short names are set to reduce space
