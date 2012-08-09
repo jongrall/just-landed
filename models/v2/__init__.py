@@ -171,7 +171,7 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     @ndb.tasklet
     def get_by_flight_id_alert_id(cls, flight_id, alert_id):
         assert utils.is_valid_fa_flight_id(flight_id)
-        q = cls.query(cls.__key__ == ndb.Key(cls, flight_id),
+        q = cls.query(cls.key == ndb.Key(cls, flight_id),
                       cls.alert_id == alert_id)
         flight = yield q.get_async()
         raise tasklets.Return(flight)
