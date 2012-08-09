@@ -42,7 +42,7 @@ Route = webapp.Route
 # is up-to-date.
 APP_VERSION = os.environ.get('CURRENT_VERSION_ID', '')
 SERVER_SOFTWARE = os.environ.get('SERVER_SOFTWARE', '')
-VERSION_CHKSM = adler32(APP_VERSION + SERVER_SOFTWARE)
+VERSION_CHKSM = abs(adler32(APP_VERSION + SERVER_SOFTWARE))
 template_context = {
     'version' : VERSION_CHKSM,
     'ga_account' : google_analytics_account(),
