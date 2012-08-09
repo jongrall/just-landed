@@ -30,7 +30,7 @@ class FlightAwareAdminHandler(StaticHandler):
         users_tracking_count = len((yield FlightAwareTrackedFlight.all_users_tracking()))
 
         # Database invariant under one flight per user
-        consistent = alert_count <= tracking_count <= users_tracking_count
+        consistent = tracking_count <= users_tracking_count <= alert_count
 
         # Figure out what environment we're running in
         environment = (on_development() and 'Development') or (on_staging() and 'Staging') or 'Production'

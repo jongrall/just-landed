@@ -819,7 +819,7 @@ airline_code_mapping = {
     'YS' : 'RAE',
     'YV' : 'ASH',
     'YW' : 'ANE',
-    'YX' : 'MEP',
+    'YX' : 'RPA',
     'Z3' : 'SMJ',
     'Z5' : 'GMG',
     'Z8' : 'AZN',
