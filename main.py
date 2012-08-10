@@ -29,7 +29,6 @@ from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
 from custom_exceptions import *
 from config import config, on_development, on_staging, google_analytics_account
-from simulate_read_only import * # FIXME
 import utils
 
 Route = webapp.Route
