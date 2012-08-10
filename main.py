@@ -86,7 +86,8 @@ class BaseHandler(webapp.RequestHandler):
                          UnableToSetAlertException,
                          FlightDurationUnknown,
                          InvalidAlertCallbackException,
-                         EventClassNotFoundException)
+                         EventClassNotFoundException,
+                         UnableToCreateUniqueEventKey)
 
         unrecoverable_errors = (OverQuotaError,
                                 CapabilityDisabledError,
