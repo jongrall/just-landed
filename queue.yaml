@@ -32,3 +32,7 @@ queue:
 - name: report-event
   bucket_size: 100
   rate: 500/s
+
+- name: log-event
+  bucket_size: 100
+  rate: 500/s

@@ -50,7 +50,7 @@ import utils
 import aircraft_types
 
 import reporting
-from reporting import report_event, report_event_transactionally
+from reporting import report_event, report_event_transactionally, log_event_transactionally, FlightTrackedEvent
 
 FLIGHT_STATES = config['flight_states']
 debug_cache = on_development() and False
@@ -885,6 +885,7 @@ class FlightAwareSource (FlightDataSource):
                                                                  alert_id,
                                                                  driving_time=driving_time)
                 report_event_transactionally(reporting.NEW_FLIGHT)
+                log_event_transactionally(FlightTrackedEvent, user_id=uuid, flight_id=flight_id)
 
             # Optimization: multi-put
             put_futs = ndb.put_multi_async([user, tracked_flight])

@@ -30,6 +30,16 @@ class ReportEventFailedException(Exception):
         self.message = 'Unable to report event: %s' % event_name
         self.code = status_code
 
+class EventClassNotFoundException(Exception):
+    def __init__(self, class_name=''):
+        self.message = 'Unable to report event with class: %s' % class_name
+        self.code = 400 # Bad request
+
+class UnableToCreateUniqueEventKey(Exception):
+    def __init__(self, class_name=''):
+        self.message = 'Unable to build key for unique %s event.' % class_name
+        self.code = 500 # Server error
+
 ###############################################################################
 """Flight Data Source Exceptions"""
 ###############################################################################

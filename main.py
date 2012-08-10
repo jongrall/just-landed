@@ -85,7 +85,8 @@ class BaseHandler(webapp.RequestHandler):
                          AirportNotFoundException,
                          UnableToSetAlertException,
                          FlightDurationUnknown,
-                         InvalidAlertCallbackException)
+                         InvalidAlertCallbackException,
+                         EventClassNotFoundException)
 
         unrecoverable_errors = (OverQuotaError,
                                 CapabilityDisabledError,
@@ -241,6 +242,7 @@ routes = [
         Route('/queue/mobile-push', handler='notifications.PushWorker'),
         Route('/queue/clear-alerts', handler='admin.admin_handlers.ClearAlertsWorker'),
         Route('/queue/report-event', handler='reporting.ReportWorker'),
+        Route('/queue/log-event', handler='reporting.DatastoreLogWorker'),
         Route('/warmup', handler='warmup.WarmupWorker'),
     ]),
     Route('/', handler=StaticHandler),

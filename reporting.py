@@ -23,6 +23,8 @@ import json
 from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
 from google.appengine.api.urlfetch import DownloadError
+from google.appengine.ext import ndb
+from google.appengine.ext.ndb import tasklets
 
 from main import BaseHandler
 from config import config, on_development, on_staging, google_analytics_account, domain_name
@@ -161,6 +163,84 @@ class GoogleAnalyticsService(ReportingService):
             utils.report_service_error(GoogleAnalyticsUnavailableError())
             logging.exception(e)
 
+###############################################################################
+"""Events Stored in the Datastore"""
+###############################################################################
+
+class _Event(ndb.Model):
+    """A logged event of interest.
+
+    Not intended to be used directly, but rather subclassed.
+
+    Fields:
+    - `created` : When the event was logged.
+
+    """
+    created = ndb.DateTimeProperty(auto_now_add=True)
+
+    @classmethod
+    def ensure_unique(cls):
+        """Returns whether or not events of this type should be unique in the datastore."""
+        return False
+
+
+class _UserEvent(_Event):
+    """A logged user event of interest.
+
+    Not intended to be used directly, but rather subclassed.
+
+    Fields:
+    - `user_id` : The id of the user who triggered the event.
+    - `datasource` : The datasource that was searched (FlightAware, etc.)
+
+    """
+    user_id = ndb.StringProperty(required=True)
+    datasource = ndb.StringProperty('source', choices=['FlightAware, FlightStats'], default='FlightAware')
+
+
+class FlightSearchEvent(_UserEvent):
+    """Event: A user searched for a flight.
+
+    Fields:
+    - `flight_number` : The flight number that the user searched for.
+
+    """
+    flight_number = ndb.StringProperty('f_num', required=True)
+
+
+class FlightSearchMissEvent(FlightSearchEvent):
+    """Event: A flight search failed to find a match."""
+
+
+class FlightTrackedEvent(_UserEvent):
+    """Event: A user began tracking a flight.
+
+    Fields:
+    - `flight_id` : The id of the flight that the user tracked.
+
+    """
+    flight_id = ndb.StringProperty(required=True)
+
+
+class UserAtAirportEvent(_UserEvent):
+    """Event: A user went to the airport.
+
+    Fields:
+    - `flight_id` : The id of the flight that the user was tracking.
+    - `airport` : The IATA/ICAO identifier of the airport the user was at.
+
+    """
+    flight_id = ndb.StringProperty(required=True)
+    airport = ndb.StringProperty(required=True)
+
+    @classmethod
+    def ensure_unique(cls):
+        return True # We only want to see one event for the user at the airport
+
+    @classmethod
+    def unique_key(cls, **kwargs):
+        return '_'.join([kwargs['user_id'], kwargs['flight_id']])
+
 
 ###############################################################################
 """Report Helper Methods"""
@@ -187,8 +267,43 @@ def report_event_transactionally(event_name, **properties):
     """
     _defer_report(event_name, True, **properties)
 
+
 ###############################################################################
-"""Reporting Handler"""
+"""Datastore Report Helper Methods"""
+###############################################################################
+
+def get_class(class_path):
+    parts = class_path.split('.')
+    module = ".".join(parts[:-1])
+    m = __import__( module )
+    for comp in parts[1:]:
+        m = getattr(m, comp)
+    return m
+
+def _defer_ds_log(event_cls, transactional, **properties):
+    """Defers logging an event and properties to the datastore using the
+    Taskqueue service. Specifying transactional ensures the event only gets
+    added to the queue if the enclosing transaction is committed successfully.
+
+    """
+    properties['event_class'] = '.'.join([event_cls.__module__, event_cls.__name__])
+    report_task = taskqueue.Task(params=properties)
+    taskqueue.Queue('log-event').add(report_task, transactional=transactional)
+
+def log_event(event_cls, **properties):
+    """Adds an event to the taskqueue for deferred logging to the datastore."""
+    _defer_ds_log(event_cls, False, **properties)
+
+def log_event_transactionally(event_cls, **properties):
+    """Adds an event to the taskqueue for deferred logging to the datastore.
+    Event is only enqueued if the enclosing transaction is committed successfully.
+
+    """
+    _defer_ds_log(event_cls, True, **properties)
+
+
+###############################################################################
+"""Reporting Handlers"""
 ###############################################################################
 
 service = GoogleAnalyticsService()
@@ -211,3 +326,32 @@ class ReportWorker(BaseHandler):
                 properties[k] = params[k]
 
         service.report(event_name, **properties)
+
+
+class DatastoreLogWorker(BaseHandler):
+    """Worker that logs events to the datastore."""
+    @ndb.toplevel
+    def post(self):
+        # Reliability: disable retries, would rather lose events than have them
+        # erroneously reported many times.
+        if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
+            return
+
+        params = dict(self.request.params)
+        event_cls_path = params.get('event_class')
+        event_cls = event_cls_path and get_class(event_cls_path)
+        if not issubclass(event_cls, ndb.Model):
+            raise EventClassNotFoundException(class_name=(event_cls_path or ''))
+
+        del(params['event_class']) # Remove the event class from the args
+
+        if event_cls.ensure_unique():
+            try:
+                event_id = event_cls.unique_key(**params)
+            except KeyError:
+                raise UnableToCreateUniqueEventKey(class_name=(event_cls_path or ''))
+            # Transactionally get or insert the event
+            yield event_cls.get_or_insert_async(event_id, **params)
+        else:
+            log_entity = event_cls(**params)
+            yield log_entity.put_async() # Store the event in the datastore

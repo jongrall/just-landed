@@ -22,6 +22,8 @@ from data_sources import FlightAwareSource, BingMapsDistanceSource, GoogleDistan
 from custom_exceptions import *
 import utils
 
+from reporting import log_event, FlightSearchEvent, FlightSearchMissEvent, UserAtAirportEvent
+
 # TODO: add FlightStatsSource()
 # Currently using FlightAware for flight data
 source = FlightAwareSource()
@@ -45,8 +47,11 @@ class SearchHandler(AuthenticatedAPIHandler):
         This handler responds to the client using JSON.
 
         """
+        # FIXME: Assumes iOS device for now
+        uuid = self.request.headers.get('X-Just-Landed-UUID')
+        sanitized_f_num = utils.sanitize_flight_number(flight_number)
+
         if not utils.valid_flight_number(flight_number):
-            sanitized_f_num = utils.sanitize_flight_number(flight_number)
             # FIXME: Temp hack until iOS version fixes flight number alert msg
             if utils.is_int(sanitized_f_num):
                 raise FlightNotFoundException(flight_number)
@@ -54,9 +59,11 @@ class SearchHandler(AuthenticatedAPIHandler):
                 raise InvalidFlightNumberException(flight_number)
 
         try:
+            log_event(FlightSearchEvent, user_id=uuid, flight_number=sanitized_f_num)
             flights = yield source.lookup_flights(flight_number)
 
         except FlightNotFoundException as e:
+            log_event(FlightSearchMissEvent, user_id=uuid, flight_number=sanitized_f_num)
             # Flight lookup failed, see if we can translate their airline code
             translated_f_num = utils.translate_flight_number(flight_number)
             if not translated_f_num:
@@ -197,6 +204,10 @@ class TrackHandler(AuthenticatedAPIHandler):
             response['leaveForAirportTime'] = utils.timestamp(utils.leave_now_time(flight, driving_time))
         elif latitude and longitude and utils.at_airport(latitude, longitude, dest_latitude, dest_longitude):
             response['drivingTime'] = 0
+            log_event(UserAtAirportEvent,
+                    user_id=uuid,
+                    flight_id=flight.flight_id,
+                    airport=(flight.destination.iata_code or flight.destination.icao_code))
 
         self.respond(response)
 
