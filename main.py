@@ -29,6 +29,7 @@ from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
 from custom_exceptions import *
 from config import config, on_development, on_staging, google_analytics_account
+from simulate_read_only import * # FIXME
 import utils
 
 Route = webapp.Route
@@ -188,6 +189,13 @@ class BaseAPIHandler(BaseHandler):
             # Set response content type to JSON
             self.response.content_type = 'application/json'
             self.response.write(json.dumps(response_data))
+
+    def dispatch(self): # FIXME
+        if not utils.datastore_writes_enabled():
+            self.response.set_status(503)
+            self.respond({'error' : 'Just Landed is currently unavailable.'})
+        else:
+            super(BaseAPIHandler, self).dispatch()
 
 
 class AuthenticatedAPIHandler(BaseAPIHandler):

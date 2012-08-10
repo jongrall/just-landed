@@ -1,0 +1,8 @@
+mapreduce:
+- name: Migrate v1 schema to v2
+  mapper:
+    input_reader: mapreduce.input_readers.DatastoreKeyInputReader
+    handler: admin.mappers.migrate_schema
+    params:
+    - name: entity_kind
+      default: iOSUser

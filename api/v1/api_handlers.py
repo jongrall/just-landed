@@ -212,15 +212,16 @@ class TrackHandler(AuthenticatedAPIHandler):
         self.respond(response)
 
         # Optimization: defer the bulk of the work to track the flight
-        task = taskqueue.Task(params={
-            'flight' : json.dumps(flight.to_dict()),
-            'uuid' : uuid or '',
-            'push_token' : push_token or '',
-            'user_latitude' : (utils.is_float(latitude) and latitude) or '',
-            'user_longitude' : (utils.is_float(longitude) and longitude) or '',
-            'driving_time' : (utils.is_int(driving_time) and int(driving_time)) or '',
-        })
-        taskqueue.Queue('track').add(task)
+        if uuid:
+            task = taskqueue.Task(params={
+                'flight' : json.dumps(flight.to_dict()),
+                'uuid' : uuid or '',
+                'push_token' : push_token or '',
+                'user_latitude' : (utils.is_float(latitude) and latitude) or '',
+                'user_longitude' : (utils.is_float(longitude) and longitude) or '',
+                'driving_time' : (utils.is_int(driving_time) and int(driving_time)) or '',
+            })
+            taskqueue.Queue('track').add(task)
 
 
 class UntrackWorker(BaseHandler):

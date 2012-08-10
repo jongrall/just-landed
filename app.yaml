@@ -23,11 +23,12 @@ pagespeed:
   - http://*/admin/*
   - http://*/cron/*
   - http://*/_ah/*
+  - http://*/mapreduce/*
   - https://*/api/*
   - https://*/admin/*
   - https://*/cron/*
   - https://*/_ah/*
-
+  - https://*/mapreduce/*
   enabled_rewriters:
   - InlineJs
   - InlineImages
@@ -69,6 +70,13 @@ handlers:
   script: main.app
   login: admin
   secure: always
+
+# Map reduce
+- url: /mapreduce/pipeline/images
+  static_dir: lib/mapreduce/lib/pipeline/ui/images
+- url: /mapreduce(/.*)?
+  script: lib.mapreduce.main.APP
+  login: admin
 
 # Everything else
 - url: /.*
