@@ -19,14 +19,15 @@ libraries:
 
 pagespeed:
   url_blacklist:
-  - http://*/api/.*
+  - http://*/api/*
   - http://*/admin/*
   - http://*/cron/*
   - http://*/_ah/*
-  - https://*/api/.*
+  - https://*/api/*
   - https://*/admin/*
   - https://*/cron/*
   - https://*/_ah/*
+
   enabled_rewriters:
   - InlineJs
   - InlineImages
