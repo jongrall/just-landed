@@ -7,6 +7,7 @@ __copyright__ = "Copyright 2012, Just Landed LLC"
 __email__ = "jon@littledetails.net"
 
 import logging
+import pickle
 import time
 from datetime import datetime, timedelta, tzinfo
 import re
@@ -17,7 +18,8 @@ from zlib import adler32
 import re
 import string
 
-from google.appengine.api import memcache, capabilities
+from google.appengine.api import memcache, taskqueue, capabilities
+from google.appengine.ext import webapp
 
 from config import config, api_secret, on_production
 from lib.twilio.rest import TwilioRestClient
@@ -561,9 +563,15 @@ def send_sms(to, body, from_phone=config['twilio']['just_landed_phone']):
 
 def sms_alert_admin(message):
     """Send an SMS alert to the admins. Intended purpose: report 500 errors."""
-    if on_production():
+    if True or on_production(): # FIXME
+        tasks = []
         for phone in config['admin_phones']:
-            send_sms(to=phone, body=message)
+            tasks.append(taskqueue.Task(params={
+                'to' : phone,
+                'message' : message,
+            }))
+        if tasks:
+            taskqueue.Queue('send-sms').add(tasks)
 
 def sms_report_exception(exception):
     """Alert admins to 500 errors via SMS at most once every 30 mins for
@@ -669,51 +677,78 @@ def service_error_cache_key(exception):
     return 'service_error_' + type(exception).__name__
 
 def report_service_error(exception):
-    """Given an error, decides whether or not the affected service is having
-    an outage based on frequency of recent errors per second. Caches errors,
-    and only reports an outage once the service outage threshold has been crossed."""
-    error_name = type(exception).__name__
-    error_cache_key = service_error_cache_key(exception)
-    send_sms = False
-    rate = 0.0
-    now = datetime.utcnow()
-    client = memcache.Client()
-    retries = 0
+    if exception:
+        taskqueue.Queue('report-outage').add(taskqueue.Task(params={
+            'exception' : pickle.dumps(exception)
+        }))
 
-    while retries < 20: # Retry loop for CAS
-        report = client.gets(error_cache_key)
-        if report is None:
-            # 1st report of this service error
-            report = {
-                'alert_sent' : False,
-                'outage_start_date' : None,
-                'error_dates' : [now]
-            }
-            client.set(error_cache_key, report) # Required for CAS to work
-            break
-        else:
-            # Update existing report of recent errors for this service
-            error_dates = report['error_dates']
-            assert isinstance(error_dates, list)
-            # Keep the last min_outage_errors
-            error_dates.append(now)
-            error_dates = sorted(error_dates)
-            report['error_dates'] = error_dates[-config['min_outage_errors']:]
+###############################################################################
+"""Utils Taskqueue Handlers"""
+###############################################################################
 
-            # Figure out if we need to send an sms notification to admins
-            send_sms = not report['alert_sent'] and is_error_rate_high(report['error_dates'])
-            if send_sms:
-                rate = error_rate(report['error_dates'])
-                report['alert_sent'] = True # We will be sending the alert shortly
-                report['outage_start_date'] = now # Use now as the outage start date
+class SMSWorker(webapp.RequestHandler):
+    """Deferred sending of SMS messages."""
+    def post(self):
+        # Disable retries
+        if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
+            return
 
-            if client.cas(error_cache_key, report):
-                break # Write was successful
+        to = self.request.params.get('to')
+        msg = self.request.params.get('message')
+        if to and msg:
+            send_sms(to, msg)
+
+
+class ReportOutageWorker(webapp.RequestHandler):
+    """Deferred reporting of outages."""
+    def post(self):
+        # Disable retries
+        if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
+            return
+
+        exception = pickle.loads(str(self.request.params.get('exception')))
+        error_name = type(exception).__name__
+        error_cache_key = service_error_cache_key(exception)
+        send_sms = False
+        rate = 0.0
+        now = datetime.utcnow()
+        client = memcache.Client()
+        retries = 0
+
+        while retries < 20: # Retry loop for CAS
+            report = client.gets(error_cache_key)
+            if report is None:
+                # 1st report of this service error
+                report = {
+                    'alert_sent' : False,
+                    'outage_start_date' : None,
+                    'error_dates' : [now]
+                }
+                client.set(error_cache_key, report) # Required for CAS to work
+                break
             else:
-                retries += 1
+                # Update existing report of recent errors for this service
+                error_dates = report['error_dates']
+                assert isinstance(error_dates, list)
+                # Keep the last min_outage_errors
+                error_dates.append(now)
+                error_dates = sorted(error_dates)
+                report['error_dates'] = error_dates[-config['min_outage_errors']:]
 
-    if send_sms:
-        sms_alert_admin("[%s] %s\nError rate: %.2f/min" %
-                        (datetime.now(Pacific).strftime('%T'),
-                        exception.message,
-                        rate * 60.0))
+                # Figure out if we need to send an sms notification to admins
+                send_sms = not report['alert_sent'] and is_error_rate_high(report['error_dates'])
+                if send_sms:
+                    rate = error_rate(report['error_dates'])
+                    report['alert_sent'] = True # We will be sending the alert shortly
+                    report['outage_start_date'] = now # Use now as the outage start date
+
+                if client.cas(error_cache_key, report):
+                    break # Write was successful
+                else:
+                    retries += 1
+
+        if send_sms:
+            sms_alert_admin("[%s] %s\nError rate: %.2f/min" %
+                            (datetime.now(Pacific).strftime('%T'),
+                            exception.message,
+                            rate * 60.0))

@@ -189,7 +189,7 @@ class BaseAPIHandler(BaseHandler):
             self.response.content_type = 'application/json'
             self.response.write(json.dumps(response_data))
 
-    def dispatch(self): # FIXME
+    def dispatch(self): # FIXME: Remove this
         if not utils.datastore_writes_enabled():
             self.response.set_status(503)
             self.respond({'error' : 'Just Landed is currently unavailable.'})
@@ -251,6 +251,8 @@ routes = [
         Route('/queue/clear-alerts', handler='admin.admin_handlers.ClearAlertsWorker'),
         Route('/queue/report-event', handler='reporting.ReportWorker'),
         Route('/queue/log-event', handler='reporting.DatastoreLogWorker'),
+        Route('/queue/send-sms', handler='utils.SMSWorker'),
+        Route('/queue/report-outage', handler='utils.ReportOutageWorker'),
         Route('/warmup', handler='warmup.WarmupWorker'),
     ]),
     Route('/', handler=StaticHandler),
