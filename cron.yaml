@@ -2,21 +2,21 @@
 cron:
   # Cost of task: $$$ (/untrack for each old flight, calls to flight_info to verify old)
   # Stops unnecessary tracking of old flights w/ unwanted alerts and push notifications
-  - description: stop tracking old flights
-    url: /cron/untrack_old_flights
-    schedule: every 3 hours
-
-  # Cost of task: $
-  # Sends leave now / leave soon reminders to users
-  - description: send flight reminders
-    url: /cron/send_reminders
-    schedule: every 1 minutes
-
-  # Cost of task: $ (one call to get_alerts, one call to delete_alert for each orphaned alert)
-  # Gets rid of orphaned flight alerts, stops us from being billed for those alerts
-  - description: clear orphaned flightaware alerts
-    url: /cron/clear_orphaned_alerts
-    schedule: every 2 hours
+  # - description: stop tracking old flights
+  #   url: /cron/untrack_old_flights
+  #   schedule: every 3 hours
+  #
+  # # Cost of task: $
+  # # Sends leave now / leave soon reminders to users
+  # - description: send flight reminders
+  #   url: /cron/send_reminders
+  #   schedule: every 1 minutes
+  #
+  # # Cost of task: $ (one call to get_alerts, one call to delete_alert for each orphaned alert)
+  # # Gets rid of orphaned flight alerts, stops us from being billed for those alerts
+  # - description: clear orphaned flightaware alerts
+  #   url: /cron/clear_orphaned_alerts
+  #   schedule: every 2 hours
 
   # Cost of task: - (memcache calls)
   # Checks whether outages have ended or not
