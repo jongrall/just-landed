@@ -9,7 +9,10 @@ from google.appengine.ext.ndb import tasklets
 
 import models.v1 as v1
 import models.v2 as v2
+from api.v1.data_sources import FlightAwareSource
 import utils
+
+source = FlightAwareSource()
 
 @ndb.toplevel
 def migrate_schema(v1_key):
@@ -75,6 +78,12 @@ def migrate_schema(v1_key):
                 assert matching_alert
                 assert len(new_reminders <= 2)
 
+                alert_id = matching_alert.alert_id
+
+                # If the alert is being used by more than one person, create a new one
+                if matching_alert.num_users_with_alert > 1:
+                    alert_id = yield source.set_alert(flight_id=flight_id)
+
                 # Create the new flight
                 v2_flight_fut = v2.FlightAwareTrackedFlight.get_or_insert_async(
                     flight_id,
@@ -83,7 +92,7 @@ def migrate_schema(v1_key):
                     last_flight_data=matching_flight.last_flight_data,
                     orig_departure_time=matching_flight.orig_departure_time,
                     orig_flight_duration=matching_flight.orig_flight_duration,
-                    alert_id=matching_alert.alert_id,
+                    alert_id=alert_id,
                     user_flight_num=u_f_num,
                     reminders=new_reminders)
 
