@@ -76,7 +76,7 @@ def migrate_schema(v1_key):
                 assert utils.valid_flight_number(flight_num)
                 assert utils.valid_flight_number(u_f_num)
                 assert matching_flight
-                assert len(new_reminders <= 2)
+                assert len(new_reminders) <= 2
 
                 alert_id = matching_alert and matching_alert.alert_id
 
