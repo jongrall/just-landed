@@ -29,9 +29,9 @@ def migrate_schema(v1_key):
         # Create the new user entity
         v2_user_fut = v2.iOSUser.get_or_insert_async(v1_user.key.string_id(),
                              created=v1_user.created, # Preserve creation date of original user
-                             last_known_location=v1_user.last_known_location,
+                             last_known_location=ndb.GeoPt(v1_user.last_known_location.lat, lon=v1_user.last_known_location.lon),
                              push_token=v1_user.push_token,
-                             push_settings=v1_user.push_settings)
+                             push_settings=v2.iOSUser.default_settings())
         futs.append(v2_user_fut)
 
         if v1_user.is_tracking_flights:
