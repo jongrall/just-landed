@@ -6,3 +6,7 @@ mapreduce:
     params:
     - name: entity_kind
       default: iOSUser
+    - name: shard_count
+      default: 32
+    - name: processing_rate
+      default: 500
