@@ -75,13 +75,12 @@ def migrate_schema(v1_key):
                 assert utils.valid_flight_number(flight_num)
                 assert utils.valid_flight_number(u_f_num)
                 assert matching_flight
-                assert matching_alert
                 assert len(new_reminders <= 2)
 
-                alert_id = matching_alert.alert_id
+                alert_id = matching_alert and matching_alert.alert_id
 
                 # If the alert is being used by more than one person, create a new one
-                if matching_alert.num_users_with_alert > 1:
+                if not matching_alert or matching_alert.num_users_with_alert > 1:
                     alert_id = yield source.set_alert(flight_id=flight_id)
 
                 # Create the new flight
