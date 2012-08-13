@@ -36,6 +36,8 @@ config = {}
 
 config['app'] = {}
 
+config['maintenance_in_progress'] = False
+
 if os.environ.get('SERVER_SOFTWARE', '').startswith('Dev'):
   config['app']['mode'] = 'development'
 

@@ -190,7 +190,7 @@ class BaseAPIHandler(BaseHandler):
             self.response.write(json.dumps(response_data))
 
     def dispatch(self): # FIXME: Remove this
-        if not utils.datastore_writes_enabled():
+        if config['maintenance_in_progress'] or not utils.datastore_writes_enabled():
             self.response.set_status(503)
             self.respond({'error' : 'Just Landed is currently unavailable.'})
         else:

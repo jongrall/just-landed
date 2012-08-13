@@ -33,7 +33,7 @@ class UntrackOldFlightsWorker(BaseHandler):
     @ndb.toplevel
     def get(self):
         # Only do something if the datastore allows writes
-        if utils.datastore_writes_enabled():
+        if not config['maintenance_in_progress'] and utils.datastore_writes_enabled():
             # Figure out which flights are old and who is tracking them
             definitely_old, maybe_old = yield FlightAwareTrackedFlight.old_flight_keys()
             flight_ids_to_check = list(set([f_key.string_id() for f_key in maybe_old]))
@@ -81,7 +81,7 @@ class SendRemindersWorker(BaseHandler):
     @ndb.toplevel
     def get(self):
         # Only do something if the datastore allows writes
-        if utils.datastore_writes_enabled():
+        if not config['maintenance_in_progress'] and utils.datastore_writes_enabled():
             # Get all the flights with overdue reminders
             reminder_qry = FlightAwareTrackedFlight.flights_with_overdue_reminders_qry()
 
@@ -135,7 +135,7 @@ class ClearOrphanedAlertsWorker(BaseHandler):
     @ndb.toplevel
     def get(self):
         # Only do something if the datastore allows writes
-        if utils.datastore_writes_enabled():
+        if not config['maintenance_in_progress'] and utils.datastore_writes_enabled():
             alerts = yield source.get_all_alerts()
 
             # Get all the valid alert ids
@@ -163,7 +163,7 @@ class OutageCheckerWorker(BaseHandler):
     """Cron worker for checking whether possible outages have finished."""
     def get(self):
         # Only do something if the datastore allows writes
-        if utils.datastore_writes_enabled():
+        if not config['maintenance_in_progress'] and utils.datastore_writes_enabled():
             possible_outages = [
                 FlightAwareUnavailableError(),
                 BingMapsUnavailableError(),
