@@ -211,10 +211,9 @@ class OutageCheckerWorker(BaseHandler):
                            # Record that we need to send an sms for this outage
                            last_error_seconds_ago = abs(now - last_error_date).total_seconds()
                            outage_duration = abs(last_error_date - outage_start_date).total_seconds()
-                           sms_to_send.append("[%s] Outage over.\n%s stopped %s ago. Outage lasted %s." %
-                                                  (datetime.now(utils.Pacific).strftime('%T'),
+                           sms_to_send.append("[%s] Outage over.\n%s stopped. Outage lasted %s." %
+                                                  (last_error_date.astimezone(utils.Pacific).strftime('%T'),
                                                   error_name,
-                                                  utils.pretty_time_interval(last_error_seconds_ago),
                                                   utils.pretty_time_interval(outage_duration)))
                         else:
                             continue # Outage in progress, not over
