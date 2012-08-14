@@ -162,66 +162,65 @@ class ClearOrphanedAlertsWorker(BaseHandler):
 class OutageCheckerWorker(BaseHandler):
     """Cron worker for checking whether possible outages have finished."""
     def get(self):
-        # Only do something if the datastore allows writes
-        if not config['maintenance_in_progress'] and utils.datastore_writes_enabled():
-            possible_outages = [
-                FlightAwareUnavailableError(),
-                BingMapsUnavailableError(),
-                GoogleDistanceAPIUnavailableError(),
-                UrbanAirshipUnavailableError(),
-                StackMobUnavailableError(),
-                # MixpanelUnavailableError(), # No longer used
-                GoogleAnalyticsUnavailableError(),
-            ]
+        possible_outages = [
+            FlightAwareUnavailableError(),
+            BingMapsUnavailableError(),
+            GoogleDistanceAPIUnavailableError(),
+            UrbanAirshipUnavailableError(),
+            StackMobUnavailableError(),
+            # MixpanelUnavailableError(), # No longer used
+            GoogleAnalyticsUnavailableError(),
+        ]
 
-            client = memcache.Client()
-            cache_keys = [utils.service_error_cache_key(e) for e in possible_outages]
-            sms_to_send = []
-            retries = 0
+        client = memcache.Client()
+        cache_keys = [utils.service_error_cache_key(e) for e in possible_outages]
+        sms_to_send = []
+        retries = 0
 
-            while retries < 20: # Retry loop for CAS
-                sms_to_send = [] # Reset sms
-                report_map = client.get_multi(cache_keys, for_cas=True)
-                to_set = {}
+        while retries < 20: # Retry loop for CAS
+            sms_to_send = [] # Reset sms
+            report_map = client.get_multi(cache_keys, for_cas=True)
+            to_set = {}
 
-                for e in possible_outages:
-                    error_name = type(e).__name__
-                    error_cache_key = utils.service_error_cache_key(e)
-                    outage_start_date = None
-                    last_error_date = None
+            for e in possible_outages:
+                error_name = type(e).__name__
+                error_cache_key = utils.service_error_cache_key(e)
+                outage_start_date = None
+                last_error_date = None
 
-                    report = report_map.get(error_cache_key)
-                    if not report or not report['alert_sent']:
-                        continue # Skip to the next error, nothing to do yet
-                    else:
-                        # An alert was previously sent for this type of outage
-                        error_dates = report['error_dates']
-                        outage_start_date = report['outage_start_date']
-                        error_dates = sorted(error_dates)
-                        now = datetime.utcnow()
-                        last_error_date = error_dates[-1]
-
-                        if (len(error_dates) == 0 or
-                           last_error_date < now - timedelta(seconds=config['outage_over_wait'])):
-                           # Outage is over, prime system to detect another outage
-                           report['alert_sent'] = False
-                           report['outage_start_date'] = None
-                           to_set[error_cache_key] = report
-
-                           # Record that we need to send an sms for this outage
-                           last_error_seconds_ago = abs(now - last_error_date).total_seconds()
-                           outage_duration = abs(last_error_date - outage_start_date).total_seconds()
-                           sms_to_send.append("[%s] Outage over.\n%s stopped. Outage lasted %s." %
-                                                  (last_error_date.astimezone(utils.Pacific).strftime('%T'),
-                                                  error_name,
-                                                  utils.pretty_time_interval(outage_duration)))
-                        else:
-                            continue # Outage in progress, not over
-
-                if not(to_set) or not(client.cas_multi(to_set)): # cas_multi returns empty list on success
-                    break # Successful
+                report = report_map.get(error_cache_key)
+                if not report or not report['alert_sent']:
+                    continue # Skip to the next error, nothing to do yet
                 else:
-                    retries += 1
+                    # An alert was previously sent for this type of outage
+                    error_dates = report['error_dates']
+                    outage_start_date = report['outage_start_date']
+                    error_dates = sorted(error_dates)
+                    now = datetime.utcnow()
+                    last_error_date = error_dates[-1]
 
-            for sms in sms_to_send:
-                utils.sms_alert_admin(sms)
+                    if (len(error_dates) == 0 or
+                       last_error_date < now - timedelta(seconds=config['outage_over_wait'])):
+                       # Outage is over, prime system to detect another outage
+                       report['alert_sent'] = False
+                       report['outage_start_date'] = None
+                       to_set[error_cache_key] = report
+
+                       # Record that we need to send an sms for this outage
+                       last_error_seconds_ago = abs(now - last_error_date).total_seconds()
+                       outage_duration = abs(last_error_date - outage_start_date).total_seconds()
+                       outage_end_date = datetime.now(utils.Pacific) - timedelta(seconds=last_error_seconds_ago)
+                       sms_to_send.append("[%s] Outage over.\n%s stopped. Outage lasted %s." %
+                                              (outage_end_date.strftime('%T'),
+                                              error_name,
+                                              utils.pretty_time_interval(outage_duration)))
+                    else:
+                        continue # Outage in progress, not over
+
+            if not(to_set) or not(client.cas_multi(to_set)): # cas_multi returns empty list on success
+                break # Successful
+            else:
+                retries += 1
+
+        for sms in sms_to_send:
+            utils.sms_alert_admin(sms)

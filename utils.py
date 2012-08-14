@@ -563,7 +563,7 @@ def send_sms(to, body, from_phone=config['twilio']['just_landed_phone']):
 
 def sms_alert_admin(message):
     """Send an SMS alert to the admins. Intended purpose: report 500 errors."""
-    if on_production(): # FIXME
+    if on_production():
         tasks = []
         for phone in config['admin_phones']:
             tasks.append(taskqueue.Task(params={
