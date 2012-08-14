@@ -884,7 +884,7 @@ class FlightAwareSource (FlightDataSource):
                                                                  flight,
                                                                  alert_id,
                                                                  driving_time=driving_time)
-                report_event_transactionally(reporting.NEW_FLIGHT)
+                report_event(reporting.NEW_FLIGHT)
                 log_event_transactionally(FlightTrackedEvent, user_id=uuid, flight_id=flight_id)
 
             # Optimization: multi-put
