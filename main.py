@@ -189,12 +189,12 @@ class BaseAPIHandler(BaseHandler):
             self.response.content_type = 'application/json'
             self.response.write(json.dumps(response_data))
 
-    def dispatch(self): # FIXME: Remove this
-        if config['maintenance_in_progress'] or not utils.datastore_writes_enabled():
-            self.response.set_status(503)
-            self.respond({'error' : 'Just Landed is currently unavailable.'})
-        else:
-            super(BaseAPIHandler, self).dispatch()
+    # def dispatch(self):
+    #     if config['maintenance_in_progress'] or not utils.datastore_writes_enabled():
+    #         self.response.set_status(503)
+    #         self.respond({'error' : 'Just Landed is currently unavailable.'})
+    #     else:
+    #         super(BaseAPIHandler, self).dispatch()
 
 
 class AuthenticatedAPIHandler(BaseAPIHandler):
