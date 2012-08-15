@@ -660,7 +660,7 @@ class FlightAwareSource (FlightDataSource):
 
         # Only process the alert if we still care about it
         if not stored_flight:
-            logging.info('ORPHANED ALERT %d CALLBACK %s IGNORED' % (alert_id, event_code.upper()))
+            logging.info('IGNORING ALERT %d FOR FLIGHT %s' % (alert_id, flight_id))
             raise tasklets.Return()
         else:
             flight_num = stored_flight.user_flight_num
