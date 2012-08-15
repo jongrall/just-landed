@@ -659,7 +659,10 @@ class FlightAwareSource (FlightDataSource):
         stored_flight = yield FlightAwareTrackedFlight.get_by_flight_id_alert_id(flight_id, alert_id)
 
         # Only process the alert if we still care about it
-        if stored_flight:
+        if not stored_flight:
+            logging.info('ORPHANED ALERT CALLBACK IGNORED')
+            raise tasklets.Return()
+        else:
             flight_num = stored_flight.user_flight_num
             alerted_flight = None
 
@@ -732,6 +735,12 @@ class FlightAwareSource (FlightDataSource):
 
                 # Fire off a /track for the user, which will update their reminders
                 yield self.do_track(request, flight_id, u_key.string_id())
+
+            elif u and not u.push_enabled:
+                logging.info('ALERT PROCESSED FOR USER WITH PUSH DISABLED')
+
+            elif not u:
+                logging.error('FLIGHT ALERT HAS FLIGHT BUT NO USER!')
 
             # Cache freshness: clear memcache keys for lookup
             FlightAwareSource.clear_flight_lookup_cache([flight_num])
