@@ -171,12 +171,14 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     @ndb.tasklet
     def get_by_flight_id_alert_id(cls, flight_id, alert_id):
         assert utils.is_valid_fa_flight_id(flight_id)
-        q = cls.query(cls.alert_id == alert_id)
+        q = cls.query(cls.alert_id == int(alert_id))
         qit = q.iter()
         while (yield qit.has_next_async()):
             next_flight = qit.next()
             if next_flight.key.string_id() == flight_id:
                 raise tasklets.Return(next_flight)
+            else:
+                logging.info('BAD MATCH %s FOR ALERT %d WITH FLIGHT ID %s' % (next_flight.key.string_id(), alert_id, flight_id))
 
     @classmethod
     @ndb.tasklet
