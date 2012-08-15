@@ -9,11 +9,14 @@ __email__ = "jon@littledetails.net"
 import logging
 
 from google.appengine.ext import ndb
+from google.appengine.ext.ndb import tasklets
+from google.appengine.api import taskqueue
 
 from api.v1.data_sources import FlightAwareSource
 from main import StaticHandler, BaseHandler, BaseAPIHandler
 from models.v2 import FlightAwareTrackedFlight
 from config import config, on_development, on_staging
+import utils
 
 source = FlightAwareSource()
 
@@ -64,6 +67,12 @@ class FlightAwareAdminAPIHandler(BaseAPIHandler):
         result = yield source.clear_all_alerts()
         self.respond(result)
 
+    @ndb.toplevel
+    def reset_alerts(self):
+        """Resets flight alerts for all flights currently being tracked."""
+        taskqueue.Queue('reset-alerts').add(taskqueue.Task())
+        self.respond({'resetting' : True})
+
 
 class ClearAlertsWorker(BaseHandler):
     """Taskqueue worker that clears alerts."""
@@ -78,3 +87,30 @@ class ClearAlertsWorker(BaseHandler):
             alert_ids = alert_list.split(',')
             alert_ids = [int(alert_id) for alert_id in alert_ids]
             yield source.delete_alerts(alert_ids)
+
+
+class ResetAlertsWorker(BaseHandler):
+    """Taskqueue worker that resets all alerts for currently tracked flights."""
+    @ndb.toplevel
+    def post(self):
+        # No retries allowed
+        if int(self.request.headers['X-AppEngine-TaskRetryCount']) > 0:
+            return
+
+        all_keys = yield FlightAwareTrackedFlight.all_flight_keys()
+
+        @ndb.tasklet
+        @ndb.transactional
+        def reset_alert_txn(f_key):
+            flight_id = f_key.string_id()
+            assert utils.is_valid_fa_flight_id(flight_id)
+            new_alert_id = yield source.set_alert(flight_id=flight_id)
+
+            if new_alert_id and new_alert_id > 0:
+                flight = yield f_key.get_async()
+                flight.alert_id = new_alert_id
+                yield flight.put_async()
+
+        for key in all_keys:
+            yield reset_alert_txn(key)
+        logging.info('RESET %d ALERTS' % len(all_keys))

@@ -242,8 +242,8 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     @ndb.tasklet
     def flight_alert_in_use(cls, alert_id):
         q = cls.query(cls.alert_id == alert_id)
-        f_key = yield q.get_async(keys_only=True)
-        if f_key:
+        count = yield q.count_async(limit=1)
+        if count > 0:
             raise tasklets.Return(True)
         else:
             raise tasklets.Return(False)

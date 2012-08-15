@@ -139,14 +139,23 @@ class ClearOrphanedAlertsWorker(BaseHandler):
             alerts = yield source.get_all_alerts()
 
             # Get all the valid alert ids
+            def eligible_alert(a):
+                # Eligible for deletion if created at least an hour ago
+                # Prevents alerts that were just created in a transaction from being cleared when cron runs
+                alert_created = a.get('alert_created')
+                if not alert_created or not isinstance(alert_created, (int, long)):
+                    return False
+                hour_ago = datetime.utcnow() - timedelta(hours=1)
+                return datetime.utcfromtimestamp(alert_created) < hour_ago
+
+            alerts = [a for a in alerts if eligible_alert(a)]
             alert_ids = [alert.get('alert_id') for alert in alerts]
             valid_alert_ids = [alert_id for alert_id in alert_ids if isinstance(alert_id, (int, long))]
 
             # Figure out which ones are no longer in use
             orphaned_alerts = []
             for batch in utils.chunks(valid_alert_ids, 20): # Batch size 20
-                f_futs = [FlightAwareTrackedFlight.flight_alert_in_use(alert_id) for alert_id in batch]
-                in_use_flags = yield f_futs
+                in_use_flags = yield [FlightAwareTrackedFlight.flight_alert_in_use(alert_id) for alert_id in batch]
                 results = zip(batch, in_use_flags)
 
                 for alert_id, in_use in results:
@@ -156,7 +165,7 @@ class ClearOrphanedAlertsWorker(BaseHandler):
             # Do the removal
             if orphaned_alerts:
                 logging.info('DELETING %d ORPHANED ALERTS' % len(orphaned_alerts))
-                yield source.delete_alerts(valid_alert_ids, orphaned=True)
+                yield source.delete_alerts(orphaned_alerts, orphaned=True)
 
 
 class OutageCheckerWorker(BaseHandler):

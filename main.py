@@ -232,6 +232,8 @@ routes = [
                 handler_method='register_endpoint'),
         Route('/clear_alerts', 'FlightAwareAdminAPIHandler',
                 handler_method='clear_alerts'),
+        Route('/reset_alerts', 'FlightAwareAdminAPIHandler',
+                handler_method='reset_alerts'),
         ]),
     ]),
     PathPrefixRoute('/cron',[
@@ -249,6 +251,7 @@ routes = [
         Route('/queue/process-alert', handler='api.v1.api_handlers.AlertWorker'),
         Route('/queue/mobile-push', handler='notifications.PushWorker'),
         Route('/queue/clear-alerts', handler='admin.admin_handlers.ClearAlertsWorker'),
+        Route('/queue/reset-alerts', handler='admin.admin_handlers.ResetAlertsWorker'),
         Route('/queue/report-event', handler='reporting.ReportWorker'),
         Route('/queue/log-event', handler='reporting.DatastoreLogWorker'),
         Route('/queue/send-sms', handler='utils.SMSWorker'),

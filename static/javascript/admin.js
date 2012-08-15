@@ -80,6 +80,7 @@ var Admin = Class.extend({
     init: function() {
         $('#set-endpoint').click({context: this}, this.setEndpoint);
         $('#clear-alerts').click({context: this}, this.clearAlerts);
+        $('#reset-alerts').click({context: this}, this.resetAlerts);
     },
 
     setEndpoint: function(e) {
@@ -110,6 +111,21 @@ var Admin = Class.extend({
          $('#clear-result').html('');
       }, 5000);
     },
+
+    resetAlerts: function(e) {
+        var context = e.data.context;
+        callRemoteAdminMethod(context, 'reset_alerts', {}, context.resetAlertsInProgress);
+    },
+
+    resetAlertsInProgress: function(data, textStatus, jqXHR) {
+      $('#reset-result').html('Resetting alerts...');
+
+      /* Remove the resetting message after a few seconds. */
+      window.setTimeout(function () {
+         $('#reset-result').html('');
+      }, 5000);
+    },
+
 });
 
 

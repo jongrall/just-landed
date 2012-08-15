@@ -17,6 +17,10 @@ queue:
   bucket_size: 5
   rate: 5/s
 
+- name: reset-alerts
+  bucket_size: 5
+  rate: 5/s
+
 - name: process-alert
   bucket_size: 20
   rate: 40/s
