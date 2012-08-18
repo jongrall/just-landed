@@ -856,21 +856,37 @@ class FlightAwareSource (FlightDataSource):
         flight_id = flight.flight_id
         user_key = ndb.Key(iOSUser, uuid) # FIXME: Assumes iOS
         flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id, parent=user_key)
+        now = datetime.utcnow()
+        alert_id = 0
+        delayed_track_tasks = []
+        
+        if driving_time:
+            # Allow for 75% fluctuation in driving time
+            first_check_time = utils.leave_now_time(flight,
+                                                    (driving_time * 1.75))
+                                                    
+            # Check again at leave soon minus 1 min, want to beat the cron job
+            second_check_time = utils.leave_soon_time(flight,
+                                                      driving_time) - timedelta(seconds=60)
+                                                      
+            check_times = [first_check_time, second_check_time]
+            delayed_track_tasks = [taskqueue.Task(params={
+                                                    'flight_id' : flight_id,
+                                                    'uuid' : uuid
+                                                    }, eta=ct) for ct in check_times if ct > now]
+
+        # Set an alert_id if we don't have one or it isn't enabled
+        existing_flight = yield flight_key.get_async()
+        if not existing_flight or existing_flight.alert_id == 0:
+            alert_id = yield self.set_alert(flight_id=flight_id)        
 
         @ndb.tasklet
         def track_txn():
             # Optimization: multi-get
             user, tracked_flight = yield ndb.get_multi_async([user_key, flight_key])
-            alert_id = 0
             already_tracking = bool(tracked_flight)
             existing_user = bool(user)
             old_push_token = None
-
-            # Set an alert_id if we don't have one or it isn't enabled
-            if not tracked_flight or tracked_flight.alert_id == 0:
-                alert_id = yield self.set_alert(flight_id=flight_id)
-            else:
-                alert_id = tracked_flight.alert_id
 
             # Create/update the user as necessary
             if user:
@@ -888,14 +904,13 @@ class FlightAwareSource (FlightDataSource):
             # Create/update the flight as necessary
             if tracked_flight:
                 tracked_flight.update(flight,
-                                      alert_id,
+                                      alert_id or tracked_flight.alert_id,
                                       driving_time=driving_time)
             else:
-                tracked_flight = FlightAwareTrackedFlight.create(user.key,
+                tracked_flight = FlightAwareTrackedFlight.create(user_key,
                                                                  flight,
                                                                  alert_id,
                                                                  driving_time=driving_time)
-                report_event(reporting.NEW_FLIGHT)
                 log_event_transactionally(FlightTrackedEvent, user_id=uuid, flight_id=flight_id)
 
             # Optimization: multi-put
@@ -903,7 +918,7 @@ class FlightAwareSource (FlightDataSource):
 
             # If they are an existing user and tracking any other flights than this one, untrack them
             if existing_user:
-                flight_ids_tracked = yield FlightAwareTrackedFlight.flight_ids_tracked_by_user(user.key)
+                flight_ids_tracked = yield FlightAwareTrackedFlight.flight_ids_tracked_by_user(user_key)
                 other_flight_ids = [f_id for f_id in flight_ids_tracked if f_id != flight_id]
                 if other_flight_ids:
                     # Optimization: batch task add, TQ max batch size is 100
@@ -930,42 +945,15 @@ class FlightAwareSource (FlightDataSource):
             # even if the user is not checking on it. Only do this the first
             # time they track this flight otherwise it will trigger a flood of
             # delayed tracking tasks.
-            if driving_time and not already_tracking:
-                now = datetime.utcnow()
-                # Allow for 75% fluctuation in driving time
-                first_check_time = utils.leave_now_time(flight,
-                                                        (driving_time * 1.75))
-
-                # Check again at leave soon minus 1 min, want to beat the cron job
-                second_check_time = utils.leave_soon_time(flight,
-                                                          driving_time) - timedelta(seconds=60)
-
-                check_times = [first_check_time, second_check_time]
-                delayed_track_tasks = [taskqueue.Task(params={
-                                                        'flight_id' : flight_id,
-                                                        'uuid' : uuid
-                                                        }, eta=ct) for ct in check_times if ct > now]
+            if delayed_track_tasks and not already_tracking:
                 # Optimization: batch task add
-                if delayed_track_tasks:
-                    taskqueue.Queue('delayed-track').add(delayed_track_tasks, transactional=True)
+                taskqueue.Queue('delayed-track').add(delayed_track_tasks, transactional=True)
 
             # Commit the datastore writes
             yield put_futs
 
-        # Checking write support guards against flood of set_alerts in read-only situation
-        writes_enabled = utils.datastore_writes_enabled()
-        tasks_enabled = utils.taskqueue_enabled()
-        valid_uuid = utils.is_valid_uuid(uuid)
-
-        if writes_enabled and tasks_enabled and valid_uuid:
-            # TRANSACTIONAL TRACKING!
-            yield ndb.transaction_async(track_txn)
-        elif not writes_enabled:
-            raise CapabilityDisabledError('Datastore is in read-only mode.')
-        elif not tasks_enabled:
-            raise CapabilityDisabledError('Taskqueue is unavailable.')
-        elif not valid_uuid:
-            logging.error('Track called with invalid UUID.')
+        # TRANSACTIONAL TRACKING!
+        yield ndb.transaction_async(track_txn)
 
     @ndb.tasklet
     def untrack_flight(self, flight_id, **kwargs):
@@ -981,25 +969,21 @@ class FlightAwareSource (FlightDataSource):
                 yield f_key.delete_async()
                 raise tasklets.Return(flight_num, alert_id)
 
-        # Checking write support guards against flood of delete_alerts in read-only situation
-        if utils.datastore_writes_enabled() and utils.is_valid_uuid(uuid):
-            # TRANSACTIONAL UNTRACKING!
-            result = yield ndb.transaction_async(untrack_txn)
+        # TRANSACTIONAL UNTRACKING!
+        result = yield ndb.transaction_async(untrack_txn)
 
-            if result:
-                flight_num, alert_id = result
+        if result:
+            flight_num, alert_id = result
 
-                if alert_id > 0:
-                    # Delete the alert now that it's no longer needed
-                    yield self.delete_alert(alert_id)
+            if alert_id > 0:
+                # Delete the alert now that it's no longer needed
+                yield self.delete_alert(alert_id)
 
-                # Cache freshness: clear cache for this flight_id
-                FlightAwareSource.clear_flight_info_cache(flight_id)
+            # Cache freshness: clear cache for this flight_id
+            FlightAwareSource.clear_flight_info_cache(flight_id)
 
-                # Cache freshness: clear lookup cache for the flight ident
-                FlightAwareSource.clear_flight_lookup_cache([flight_num])
-        else:
-            raise CapabilityDisabledError('Datastore is in read-only mode.')
+            # Cache freshness: clear lookup cache for the flight ident
+            FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
     def authenticate_remote_request(self, request):
         """Returns True if the incoming request is in fact from the trusted

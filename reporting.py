@@ -40,7 +40,6 @@ debug_reporting = on_development() and False
 """Flight Counters"""
 ###############################################################################
 
-NEW_FLIGHT = 'Flight.NewFlight'
 FLIGHT_TAKEOFF = 'Flight.Takeoff'
 FLIGHT_LANDED = 'Flight.Landed'
 FLIGHT_CANCELED = 'Flight.Canceled'
