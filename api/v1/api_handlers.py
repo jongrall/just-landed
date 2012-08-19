@@ -148,16 +148,18 @@ class TrackHandler(AuthenticatedAPIHandler):
         reading in the browser.
 
         """
-        # Get the current flight information
-        flight = yield source.flight_info(flight_id=flight_id,
-                                          flight_number=flight_number)
-
         # FIXME: Assumes iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
         push_token = self.request.params.get('push_token')
         
         assert utils.is_valid_uuid(uuid)
-        assert utils.is_valid_flight_id(flight_id)
+        
+        if not utils.is_valid_flight_id(flight_id):
+            raise FlightNotFoundException(flight_id)
+        
+        # Get the current flight information
+        flight = yield source.flight_info(flight_id=flight_id,
+                                          flight_number=flight_number)
 
         # Get driving time, if we have their location
         driving_time = None
@@ -249,9 +251,7 @@ class UntrackHandler(AuthenticatedAPIHandler):
 
         # FIXME: Assumes iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
-
         assert utils.is_valid_uuid(uuid)
-        assert utils.is_valid_flight_id(flight_id)
 
         # Optimization: defer untracking the flight
         task = taskqueue.Task(params = {
