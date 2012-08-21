@@ -291,8 +291,7 @@ class AlertHandler(BaseAPIHandler):
             try:
                 # Load and decode the utf-8 json bytestring
                 unicode_body = unicode(self.request.body, 'utf-8')
-                unicode_body = unicode_body.replace('\r\n', '\\r\\n') # FIXME: Temp patch
-                alert_body = json.loads(unicode_body, 'utf-8')
+                alert_body = json.loads(unicode_body, 'utf-8', strict=False) # FIXME: Be strict once FA fixes their JSON
                 assert utils.is_valid_fa_alert_body(alert_body)
             except Exception as e:
                 logging.exception(e)
