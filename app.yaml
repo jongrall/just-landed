@@ -1,5 +1,5 @@
 application: just-landed
-version: 1-3-2
+version: 2-0
 runtime: python27
 api_version: 1
 threadsafe: true

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""api_handlers.py: This module defines the Just Landed API handlers. All
+"""handlers.py: This module defines the Just Landed API handlers. All
 requests by Just Landed clients are routed through here.
 
 """
@@ -39,7 +39,7 @@ fallback_distance_source = GoogleDistanceSource()
 class SearchHandler(AuthenticatedAPIHandler):
     """Handles looking up a flight by flight number."""
     @ndb.toplevel
-    def get(self, flight_number):
+    def get(self, flight_number, is_pro=False):
         """Returns top-level information about flights matching a specific
         flight number. The flights returned will be flights that have landed
         no more than an hour ago or are en-route or scheduled for the future.
@@ -129,7 +129,7 @@ class DelayedTrackWorker(BaseHandler):
 class TrackHandler(AuthenticatedAPIHandler):
     """Handles tracking a flight by flight number and id."""
     @ndb.toplevel
-    def get(self, flight_number, flight_id):
+    def get(self, flight_number, flight_id, is_pro=False):
         """Returns detailed information for tracking a flight given a flight
         number and flight id (this uniquely identifies a single flight). This
         handler responds to the client using JSON.
@@ -245,7 +245,7 @@ class UntrackHandler(AuthenticatedAPIHandler):
     for that flight.
 
     """
-    def get(self, flight_id):
+    def get(self, flight_id, is_pro=False):
         if not utils.is_valid_flight_id(flight_id):
             raise FlightNotFoundException(flight_id)
 
@@ -284,7 +284,7 @@ class AlertHandler(BaseAPIHandler):
     alert.
 
     """
-    def post(self):
+    def post(self, is_pro=False):
         # FIXME: Assumes FlightAware
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):

@@ -51,7 +51,7 @@ def text_to_html(text):
 
     lines = [reindent(line).rstrip() for line in text.splitlines()]
     return '<br />'.join(lines)
-
+        
 def sub_dict_strict(somedict, somekeys):
     """Returns a new dictionary containing only the keys specified. If specified
     keys are not present in the dictionary, it will raise a KeyError (strict).

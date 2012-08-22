@@ -189,12 +189,13 @@ class BaseAPIHandler(BaseHandler):
             self.response.content_type = 'application/json'
             self.response.write(json.dumps(response_data))
 
-    # def dispatch(self):
-    #     if config['maintenance_in_progress'] or not utils.datastore_writes_enabled():
-    #         self.response.set_status(503)
-    #         self.respond({'error' : 'Just Landed is currently unavailable.'})
-    #     else:
-    #         super(BaseAPIHandler, self).dispatch()
+    def dispatch(self):
+        # Sanitize route kwargs slightly
+        if self.request.route_kwargs:
+            self.request.route_kwargs['is_pro'] = bool(self.request.route_kwargs.get('pro'))
+            if 'pro' in self.request.route_kwargs.keys():
+                del(self.request.route_kwargs['pro'])
+        super(BaseAPIHandler, self).dispatch()
 
 
 class AuthenticatedAPIHandler(BaseAPIHandler):
@@ -218,11 +219,11 @@ class AuthenticatedAPIHandler(BaseAPIHandler):
 
 routes = [
     PathPrefixRoute('/api/v1', [
-        HandlerPrefixRoute('api.v1.api_handlers.', [
-        Route('/track/<flight_number>/<flight_id:[^/]+>', 'TrackHandler', name='track'),
-        Route('/search/<flight_number:[^/]+>', 'SearchHandler', name='search'),
-        Route('/handle_alert', 'AlertHandler'),
-        Route('/untrack/<flight_id:[^/]+>', 'UntrackHandler', name='untrack'),
+        HandlerPrefixRoute('api.v1.handlers.', [
+        Route('<pro:(/pro){0,1}>/track/<flight_number>/<flight_id:[^/]+>', 'TrackHandler', name='track'),
+        Route('<pro:(/pro){0,1}>/search/<flight_number:[^/]+>', 'SearchHandler', name='search'),
+        Route('<pro:(/pro){0,1}>/handle_alert', 'AlertHandler'),
+        Route('<pro:(/pro){0,1}>/untrack/<flight_id:[^/]+>', 'UntrackHandler', name='untrack'),
         ]),
     ]),
     PathPrefixRoute('/admin/flightaware', [
@@ -245,10 +246,10 @@ routes = [
         ]),
     ]),
     PathPrefixRoute('/_ah', [
-        Route('/queue/track', handler='api.v1.api_handlers.TrackWorker'),
-        Route('/queue/delayed-track', handler='api.v1.api_handlers.DelayedTrackWorker'),
-        Route('/queue/untrack', handler='api.v1.api_handlers.UntrackWorker'),
-        Route('/queue/process-alert', handler='api.v1.api_handlers.AlertWorker'),
+        Route('/queue/track', handler='api.v1.handlers.TrackWorker'),
+        Route('/queue/delayed-track', handler='api.v1.handlers.DelayedTrackWorker'),
+        Route('/queue/untrack', handler='api.v1.handlers.UntrackWorker'),
+        Route('/queue/process-alert', handler='api.v1.handlers.AlertWorker'),
         Route('/queue/mobile-push', handler='notifications.PushWorker'),
         Route('/queue/clear-alerts', handler='admin.admin_handlers.ClearAlertsWorker'),
         Route('/queue/reset-alerts', handler='admin.admin_handlers.ResetAlertsWorker'),
