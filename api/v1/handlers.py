@@ -65,7 +65,7 @@ class SearchHandler(AuthenticatedAPIHandler):
         except FlightNotFoundException as e:
             log_event(FlightSearchMissEvent, user_id=uuid, flight_number=sanitized_f_num)
             # Flight lookup failed, see if we can translate their airline code
-            translated_f_num = utils.translate_flight_number(flight_number)
+            translated_f_num = utils.translate_flight_number_to_icao(flight_number)
             if not translated_f_num:
                 raise e
             flights = yield source.lookup_flights(translated_f_num)

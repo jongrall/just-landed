@@ -24,7 +24,7 @@ from google.appengine.ext import webapp
 from config import config, api_secret, on_production
 from lib.twilio.rest import TwilioRestClient
 from lib import ipaddr, pysolar
-from airline_codes import airline_code_mapping
+from airline_codes import airlines_iata_to_icao
 
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
@@ -242,6 +242,9 @@ FLIGHT_NUMBER_RE = re.compile("\A[A-Z][0-9][A-Z]{0,1}[0-9]{1,4}[A-Z]{0,1}\Z|"
 AIRLINE_CODE_RE = re.compile('\A[A-Z][0-9][A-Z]{0,1}|\A[0-9][A-Z]{1,2}|\A[A-Z]{2,3}')
 IATA_CODE_RE = re.compile('\A[A-Z0-9]{3}\Z')
 ICAO_CODE_RE = re.compile('\A[A-Z0-9]{4}\Z')
+AIRLINE_IATA_CODE_RE = re.compile('\A[A-Z0-9]{2}\Z')
+AIRLINE_ICAO_CODE_RE = re.compile('\A[A-Z0-9]{3}\Z')
+airlines_icao_to_iata = dictinvert(airlines_iata_to_icao)
 
 def sanitize_flight_number(f_num):
     """Cleans up a flight number - strips leading zeros from flight number, extra
@@ -269,21 +272,6 @@ def valid_flight_number(f_num):
     else:
         return False
 
-def translate_flight_number(f_num):
-    if valid_flight_number(f_num):
-        f_num_san = sanitize_flight_number(f_num)
-        matched_code = AIRLINE_CODE_RE.match(f_num_san)
-        if matched_code:
-            matching_code = matched_code.group(0)
-            translated_code = airline_code_mapping.get(matching_code)
-            if translated_code:
-                new_f_num = translated_code + f_num_san[len(matching_code):]
-                if valid_flight_number(new_f_num):
-                    return new_f_num
-                else:
-                    return None
-    return None
-
 def is_valid_icao(icao_code):
     """Tests whether the argument could be a valid ICAO airport code."""
     return isinstance(icao_code, basestring) and ICAO_CODE_RE.match(icao_code)
@@ -291,6 +279,14 @@ def is_valid_icao(icao_code):
 def is_valid_iata(iata_code):
     """Tests whether the argument could be a valid IATA airport code."""
     return isinstance(iata_code, basestring) and IATA_CODE_RE.match(iata_code)
+
+def is_valid_airline_icao(icao_code):
+    """Tests whether the argument could be a valid ICAO airline code."""
+    return isinstance(icao_code, basestring) and AIRLINE_ICAO_CODE_RE.match(icao_code)
+
+def is_valid_airline_iata(iata_code):
+    """Tests whether the argument could be a valid IATA airline code."""
+    return isinstance(iata_code, basestring) and AIRLINE_IATA_CODE_RE.match(iata_code)
 
 def is_valid_flight_id(flight_id):
     """Forgiving test for non-empty flight id."""
@@ -315,6 +311,39 @@ def proper_airport_name(name):
     """Replaces 'International' with 'Int'l.' in an airport name."""
     name = name.replace("Intl", "Int'l")
     return name.replace("International", "Int'l")
+
+def translate_flight_number_to_icao(f_num):
+    if valid_flight_number(f_num):
+        f_num_san = sanitize_flight_number(f_num)
+        matched_code = AIRLINE_CODE_RE.match(f_num_san)
+        if matched_code:
+            matching_code = matched_code.group(0)
+            translated_code = airlines_iata_to_icao.get(matching_code)
+            if translated_code:
+                new_f_num = translated_code + f_num_san[len(matching_code):]
+                if valid_flight_number(new_f_num):
+                    return new_f_num
+                else:
+                    return None
+    return None
+
+def split_flight_number(f_num, as_iata=True):
+    if valid_flight_number(f_num):
+        f_num_san = sanitize_flight_number(f_num)
+        matched_code = AIRLINE_CODE_RE.match(f_num_san)
+        if matched_code:
+            airline_code = matched_code.group(0)
+            f_num_digits = f_num_san[len(airline_code):]
+            # Translate the airline code to/from ICAO/IATA as needed
+            if is_valid_airline_icao(airline_code) and as_iata:
+                airline_code = (airlines_icao_to_iata.get(airline_code) and 
+                               airlines_icao_to_iata.get(airline_code)[0])
+            elif is_valid_airline_iata(airline_code) and not as_iata:
+                airline_code = airlines_iata_to_icao.get(airline_code)
+            # Ensure the flight number is still valid
+            if airline_code and valid_flight_number(airline_code + f_num_digits):
+                return airline_code, f_num_digits
+    return None, None
 
 def flight_num_from_fa_flight_id(flight_id):
     """Extracts a flight number from a FlightAware flight id."""

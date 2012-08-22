@@ -6,7 +6,7 @@ __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed LLC"
 __email__ = "jon@littledetails.net"
 
-airline_code_mapping = {
+airlines_iata_to_icao = {
     '0A' : 'GNT',
     '0B' : 'JOR',
     '0C' : 'IBL',
