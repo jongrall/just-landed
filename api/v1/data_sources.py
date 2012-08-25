@@ -384,6 +384,11 @@ class FlightAwareSource (FlightDataSource):
                         airport['latitude'] = utils.round_coord(airport['latitude'])
                         airport['longitude'] = utils.round_coord(airport['longitude'])
 
+                        # Cleanup the timezone
+                        if airport.get('timezone'):
+                            if airport['timezone'].startswith(':'):
+                                airport['timezone'] = airport['timezone'][1:]
+
                         if not memcache.set(airport_cache_key, airport):
                             logging.error("Unable to cache airport info!")
                         elif debug_cache:

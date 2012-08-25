@@ -291,6 +291,7 @@ config['flightaware'] = {
         'location',
         'longitude',
         'latitude',
+        'timezone',
     ],
 
     # Fields that should be retained from a /AirlineFlightInfo response
