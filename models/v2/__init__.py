@@ -394,8 +394,8 @@ class iOSUser(_User):
     - `push_enabled` : Whether this user accepts push notifications.
 
     """
-    app_version = ndb.TextProperty('version', default='1.2.1')
-    preferred_language = ndb.TextProperty('language', default='en')
+    app_version = ndb.StringProperty('version', default='1.2.1', indexed=False)
+    preferred_language = ndb.StringProperty('language', default='en', indexed=False)
     last_known_location = ndb.GeoPtProperty('loc', indexed=False)
     push_token = ndb.TextProperty()
     push_settings = ndb.StructuredProperty(PushNotificationSetting, repeated=True)
