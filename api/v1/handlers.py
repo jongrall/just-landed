@@ -84,6 +84,7 @@ class TrackWorker(BaseHandler):
         params = self.request.params
         flight_data = json.loads(params.get('flight'))
         uuid = params.get('uuid')
+        version = params.get('version')
         push_token = params.get('push_token')
         user_latitude = params.get('user_latitude')
         user_longitude = params.get('user_longitude')
@@ -103,6 +104,7 @@ class TrackWorker(BaseHandler):
 
         yield source.track_flight(flight_data,
                                   uuid=uuid,
+                                  version=version,
                                   push_token=push_token,
                                   user_latitude=user_latitude,
                                   user_longitude=user_longitude,
@@ -150,6 +152,7 @@ class TrackHandler(AuthenticatedAPIHandler):
         """
         # FIXME: Assumes iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
+        version = self.request.headers.get('X-Just-Landed-Version')
         push_token = self.request.params.get('push_token')
         
         assert utils.is_valid_uuid(uuid)
@@ -221,6 +224,7 @@ class TrackHandler(AuthenticatedAPIHandler):
             task = taskqueue.Task(params={
                 'flight' : json.dumps(flight.to_dict()),
                 'uuid' : uuid or '',
+                'version' : version or '',
                 'push_token' : push_token or '',
                 'user_latitude' : (utils.is_float(latitude) and latitude) or '',
                 'user_longitude' : (utils.is_float(longitude) and longitude) or '',

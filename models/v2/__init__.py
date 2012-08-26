@@ -386,12 +386,14 @@ class iOSUser(_User):
     in the system - one for each device with Just Landed installed.
 
     Fields:
+    - `app_version` : The version of the iOS app that the user most recently used.
     - `last_known_location` : The user's last known location.
     - `push_token` : The push token associated with this user.
     - `push_settings` : The push notification settings for this user.
     - `push_enabled` : Whether this user accepts push notifications.
 
     """
+    app_version = ndb.StringProperty('version', default='1.2.1')
     last_known_location = ndb.GeoPtProperty('loc', indexed=False)
     push_token = ndb.TextProperty()
     push_settings = ndb.StructuredProperty(PushNotificationSetting, repeated=True)
@@ -410,10 +412,12 @@ class iOSUser(_User):
         raise tasklets.Return(user)
 
     @classmethod
-    def create(cls, uuid, user_latitude=None, user_longitude=None, push_token=None):
+    def create(cls, uuid, version=None, user_latitude=None, user_longitude=None, push_token=None):
         assert utils.is_valid_uuid(uuid)
         user = cls(id=uuid,
                    push_settings=cls.default_settings())
+        if version is not None:
+            user.app_version = version
         if push_token is not None:
             user.push_token = push_token
         if user_latitude is not None and user_longitude is not None:
@@ -431,9 +435,13 @@ class iOSUser(_User):
             settings.append(PushNotificationSetting(name=push, value=True))
         return settings
 
-    def update(self, user_latitude=None, user_longitude=None, push_token=None):
+    def update(self, version=None, user_latitude=None, user_longitude=None, push_token=None):
         if debug_datastore:
             logging.info('UPDATING EXISTING USER %s' % self.key.string_id())
+
+        # Only update the version if it has changed
+        if version is not None and version != self.app_version:
+            self.app_version = version
 
         # Only update the user's location if it has changed
         if ((user_latitude is not None) and (user_longitude is not None) and
