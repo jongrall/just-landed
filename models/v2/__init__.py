@@ -412,12 +412,12 @@ class iOSUser(_User):
         raise tasklets.Return(user)
 
     @classmethod
-    def create(cls, uuid, version=None, user_latitude=None, user_longitude=None, push_token=None):
+    def create(cls, uuid, app_version=None, user_latitude=None, user_longitude=None, push_token=None):
         assert utils.is_valid_uuid(uuid)
         user = cls(id=uuid,
                    push_settings=cls.default_settings())
-        if version is not None:
-            user.app_version = version
+        if app_version:
+            user.app_version = app_version
         if push_token is not None:
             user.push_token = push_token
         if user_latitude is not None and user_longitude is not None:
@@ -435,13 +435,13 @@ class iOSUser(_User):
             settings.append(PushNotificationSetting(name=push, value=True))
         return settings
 
-    def update(self, version=None, user_latitude=None, user_longitude=None, push_token=None):
+    def update(self, app_version=None, user_latitude=None, user_longitude=None, push_token=None):
         if debug_datastore:
             logging.info('UPDATING EXISTING USER %s' % self.key.string_id())
 
         # Only update the version if it has changed
-        if version is not None and version != self.app_version:
-            self.app_version = version
+        if app_version and app_version != self.app_version:
+            self.app_version = app_version
 
         # Only update the user's location if it has changed
         if ((user_latitude is not None) and (user_longitude is not None) and

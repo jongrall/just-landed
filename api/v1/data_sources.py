@@ -853,7 +853,7 @@ class FlightAwareSource (FlightDataSource):
     @ndb.tasklet
     def track_flight(self, flight_data, **kwargs):
         uuid = kwargs.get('uuid')
-        version = kwargs.get('version')
+        app_version = kwargs.get('app_version')
         push_token = kwargs.get('push_token')
         user_latitude = kwargs.get('user_latitude')
         user_longitude = kwargs.get('user_longitude')
@@ -897,14 +897,14 @@ class FlightAwareSource (FlightDataSource):
             # Create/update the user as necessary
             if user:
                 old_push_token = user.push_token
-                user.update(version=version,
+                user.update(app_version=app_version,
                             user_latitude=user_latitude,
                             user_longitude=user_longitude,
                             push_token=push_token)
             else:
                 # FIXME: Assumes iOS
                 user = iOSUser.create(uuid,
-                                      version=version,
+                                      app_version=app_version,
                                       user_latitude=user_latitude,
                                       user_longitude=user_longitude,
                                       push_token=push_token)
