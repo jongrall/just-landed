@@ -859,29 +859,14 @@ class FlightAwareSource (FlightDataSource):
         user_latitude = kwargs.get('user_latitude')
         user_longitude = kwargs.get('user_longitude')
         driving_time = kwargs.get('driving_time')
+        reminder_lead_time = kwargs.get('reminder_lead_time')
         flight = Flight.from_dict(flight_data)
         flight_id = flight.flight_id
         user_key = ndb.Key(iOSUser, uuid) # FIXME: Assumes iOS
         flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id, parent=user_key)
         now = datetime.utcnow()
         alert_id = 0
-        delayed_track_tasks = []
-        
-        if driving_time:
-            # Allow for 75% fluctuation in driving time
-            first_check_time = utils.leave_now_time(flight,
-                                                    (driving_time * 1.75))
-                                                    
-            # Check again at leave soon minus 1 min, want to beat the cron job
-            second_check_time = utils.leave_soon_time(flight,
-                                                      driving_time) - timedelta(seconds=60)
-                                                      
-            check_times = [first_check_time, second_check_time]
-            delayed_track_tasks = [taskqueue.Task(params={
-                                                    'flight_id' : flight_id,
-                                                    'uuid' : uuid
-                                                    }, eta=ct) for ct in check_times if ct > now]
-
+                
         # Set an alert_id if we don't have one or it isn't enabled
         existing_flight = yield flight_key.get_async()
         if not existing_flight or existing_flight.alert_id == 0:
@@ -916,12 +901,14 @@ class FlightAwareSource (FlightDataSource):
             if tracked_flight:
                 tracked_flight.update(flight,
                                       alert_id or tracked_flight.alert_id,
-                                      driving_time=driving_time)
+                                      driving_time=driving_time,
+                                      reminder_lead_time=reminder_lead_time)
             else:
                 tracked_flight = FlightAwareTrackedFlight.create(user_key,
                                                                  flight,
                                                                  alert_id,
-                                                                 driving_time=driving_time)
+                                                                 driving_time=driving_time,
+                                                                 reminder_lead_time=reminder_lead_time)
                 log_event_transactionally(FlightTrackedEvent, user_id=uuid, flight_id=flight_id)
 
             # Optimization: multi-put
@@ -956,7 +943,24 @@ class FlightAwareSource (FlightDataSource):
             # even if the user is not checking on it. Only do this the first
             # time they track this flight otherwise it will trigger a flood of
             # delayed tracking tasks.
-            if delayed_track_tasks and not already_tracking:
+            if driving_time and not already_tracking:
+                delayed_track_tasks = []
+                
+                # Allow for 75% fluctuation in driving time
+                first_check_time = utils.leave_now_time(flight,
+                                                        (driving_time * 1.75))
+                                                        
+                # Check again at leave soon minus 1 min, want to beat the cron job
+                second_check_time = utils.leave_soon_time(flight,
+                                                          driving_time,
+                                                          tracked_flight.reminder_lead_time) - timedelta(seconds=60)
+                                                          
+                check_times = [first_check_time, second_check_time]
+                delayed_track_tasks = [taskqueue.Task(params={
+                                                        'flight_id' : flight_id,
+                                                        'uuid' : uuid
+                                                        }, eta=ct) for ct in check_times if ct > now]
+                
                 # Optimization: batch task add
                 taskqueue.Queue('delayed-track').add(delayed_track_tasks, transactional=True)
 

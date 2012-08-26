@@ -505,12 +505,11 @@ def leave_now_time(flight, driving_time):
     return datetime.utcfromtimestamp(
         touchdown_to_terminal + flight.estimated_arrival_time - driving_time)
 
-def leave_soon_time(flight, driving_time):
+def leave_soon_time(flight, driving_time, leave_soon_interval):
     """Calculates the leave soon reminder time given the estimated arrival time
-    of the flight, and the driving time from their current location to the
-    destination airport.
+    of the flight, the driving time from their current location to the
+    destination airport, and how long they want to be notified before the time to leave.
     """
-    leave_soon_interval = config['leave_soon_seconds_before']
     leave_now = timestamp(leave_now_time(flight, driving_time))
     return datetime.utcfromtimestamp(leave_now - leave_soon_interval)
 

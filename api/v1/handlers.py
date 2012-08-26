@@ -90,6 +90,7 @@ class TrackWorker(BaseHandler):
         user_latitude = params.get('user_latitude')
         user_longitude = params.get('user_longitude')
         driving_time = params.get('driving_time')
+        reminder_lead_time = params.get('reminder_lead_time')
 
         if utils.is_float(user_latitude) and utils.is_float(user_longitude):
             user_latitude = float(user_latitude)
@@ -102,6 +103,11 @@ class TrackWorker(BaseHandler):
             driving_time = int(driving_time)
         else:
             driving_time = None
+            
+        if utils.is_int(reminder_lead_time):
+            reminder_lead_time = int(reminder_lead_time)
+        else:
+            reminder_lead_time = None
 
         yield source.track_flight(flight_data,
                                   uuid=uuid,
@@ -110,7 +116,8 @@ class TrackWorker(BaseHandler):
                                   push_token=push_token,
                                   user_latitude=user_latitude,
                                   user_longitude=user_longitude,
-                                  driving_time=driving_time)
+                                  driving_time=driving_time,
+                                  reminder_lead_time=reminder_lead_time)
 
 
 class DelayedTrackWorker(BaseHandler):
@@ -157,6 +164,7 @@ class TrackHandler(AuthenticatedAPIHandler):
         app_version = self.request.headers.get('X-Just-Landed-App-Version')
         preferred_language = self.request.headers.get('X-Just-Landed-User-Language')
         push_token = self.request.params.get('push_token')
+        reminder_lead_time = self.request.params.get('reminder_lead_time')
         
         assert utils.is_valid_uuid(uuid)
         
@@ -232,7 +240,8 @@ class TrackHandler(AuthenticatedAPIHandler):
                 'push_token' : push_token or '',
                 'user_latitude' : (utils.is_float(latitude) and latitude) or '',
                 'user_longitude' : (utils.is_float(longitude) and longitude) or '',
-                'driving_time' : (utils.is_int(driving_time) and int(driving_time)) or '',
+                'driving_time' : (utils.is_int(driving_time) and abs(int(driving_time))) or '',
+                'reminder_lead_time' : (utils.is_int(reminder_lead_time) and abs(int(reminder_lead_time))) or '',
             })
             taskqueue.Queue('track').add(task)
 

@@ -131,6 +131,8 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     - `user_flight_num` : The flight number the user entered to find this flight.
     - `reminders` : The reminders that are set for this flight.
     - `has_unsent_reminders` : Whether this user has unsent reminders.
+    - `reminder_lead_time` : The number of seconds before it is time to leave that the
+                             first reminder is sent.
     """
     last_flight_data = ndb.JsonProperty('data', required=True)
     orig_departure_time = ndb.IntegerProperty('orig_dep', required=True, indexed=False)
@@ -139,13 +141,14 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     user_flight_num = ndb.StringProperty('u_f_num', required=True)
     reminders = ndb.StructuredProperty(FlightReminder, repeated=True)
     has_unsent_reminders = ndb.ComputedProperty(lambda f: bool([r for r in f.reminders if r.sent == False]))
+    reminder_lead_time = ndb.IntegerProperty('lead_time', default=config['leave_soon_seconds_before'], indexed=False)
 
     @classmethod
     def _get_kind(cls):
         return 'FlightAwareTrackedFlight_v2' # Versioned model kind
 
     @classmethod
-    def create(cls, parent, flight, alert_id, driving_time=None):
+    def create(cls, parent, flight, alert_id, driving_time=None, reminder_lead_time=None):
         assert isinstance(parent, ndb.Key)
         assert isinstance(flight, Flight)
         assert isinstance(alert_id, (int, long))
@@ -156,6 +159,10 @@ class FlightAwareTrackedFlight(_TrackedFlight):
                          orig_flight_duration=flight.scheduled_flight_duration,
                          alert_id=alert_id,
                          user_flight_num=flight.flight_number)
+
+        # If we have a reminder lead time specified, store it
+        if reminder_lead_time:
+            new_flight.reminder_lead_time = reminder_lead_time
 
         # If we have driving time, update their reminders
         if driving_time is not None:
@@ -257,7 +264,7 @@ class FlightAwareTrackedFlight(_TrackedFlight):
         return cls.query(cls.has_unsent_reminders == True,
                          cls.reminders.fire_time < datetime.utcnow())
 
-    def update(self, flight, alert_id, driving_time=None):
+    def update(self, flight, alert_id, driving_time=None, reminder_lead_time=None):
         assert isinstance(flight, Flight)
         assert isinstance(alert_id, (int, long))
         new_data = flight.to_dict()
@@ -270,7 +277,12 @@ class FlightAwareTrackedFlight(_TrackedFlight):
         if alert_id != self.alert_id:
             self.alert_id = alert_id
             if debug_datastore:
-                logging.info('USER FLIGHT ALERT UPDATED %s' % alert_id)
+                logging.info('FLIGHT ALERT ID UPDATED %s' % alert_id)
+        if reminder_lead_time and reminder_lead_time != self.reminder_lead_time:
+            self.reminder_lead_time = reminder_lead_time
+            if debug_datastore:
+                logging.info('FLIGHT REMINDER LEAD TIME CHANGED %d' % reminder_lead_time)
+                
         # If we have driving time, update their reminders
         if driving_time is not None:
             self.set_or_update_flight_reminders(flight, driving_time)
@@ -296,8 +308,8 @@ class FlightAwareTrackedFlight(_TrackedFlight):
         flight_num = self.user_flight_num
         dest_terminal = flight.destination.terminal
         dest_name = flight.destination.best_name
-        leave_soon_interval = config['leave_soon_seconds_before']
-        leave_soon_pretty_interval = utils.pretty_time_interval(leave_soon_interval, round_days=True)
+        lead_time = self.reminder_lead_time or config['leave_soon_seconds_before']
+        leave_soon_pretty_interval = utils.pretty_time_interval(lead_time, round_days=True)
 
         # Figure out the reminder messages
         leave_soon_body = None
@@ -319,7 +331,7 @@ class FlightAwareTrackedFlight(_TrackedFlight):
                                 dest_name, flight_num)
 
         # Calculate the reminder times
-        leave_soon_time = utils.leave_soon_time(flight, driving_time)
+        leave_soon_time = utils.leave_soon_time(flight, driving_time, lead_time)
         leave_now_time = utils.leave_now_time(flight, driving_time)
 
         # If there are no reminders for this flight, set them (even if they were supposed to fire in the past)
