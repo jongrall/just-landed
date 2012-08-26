@@ -854,6 +854,7 @@ class FlightAwareSource (FlightDataSource):
     def track_flight(self, flight_data, **kwargs):
         uuid = kwargs.get('uuid')
         app_version = kwargs.get('app_version')
+        preferred_language = kwargs.get('preferred_language')
         push_token = kwargs.get('push_token')
         user_latitude = kwargs.get('user_latitude')
         user_longitude = kwargs.get('user_longitude')
@@ -898,6 +899,7 @@ class FlightAwareSource (FlightDataSource):
             if user:
                 old_push_token = user.push_token
                 user.update(app_version=app_version,
+                            preferred_language=preferred_language,
                             user_latitude=user_latitude,
                             user_longitude=user_longitude,
                             push_token=push_token)
@@ -905,6 +907,7 @@ class FlightAwareSource (FlightDataSource):
                 # FIXME: Assumes iOS
                 user = iOSUser.create(uuid,
                                       app_version=app_version,
+                                      preferred_language=preferred_language,
                                       user_latitude=user_latitude,
                                       user_longitude=user_longitude,
                                       push_token=push_token)
