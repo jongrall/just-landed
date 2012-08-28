@@ -62,6 +62,9 @@ class SearchHandler(AuthenticatedAPIHandler):
             log_event(FlightSearchEvent, user_id=uuid, flight_number=sanitized_f_num)
             flights = yield source.lookup_flights(flight_number)
 
+        except CurrentFlightNotFoundException as e:
+            raise e # Not worth trying again, we found the flight but it's old
+
         except FlightNotFoundException as e:
             log_event(FlightSearchMissEvent, user_id=uuid, flight_number=sanitized_f_num)
             # Flight lookup failed, see if we can translate their airline code
@@ -185,7 +188,7 @@ class TrackHandler(AuthenticatedAPIHandler):
         assert utils.is_valid_uuid(uuid)
         
         if not utils.is_valid_flight_id(flight_id):
-            raise FlightNotFoundException(flight_id)
+            raise InvalidFlightNumberException(flight_id)
         
         # Get the current flight information
         flight = yield source.flight_info(flight_id=flight_id,
@@ -282,7 +285,7 @@ class UntrackHandler(AuthenticatedAPIHandler):
     """
     def get(self, flight_id):
         if not utils.is_valid_flight_id(flight_id):
-            raise FlightNotFoundException(flight_id)
+            raise InvalidFlightNumberException(flight_id)
 
         # FIXME: Assumes iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')

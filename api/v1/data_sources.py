@@ -439,7 +439,7 @@ class FlightAwareSource (FlightDataSource):
             raise InvalidFlightNumberException(flight_number)
 
         if not utils.is_valid_fa_flight_id(flight_id):
-            raise FlightNotFoundException(flight_number)
+            raise InvalidFlightNumberException(flight_number)
 
         flight_cache_key = FlightAwareSource.flight_info_cache_key(flight_id)
         sanitized_f_num = utils.sanitize_flight_number(flight_number)
@@ -616,9 +616,9 @@ class FlightAwareSource (FlightDataSource):
                                 for data in flight_data]
             flights = [f for f in flights if f is not None] # Filter out bad results
 
-            # If there are no good flights left, raise FlightNotFound
+            # If there are no good flights left, raise CurrentFlightNotFound
             if len(flights) == 0:
-                raise FlightNotFoundException(sanitized_f_num)
+                raise CurrentFlightNotFoundException(sanitized_f_num)
 
             # Optimization: cache flight info so /track doesn't have cache miss on selecting a flight
             flights_to_cache = {}
