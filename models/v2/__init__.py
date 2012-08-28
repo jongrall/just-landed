@@ -23,6 +23,7 @@ import utils
 
 FLIGHT_STATES = config['flight_states']
 REMINDER_TYPES = config['reminder_types']
+PUSH_TYPES = config['push_types']
 
 # Set to true to log informational messages about datastore operations
 debug_datastore = on_development() and False
@@ -427,7 +428,8 @@ class iOSUser(_User):
 
     @classmethod
     def create(cls, uuid, app_version=None, preferred_language=None, 
-               user_latitude=None, user_longitude=None, push_token=None):
+               user_latitude=None, user_longitude=None, push_token=None,
+               send_reminders=None, send_flight_events=None):
         assert utils.is_valid_uuid(uuid)
         user = cls(id=uuid,
                    push_settings=cls.default_settings())
@@ -439,6 +441,10 @@ class iOSUser(_User):
             user.push_token = push_token
         if user_latitude is not None and user_longitude is not None:
             user.last_known_location = ndb.GeoPt(user_latitude, lon=user_longitude)
+            
+        user.update_push_settings(send_reminders=send_reminders,
+                                  send_flight_events=send_flight_events)    
+                                          
         if debug_datastore:
             logging.info('CREATED NEW USER %s' % uuid)
         return user
@@ -448,12 +454,22 @@ class iOSUser(_User):
         """Returns a list of the default PushNotificationSettings for an iOS user."""
         settings = []
         # Prefs are True by default
-        for push in config['push_types']:
+        for push in PUSH_TYPES:
             settings.append(PushNotificationSetting(name=push, value=True))
         return settings
+        
+    def update_push_settings(self, send_reminders=None, send_flight_events=None):
+        for setting in self.push_settings:
+            if setting.name in REMINDER_TYPES and send_reminders is not None:
+                setting.value = bool(send_reminders)
+            elif (setting.name in [PUSH_TYPES.FILED, PUSH_TYPES.DIVERTED,
+                PUSH_TYPES.CANCELED, PUSH_TYPES.DEPARTED, PUSH_TYPES.ARRIVED,
+                PUSH_TYPES.CHANGED] and send_flight_events is not None):
+                setting.value = bool(send_flight_events)
 
     def update(self, app_version=None, preferred_language=None, 
-               user_latitude=None, user_longitude=None, push_token=None):
+               user_latitude=None, user_longitude=None, push_token=None,
+               send_reminders=None, send_flight_events=None):
         if debug_datastore:
             logging.info('UPDATING EXISTING USER %s' % self.key.string_id())
 
@@ -477,6 +493,10 @@ class iOSUser(_User):
             self.push_token = push_token
             if debug_datastore:
                 logging.info('USER PUSH TOKEN UPDATED')
+                
+        # Update the push settings
+        self.update_push_settings(send_reminders=send_reminders,
+                                  send_flight_events=send_flight_events)   
 
     def wants_notification_type(self, push_type):
         assert push_type

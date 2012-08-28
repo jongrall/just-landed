@@ -39,7 +39,7 @@ fallback_distance_source = GoogleDistanceSource()
 class SearchHandler(AuthenticatedAPIHandler):
     """Handles looking up a flight by flight number."""
     @ndb.toplevel
-    def get(self, flight_number, is_pro=False):
+    def get(self, flight_number):
         """Returns top-level information about flights matching a specific
         flight number. The flights returned will be flights that have landed
         no more than an hour ago or are en-route or scheduled for the future.
@@ -91,6 +91,8 @@ class TrackWorker(BaseHandler):
         user_longitude = params.get('user_longitude')
         driving_time = params.get('driving_time')
         reminder_lead_time = params.get('reminder_lead_time')
+        send_reminders = params.get('send_reminders')
+        send_flight_events = params.get('send_flight_events')
 
         if utils.is_float(user_latitude) and utils.is_float(user_longitude):
             user_latitude = float(user_latitude)
@@ -108,6 +110,16 @@ class TrackWorker(BaseHandler):
             reminder_lead_time = int(reminder_lead_time)
         else:
             reminder_lead_time = None
+            
+        if utils.is_int(send_reminders):
+            send_reminders = bool(int(send_reminders))
+        else:
+            send_reminders = True
+        
+        if utils.is_int(send_flight_events):
+            send_flight_events = bool(int(send_flight_events))
+        else:
+            send_flight_events = True
 
         yield source.track_flight(flight_data,
                                   uuid=uuid,
@@ -117,7 +129,9 @@ class TrackWorker(BaseHandler):
                                   user_latitude=user_latitude,
                                   user_longitude=user_longitude,
                                   driving_time=driving_time,
-                                  reminder_lead_time=reminder_lead_time)
+                                  reminder_lead_time=reminder_lead_time,
+                                  send_reminders=send_reminders,
+                                  send_flight_events=send_flight_events)
 
 
 class DelayedTrackWorker(BaseHandler):
@@ -140,7 +154,7 @@ class DelayedTrackWorker(BaseHandler):
 class TrackHandler(AuthenticatedAPIHandler):
     """Handles tracking a flight by flight number and id."""
     @ndb.toplevel
-    def get(self, flight_number, flight_id, is_pro=False):
+    def get(self, flight_number, flight_id):
         """Returns detailed information for tracking a flight given a flight
         number and flight id (this uniquely identifies a single flight). This
         handler responds to the client using JSON.
@@ -165,7 +179,9 @@ class TrackHandler(AuthenticatedAPIHandler):
         preferred_language = self.request.headers.get('X-Just-Landed-User-Language')
         push_token = self.request.params.get('push_token')
         reminder_lead_time = self.request.params.get('reminder_lead_time')
-        
+        send_reminders = self.request.params.get('send_reminders')
+        send_flight_events = self.request.params.get('send_flight_events')
+                
         assert utils.is_valid_uuid(uuid)
         
         if not utils.is_valid_flight_id(flight_id):
@@ -242,6 +258,8 @@ class TrackHandler(AuthenticatedAPIHandler):
                 'user_longitude' : (utils.is_float(longitude) and longitude) or '',
                 'driving_time' : (utils.is_int(driving_time) and abs(int(driving_time))) or '',
                 'reminder_lead_time' : (utils.is_int(reminder_lead_time) and abs(int(reminder_lead_time))) or '',
+                'send_reminders' : send_reminders,
+                'send_flight_events' : send_flight_events,
             })
             taskqueue.Queue('track').add(task)
 
@@ -262,7 +280,7 @@ class UntrackHandler(AuthenticatedAPIHandler):
     for that flight.
 
     """
-    def get(self, flight_id, is_pro=False):
+    def get(self, flight_id):
         if not utils.is_valid_flight_id(flight_id):
             raise FlightNotFoundException(flight_id)
 
@@ -301,7 +319,7 @@ class AlertHandler(BaseAPIHandler):
     alert.
 
     """
-    def post(self, is_pro=False):
+    def post(self):
         # FIXME: Assumes FlightAware
         # Make sure the POST came from the trusted datasource
         if (source.authenticate_remote_request(self.request)):

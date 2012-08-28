@@ -189,14 +189,6 @@ class BaseAPIHandler(BaseHandler):
             self.response.content_type = 'application/json'
             self.response.write(json.dumps(response_data))
 
-    def dispatch(self):
-        # Sanitize route kwargs slightly
-        if self.request.route_kwargs:
-            self.request.route_kwargs['is_pro'] = bool(self.request.route_kwargs.get('pro'))
-            if 'pro' in self.request.route_kwargs.keys():
-                del(self.request.route_kwargs['pro'])
-        super(BaseAPIHandler, self).dispatch()
-
 
 class AuthenticatedAPIHandler(BaseAPIHandler):
     """An API handler that authenticates all incoming API requests before
@@ -220,10 +212,10 @@ class AuthenticatedAPIHandler(BaseAPIHandler):
 routes = [
     PathPrefixRoute('/api/v1', [
         HandlerPrefixRoute('api.v1.handlers.', [
-        Route('<pro:(/pro){0,1}>/track/<flight_number>/<flight_id:[^/]+>', 'TrackHandler', name='track'),
-        Route('<pro:(/pro){0,1}>/search/<flight_number:[^/]+>', 'SearchHandler', name='search'),
-        Route('<pro:(/pro){0,1}>/handle_alert', 'AlertHandler'),
-        Route('<pro:(/pro){0,1}>/untrack/<flight_id:[^/]+>', 'UntrackHandler', name='untrack'),
+        Route('/track/<flight_number>/<flight_id:[^/]+>', 'TrackHandler', name='track'),
+        Route('/search/<flight_number:[^/]+>', 'SearchHandler', name='search'),
+        Route('/handle_alert', 'AlertHandler'),
+        Route('/untrack/<flight_id:[^/]+>', 'UntrackHandler', name='untrack'),
         ]),
     ]),
     PathPrefixRoute('/admin/flightaware', [

@@ -53,6 +53,7 @@ import reporting
 from reporting import report_event, report_event_transactionally, log_event_transactionally, FlightTrackedEvent
 
 FLIGHT_STATES = config['flight_states']
+PUSH_TYPES = config['push_types']
 debug_cache = on_development() and False
 debug_alerts = on_development() and False
 memcache_client = memcache.Client()
@@ -229,7 +230,7 @@ class FlightAwareSource (FlightDataSource):
 
         # Don't track if we don't need to
         if (not flight or not user.push_enabled or not flight.has_unsent_reminders):
-            return
+           return
 
         user_flight_num = flight.user_flight_num
 
@@ -244,6 +245,9 @@ class FlightAwareSource (FlightDataSource):
         req_args =  {'push_token' : user.push_token,
                     'latitude' : user.last_known_location and user.last_known_location.lat,
                     'longitude' : user.last_known_location and user.last_known_location.lon,
+                    # FIXME: Assumes grouped settings for reminders & flight events
+                    'send_reminders' : int(user.wants_notification_type(PUSH_TYPES.LEAVE_NOW)),
+                    'send_flight_events' : int(user.wants_notification_type(PUSH_TYPES.ARRIVED)),
         }
 
         full_track_url = build_url(track_url, '', args=req_args)
@@ -257,6 +261,7 @@ class FlightAwareSource (FlightDataSource):
         headers = {'X-Just-Landed-UUID' : uuid,
                    'X-Just-Landed-Signature' : sig}
         ctx = ndb.get_context()
+
         yield ctx.urlfetch(full_track_url,
                             headers=headers,
                             deadline=120,
@@ -702,8 +707,6 @@ class FlightAwareSource (FlightDataSource):
             elif event_code == 'cancelled':
                 report_event(reporting.FLIGHT_CANCELED)
 
-            push_types = config['push_types']
-
             # Figure out which user to alert
             u_key = stored_flight.key.parent()
             u = yield u_key.get_async()
@@ -713,26 +716,26 @@ class FlightAwareSource (FlightDataSource):
 
                 # Send notifications to each user, only if they want that notification type
                 # Early / delayed / on time
-                if event_code in ['change', 'minutes_out'] and u.wants_notification_type(push_types.CHANGED):
+                if event_code in ['change', 'minutes_out'] and u.wants_notification_type(PUSH_TYPES.CHANGED):
                     if terminal_changed:
                         TerminalChangeAlert(device_token, alerted_flight, flight_num).push()
                     else:
                         FlightPlanChangeAlert(device_token, alerted_flight, flight_num).push()
 
                 # Take off
-                elif event_code == 'departure' and u.wants_notification_type(push_types.DEPARTED):
+                elif event_code == 'departure' and u.wants_notification_type(PUSH_TYPES.DEPARTED):
                     FlightDepartedAlert(device_token, alerted_flight, flight_num).push()
 
                 # Arrival
-                elif event_code == 'arrival' and u.wants_notification_type(push_types.ARRIVED):
+                elif event_code == 'arrival' and u.wants_notification_type(PUSH_TYPES.ARRIVED):
                     FlightArrivedAlert(device_token, alerted_flight, flight_num).push()
 
                 # Diverted
-                elif event_code == 'diverted' and u.wants_notification_type(push_types.DIVERTED):
+                elif event_code == 'diverted' and u.wants_notification_type(PUSH_TYPES.DIVERTED):
                     FlightDivertedAlert(device_token, alerted_flight, flight_num).push()
 
                 # Canceled
-                elif event_code == 'cancelled' and u.wants_notification_type(push_types.CANCELED):
+                elif event_code == 'cancelled' and u.wants_notification_type(PUSH_TYPES.CANCELED):
                     FlightCanceledAlert(device_token, alerted_flight, flight_num).push()
 
                 else:
@@ -860,6 +863,9 @@ class FlightAwareSource (FlightDataSource):
         user_longitude = kwargs.get('user_longitude')
         driving_time = kwargs.get('driving_time')
         reminder_lead_time = kwargs.get('reminder_lead_time')
+        send_reminders = kwargs.get('send_reminders')
+        send_flight_events = kwargs.get('send_flight_events')
+        
         flight = Flight.from_dict(flight_data)
         flight_id = flight.flight_id
         user_key = ndb.Key(iOSUser, uuid) # FIXME: Assumes iOS
@@ -887,7 +893,9 @@ class FlightAwareSource (FlightDataSource):
                             preferred_language=preferred_language,
                             user_latitude=user_latitude,
                             user_longitude=user_longitude,
-                            push_token=push_token)
+                            push_token=push_token,
+                            send_reminders=send_reminders,
+                            send_flight_events=send_flight_events)
             else:
                 # FIXME: Assumes iOS
                 user = iOSUser.create(uuid,
@@ -895,7 +903,9 @@ class FlightAwareSource (FlightDataSource):
                                       preferred_language=preferred_language,
                                       user_latitude=user_latitude,
                                       user_longitude=user_longitude,
-                                      push_token=push_token)
+                                      push_token=push_token,
+                                      send_reminders=send_reminders,
+                                      send_flight_events=send_flight_events)
 
             # Create/update the flight as necessary
             if tracked_flight:
