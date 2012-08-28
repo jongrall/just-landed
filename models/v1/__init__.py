@@ -538,8 +538,6 @@ class iOSUser(_User):
 
                     # Check the remaining flights they are tracking (if any)
                     for f in user.tracked_flights:
-                        # FIXME: Assumes FlightAware is not being used alongside another data source
-                        # TODO: Check kind of f.flight key
                         tracked_f_num = utils.flight_num_from_fa_flight_id(f.flight.string_id())
                         needs_alert = tracked_f_num == untracking_flight_num
                         if needs_alert:

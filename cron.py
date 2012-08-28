@@ -24,7 +24,6 @@ import reporting
 from reporting import report_event, report_event_transactionally
 import utils
 
-# TODO: Integrate FlightStats source
 source = FlightAwareSource()
 reminder_types = config['reminder_types']
 

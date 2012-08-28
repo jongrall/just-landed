@@ -22,7 +22,7 @@ from config import config, on_development, ua_credentials, stackmob_credentials
 import utils
 
 # Enable to log informational messages about push notification activity
-debug_push = on_development() and False # FIXME
+debug_push = on_development() and False
 
 push_types = config['push_types']
 FLIGHT_STATES = config['flight_states']

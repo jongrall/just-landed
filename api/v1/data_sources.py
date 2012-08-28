@@ -54,7 +54,7 @@ from reporting import report_event, report_event_transactionally, log_event_tran
 
 FLIGHT_STATES = config['flight_states']
 PUSH_TYPES = config['push_types']
-debug_cache = on_development() and False
+debug_cache = on_development() and True
 debug_alerts = on_development() and False
 memcache_client = memcache.Client()
 
@@ -432,8 +432,15 @@ class FlightAwareSource (FlightDataSource):
         additional kwargs:
 
         - `flight_number` : Required by FlightAware to lookup flights.
+        - `use_cache` : Whether or not memcache should be used for getting data.
+                        Cache is still set after retrieving data from datasource.
         """
         flight_number = kwargs.get('flight_number')
+        use_cache = kwargs.get('use_cache')
+        
+        # Default to using cache if not specified
+        if use_cache is None:
+            use_cache = True
 
         if not utils.valid_flight_number(flight_number):
             raise InvalidFlightNumberException(flight_number)
@@ -445,10 +452,14 @@ class FlightAwareSource (FlightDataSource):
         sanitized_f_num = utils.sanitize_flight_number(flight_number)
 
         # Optimization: check memcache first
-        flight = memcache.get(flight_cache_key)
+        flight = None
+        if use_cache:
+            flight = memcache.get(flight_cache_key)
+        elif debug_cache:
+            logging.info('IGNORING FLIGHT CACHE')
 
         if flight:
-            if debug_cache:
+            if use_cache and debug_cache:
                 logging.info('FLIGHT CACHE HIT')
             if flight.is_old_flight:
                 raise OldFlightException(flight_number=flight_number,
@@ -456,17 +467,21 @@ class FlightAwareSource (FlightDataSource):
             flight.flight_number = sanitized_f_num
             raise tasklets.Return(flight)
         else:
-            if debug_cache:
+            if use_cache and debug_cache:
                 logging.info('FLIGHT CACHE MISS')
 
             # Optimization: check to see if we have cached flight info from recent lookup
-            flight_result_cache_key = FlightAwareSource.flight_result_cache_key(flight_id)
-            flight = memcache.get(flight_result_cache_key)
+            if use_cache:
+                flight_result_cache_key = FlightAwareSource.flight_result_cache_key(flight_id)
+                flight = memcache.get(flight_result_cache_key)
+            elif debug_cache:
+                logging.info('IGNORING LOOKUP CACHE')
+                
             airline_data = None
 
             if flight:
                 # We have a cached flight from lookup but still need airline info
-                if debug_cache:
+                if use_cache and debug_cache:
                     logging.info('FLIGHT RESULT CACHE HIT')
 
                 try:
@@ -480,7 +495,7 @@ class FlightAwareSource (FlightDataSource):
                 if airline_data.get('error'):
                     raise TerminalsUnknownException(flight_id)
             else:
-                if debug_cache:
+                if use_cache and debug_cache:
                     logging.info('FLIGHT RESULT CACHE MISS')
                 to_fetch = []
                 to_fetch.append(self.conn.get_json('/FlightInfoEx',
@@ -675,13 +690,18 @@ class FlightAwareSource (FlightDataSource):
         else:
             flight_num = stored_flight.user_flight_num
             alerted_flight = None
+            
+            # Cache freshness: clear memcache keys for lookup
+            FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
             # Get current and last flight information for the flight mentioned by the alert
             if event_code == 'cancelled':
                 # Canceled flights can't be looked up, use stored flight data
                 alerted_flight = Flight.from_dict(stored_flight.last_flight_data)
             else:
-                alerted_flight = yield self.flight_info(flight_id=flight_id, flight_number=flight_num)
+                alerted_flight = yield self.flight_info(flight_id=flight_id,
+                                                        flight_number=flight_num,
+                                                        use_cache=False)
 
             # Reconstruct the flight from the datastore so we can compare before/after alert
             orig_flight = Flight.from_dict(stored_flight.last_flight_data)
@@ -741,8 +761,11 @@ class FlightAwareSource (FlightDataSource):
                 else:
                     logging.info('Unhandled eventcode: %s' % event_code)
 
-                # Fire off a /track for the user, which will update their reminders
-                yield self.do_track(request, flight_id, u_key.string_id())
+                # IMPORTANT: Fire off a /track for the user, which will update their reminders
+                taskqueue.Queue('delayed-track').add(taskqueue.Task(params={
+                                                                    'flight_id' : flight_id,
+                                                                    'uuid' : u_key.string_id(),
+                                                                    }))
 
                 logging.info('ALERT %d %s CALLBACK PROCESSED' % (alert_id, event_code.upper()))
 
@@ -751,9 +774,6 @@ class FlightAwareSource (FlightDataSource):
 
             elif not u:
                 logging.error('ALERT %d HAS FLIGHT %s BUT NO USER %s!' % (alert_id, flight_id, u_key.string_id()))
-
-            # Cache freshness: clear memcache keys for lookup
-            FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
     @ndb.tasklet
     def set_alert(self, **kwargs):
@@ -1068,19 +1088,39 @@ class GoogleDistanceSource (DrivingTimeDataSource):
 
     @ndb.tasklet
     def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
-        """Implements driving_time method of DrivingTimeDataSource."""
+        """Implements driving_time method of DrivingTimeDataSource.
+        
+        Fields:
+        - `origin_lat` : The latitude of the origin to route from.
+        - `origin_lon` : The longitude of the origin to route from.
+        - `dest_lat` : The latitude of the destination to route to.
+        - `dest_lon` : The longitude of the destination to route to.
+        - `use_cache` : Whether or not to use memcache. Will always update the cache
+                        when fetching new data regardless of whether this is set.
+                        
+        """
         driving_cache_key = GoogleDistanceSource.driving_cache_key(origin_lat,
                                                                    origin_lon,
                                                                    dest_lat,
                                                                    dest_lon)
-        time = memcache.get(driving_cache_key)
+        use_cache = kwargs.get('use_cache')
+        
+        # Default to using cache if not specified
+        if use_cache is None:
+            use_cache = True
+        
+        time = None
+        if use_cache:
+            time = memcache.get(driving_cache_key)
+        elif debug_cache:
+            logging.info('IGNORING DRIVING CACHE')
 
         if time is not None:
-            if debug_cache:
+            if use_cache and debug_cache:
                 logging.info('DRIVING CACHE HIT')
             raise tasklets.Return(time)
         else:
-            if debug_cache:
+            if use_cache and debug_cache:
                 logging.info('DRIVING CACHE MISS')
             params = dict(
                 origins='%f,%f' % (origin_lat, origin_lon),
@@ -1143,19 +1183,39 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
 
     @ndb.tasklet
     def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
-        """Implements driving_time method of DrivingTimeDataSource."""
+        """Implements driving_time method of DrivingTimeDataSource.
+        
+        Fields:
+        - `origin_lat` : The latitude of the origin to route from.
+        - `origin_lon` : The longitude of the origin to route from.
+        - `dest_lat` : The latitude of the destination to route to.
+        - `dest_lon` : The longitude of the destination to route to.
+        - `use_cache` : Whether or not to use memcache. Will always update the cache
+                        when fetching new data regardless of whether this is set.
+                        
+        """
         driving_cache_key = BingMapsDistanceSource.driving_cache_key(origin_lat,
                                                                     origin_lon,
                                                                     dest_lat,
-                                                                    dest_lon)
-        time = memcache.get(driving_cache_key)
+                                                                    dest_lon)                                                        
+        use_cache = kwargs.get('use_cache')
+        
+        # Default to using cache if not specified
+        if use_cache is None:
+            use_cache = True
+        
+        time = None
+        if use_cache:
+            time = memcache.get(driving_cache_key)
+        elif debug_cache:
+            logging.info('IGNORING DRIVING CACHE')
 
         if time is not None:
-            if debug_cache:
+            if use_cache and debug_cache:
                 logging.info('DRIVING CACHE HIT')
             raise tasklets.Return(time)
         else:
-            if debug_cache:
+            if use_cache and debug_cache:
                 logging.info('DRIVING CACHE MISS')
             params = {
                 'key' : config['bing_maps']['key'],
