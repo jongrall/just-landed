@@ -584,7 +584,7 @@ def send_sms(to, body, from_phone=config['twilio']['just_landed_phone']):
     """
     assert to, 'No to phone number'
     assert from_phone, 'No from phone number'
-    assert len(body) <= 160, 'SMS messages must be at most 160 characters'
+    assert len(body) <= 160, 'SMS message too long %d/160 characters: %s' % (len(body), body)
     twilio_client.sms.messages.create(to=to,
                                       from_=from_phone,
                                       body=body)
