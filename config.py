@@ -121,8 +121,8 @@ config['airport_fields'] = [
     'timezone',
 ]
 
-# Supported push notification types
-config['push_types'] = Enum([
+# Supported push notification settings
+config['push_settings'] = Enum([
     'FILED',
     'DIVERTED',
     'CANCELED',
@@ -131,6 +131,19 @@ config['push_types'] = Enum([
     'CHANGED',
     'LEAVE_SOON',
     'LEAVE_NOW',
+    'PLAY_FLIGHT_SOUNDS',
+])
+
+# Supported push notification types
+config['push_types'] = Enum([
+    config['push_settings'].FILED,
+    config['push_settings'].DIVERTED,
+    config['push_settings'].CANCELED,
+    config['push_settings'].DEPARTED,
+    config['push_settings'].ARRIVED,
+    config['push_settings'].CHANGED,
+    config['push_settings'].LEAVE_SOON,
+    config['push_settings'].LEAVE_NOW,
 ])
 
 # Supported reminder types

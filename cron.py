@@ -120,7 +120,7 @@ class SendRemindersWorker(BaseHandler):
                     if outbox:
                         yield flight.put_async() # Save the changes to the flight reminders
                         for r in outbox:
-                            r.push(_transactional=True) # Transactional push
+                            r.push(_transactional=True, play_flight_sounds=user.wants_flight_sounds()) # Transactional push
                             if isinstance(r, LeaveSoonAlert):
                                 report_event_transactionally(reporting.SENT_LEAVE_SOON_NOTIFICATION)
                             else:

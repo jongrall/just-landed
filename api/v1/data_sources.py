@@ -248,6 +248,7 @@ class FlightAwareSource (FlightDataSource):
                     # FIXME: Assumes grouped settings for reminders & flight events
                     'send_reminders' : int(user.wants_notification_type(PUSH_TYPES.LEAVE_NOW)),
                     'send_flight_events' : int(user.wants_notification_type(PUSH_TYPES.ARRIVED)),
+                    'play_flight_sounds' : int(user.wants_flight_sounds()),
         }
 
         full_track_url = build_url(track_url, '', args=req_args)
@@ -733,33 +734,39 @@ class FlightAwareSource (FlightDataSource):
 
             if u and u.push_enabled:
                 device_token = u.push_token
+                alert_type = None
 
                 # Send notifications to each user, only if they want that notification type
                 # Early / delayed / on time
                 if event_code in ['change', 'minutes_out'] and u.wants_notification_type(PUSH_TYPES.CHANGED):
                     if terminal_changed:
-                        TerminalChangeAlert(device_token, alerted_flight, flight_num).push()
+                        alert_type = TerminalChangeAlert
                     else:
-                        FlightPlanChangeAlert(device_token, alerted_flight, flight_num).push()
+                        alert_type = FlightPlanChangeAlert
 
                 # Take off
                 elif event_code == 'departure' and u.wants_notification_type(PUSH_TYPES.DEPARTED):
-                    FlightDepartedAlert(device_token, alerted_flight, flight_num).push()
+                    alert_type = FlightDepartedAlert
 
                 # Arrival
                 elif event_code == 'arrival' and u.wants_notification_type(PUSH_TYPES.ARRIVED):
-                    FlightArrivedAlert(device_token, alerted_flight, flight_num).push()
+                    alert_type = FlightArrivedAlert
 
                 # Diverted
                 elif event_code == 'diverted' and u.wants_notification_type(PUSH_TYPES.DIVERTED):
-                    FlightDivertedAlert(device_token, alerted_flight, flight_num).push()
+                    alert_type = FlightDivertedAlert
 
                 # Canceled
                 elif event_code == 'cancelled' and u.wants_notification_type(PUSH_TYPES.CANCELED):
-                    FlightCanceledAlert(device_token, alerted_flight, flight_num).push()
+                    alert_type = FlightCanceledAlert
 
                 else:
                     logging.info('Unhandled eventcode: %s' % event_code)
+
+                # Push the notification if we need to send one
+                if alert_type:
+                    alert = alert_type(device_token, alerted_flight, flight_num)
+                    alert.push(play_flight_sounds=u.wants_flight_sounds())
 
                 # IMPORTANT: Fire off a /track for the user, which will update their reminders
                 yield self.do_track(request_handler, flight_id, u_key.string_id())
@@ -882,6 +889,7 @@ class FlightAwareSource (FlightDataSource):
         reminder_lead_time = kwargs.get('reminder_lead_time')
         send_reminders = kwargs.get('send_reminders')
         send_flight_events = kwargs.get('send_flight_events')
+        play_flight_sounds = kwargs.get('play_flight_sounds')
         
         flight = Flight.from_dict(flight_data)
         flight_id = flight.flight_id
@@ -912,7 +920,8 @@ class FlightAwareSource (FlightDataSource):
                             user_longitude=user_longitude,
                             push_token=push_token,
                             send_reminders=send_reminders,
-                            send_flight_events=send_flight_events)
+                            send_flight_events=send_flight_events,
+                            play_flight_sounds=play_flight_sounds)
             else:
                 # FIXME: Assumes iOS
                 user = iOSUser.create(uuid,
@@ -922,7 +931,8 @@ class FlightAwareSource (FlightDataSource):
                                       user_longitude=user_longitude,
                                       push_token=push_token,
                                       send_reminders=send_reminders,
-                                      send_flight_events=send_flight_events)
+                                      send_flight_events=send_flight_events,
+                                      play_flight_sounds=play_flight_sounds)
 
             # Create/update the flight as necessary
             if tracked_flight:
@@ -989,7 +999,8 @@ class FlightAwareSource (FlightDataSource):
                                                         }, eta=ct) for ct in check_times if ct > now]
                 
                 # Optimization: batch task add
-                taskqueue.Queue('delayed-track').add(delayed_track_tasks, transactional=True)
+                if delayed_track_tasks:
+                    taskqueue.Queue('delayed-track').add(delayed_track_tasks, transactional=True)
 
             # Commit the datastore writes
             yield put_futs

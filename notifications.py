@@ -179,6 +179,8 @@ class PushWorker(BaseHandler):
             del(kwds['_transactional'])
         if 'force' in kwds.keys():
             del(kwds['force'])
+        if 'play_flight_sounds' in kwds.keys():
+            del(kwds['play_flight_sounds'])
 
         if debug_push:
             if method == 'register_token':
@@ -238,6 +240,12 @@ class _Alert(object):
         """Push the alert (adds to taskqueue for processing)."""
         data =  self.payload
         kwargs['device_tokens'] = [self._device_token]
+        play_flight_sounds = kwargs.get('play_flight_sounds')
+        
+        # Disable flight sounds if specified
+        if play_flight_sounds is not None and not play_flight_sounds:
+            data['aps']['sound'] = 'default'
+        
         # Don't send empty messages
         if data['aps']['alert']:
             _defer('push', data, **kwargs)

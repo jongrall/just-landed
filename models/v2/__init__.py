@@ -23,7 +23,7 @@ import utils
 
 FLIGHT_STATES = config['flight_states']
 REMINDER_TYPES = config['reminder_types']
-PUSH_TYPES = config['push_types']
+PUSH_SETTINGS = config['push_settings']
 
 # Set to true to log informational messages about datastore operations
 debug_datastore = on_development() and False
@@ -429,7 +429,7 @@ class iOSUser(_User):
     @classmethod
     def create(cls, uuid, app_version=None, preferred_language=None, 
                user_latitude=None, user_longitude=None, push_token=None,
-               send_reminders=None, send_flight_events=None):
+               send_reminders=None, send_flight_events=None, play_flight_sounds=None):
         assert utils.is_valid_uuid(uuid)
         user = cls(id=uuid,
                    push_settings=cls.default_settings())
@@ -443,7 +443,8 @@ class iOSUser(_User):
             user.last_known_location = ndb.GeoPt(user_latitude, lon=user_longitude)
             
         user.update_push_settings(send_reminders=send_reminders,
-                                  send_flight_events=send_flight_events)    
+                                  send_flight_events=send_flight_events,
+                                  play_flight_sounds=play_flight_sounds)    
                                           
         if debug_datastore:
             logging.info('CREATED NEW USER %s' % uuid)
@@ -454,22 +455,31 @@ class iOSUser(_User):
         """Returns a list of the default PushNotificationSettings for an iOS user."""
         settings = []
         # Prefs are True by default
-        for push in PUSH_TYPES:
-            settings.append(PushNotificationSetting(name=push, value=True))
+        for setting in PUSH_SETTINGS:
+            settings.append(PushNotificationSetting(name=setting, value=True))
         return settings
         
-    def update_push_settings(self, send_reminders=None, send_flight_events=None):
+    def update_push_settings(self, send_reminders=None, send_flight_events=None,
+                             play_flight_sounds=None):
+        # Add any missing settings
+        existing_settings = [s.name for s in self.push_settings]
+        missing_settings = [name for name in PUSH_SETTINGS if name not in existing_settings]
+        for setting in missing_settings:
+            self.push_settings.append(PushNotificationSetting(name=setting, value=True))
+                             
         for setting in self.push_settings:
             if setting.name in REMINDER_TYPES and send_reminders is not None:
                 setting.value = bool(send_reminders)
-            elif (setting.name in [PUSH_TYPES.FILED, PUSH_TYPES.DIVERTED,
-                PUSH_TYPES.CANCELED, PUSH_TYPES.DEPARTED, PUSH_TYPES.ARRIVED,
-                PUSH_TYPES.CHANGED] and send_flight_events is not None):
+            elif (setting.name in [PUSH_SETTINGS.FILED, PUSH_SETTINGS.DIVERTED,
+                PUSH_SETTINGS.CANCELED, PUSH_SETTINGS.DEPARTED, PUSH_SETTINGS.ARRIVED,
+                PUSH_SETTINGS.CHANGED] and send_flight_events is not None):
                 setting.value = bool(send_flight_events)
+            elif setting.name == PUSH_SETTINGS.PLAY_FLIGHT_SOUNDS and play_flight_sounds is not None:
+                setting.value = bool(play_flight_sounds)
 
     def update(self, app_version=None, preferred_language=None, 
                user_latitude=None, user_longitude=None, push_token=None,
-               send_reminders=None, send_flight_events=None):
+               send_reminders=None, send_flight_events=None, play_flight_sounds=None):
         if debug_datastore:
             logging.info('UPDATING EXISTING USER %s' % self.key.string_id())
 
@@ -496,14 +506,21 @@ class iOSUser(_User):
                 
         # Update the push settings
         self.update_push_settings(send_reminders=send_reminders,
-                                  send_flight_events=send_flight_events)   
+                                  send_flight_events=send_flight_events,
+                                  play_flight_sounds=play_flight_sounds)   
 
     def wants_notification_type(self, push_type):
         assert push_type
         for setting in self.push_settings:
-            if setting.name == push_type and setting.value == True:
-                return True
-        return False
+            if setting.name == push_type:
+                return setting.value
+        return True # Default is True
+    
+    def wants_flight_sounds(self):
+        for setting in self.push_settings:
+            if setting.name == PUSH_SETTINGS.PLAY_FLIGHT_SOUNDS:
+                return setting.value
+        return True # Default is True
 
     def location_is_current(self, latitude, longitude):
         loc = self.last_known_location

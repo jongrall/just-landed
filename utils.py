@@ -154,6 +154,30 @@ def is_float(s):
     except TypeError:
         return False
 
+def sanitize_int(s, default=None):
+    if is_int(s):
+        return int(s)
+    else:
+        return default
+        
+def sanitize_float(s, default=None):
+    if is_float(s):
+        return float(s)
+    else:
+        return default
+
+def sanitize_bool(s, default=True):
+    if is_int(s):
+        return bool(int(s))
+    else:
+        return default
+        
+def sanitize_positive_int(s, default=None):
+    if is_int(s):
+        return abs(int(s))
+    else:
+        return default
+
 ###############################################################################
 """Security Utilities"""
 ###############################################################################

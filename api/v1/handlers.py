@@ -89,39 +89,13 @@ class TrackWorker(BaseHandler):
         app_version = params.get('app_version')
         preferred_language = params.get('preferred_language')
         push_token = params.get('push_token')
-        user_latitude = params.get('user_latitude')
-        user_longitude = params.get('user_longitude')
-        driving_time = params.get('driving_time')
-        reminder_lead_time = params.get('reminder_lead_time')
-        send_reminders = params.get('send_reminders')
-        send_flight_events = params.get('send_flight_events')
-
-        if utils.is_float(user_latitude) and utils.is_float(user_longitude):
-            user_latitude = float(user_latitude)
-            user_longitude = float(user_longitude)
-        else:
-            user_latitude = None
-            user_longitude = None
-
-        if utils.is_int(driving_time):
-            driving_time = int(driving_time)
-        else:
-            driving_time = None
-            
-        if utils.is_int(reminder_lead_time):
-            reminder_lead_time = int(reminder_lead_time)
-        else:
-            reminder_lead_time = None
-            
-        if utils.is_int(send_reminders):
-            send_reminders = bool(int(send_reminders))
-        else:
-            send_reminders = True
-        
-        if utils.is_int(send_flight_events):
-            send_flight_events = bool(int(send_flight_events))
-        else:
-            send_flight_events = True
+        user_latitude = utils.sanitize_float(params.get('user_latitude'))
+        user_longitude = utils.sanitize_float(params.get('user_longitude'))
+        driving_time = utils.sanitize_positive_int(params.get('driving_time'))
+        reminder_lead_time = utils.sanitize_positive_int(params.get('reminder_lead_time'))
+        send_reminders = utils.sanitize_bool(params.get('send_reminders'), default=True)
+        send_flight_events = utils.sanitize_bool(params.get('send_flight_events'), default=True)
+        play_flight_sounds = utils.sanitize_bool(params.get('play_flight_sounds'), default=True)
 
         yield source.track_flight(flight_data,
                                   uuid=uuid,
@@ -133,7 +107,8 @@ class TrackWorker(BaseHandler):
                                   driving_time=driving_time,
                                   reminder_lead_time=reminder_lead_time,
                                   send_reminders=send_reminders,
-                                  send_flight_events=send_flight_events)
+                                  send_flight_events=send_flight_events,
+                                  play_flight_sounds=play_flight_sounds)
 
 
 class DelayedTrackWorker(BaseHandler):
@@ -183,6 +158,7 @@ class TrackHandler(AuthenticatedAPIHandler):
         reminder_lead_time = self.request.params.get('reminder_lead_time')
         send_reminders = self.request.params.get('send_reminders')
         send_flight_events = self.request.params.get('send_flight_events')
+        play_flight_sounds = self.request.params.get('play_flight_sounds')
         
         # /track requests from server should not use the cache - we want the latest data
         use_cache = self.client != 'Server'
@@ -199,11 +175,8 @@ class TrackHandler(AuthenticatedAPIHandler):
 
         # Get driving time, if we have their location
         driving_time = None
-        latitude = self.request.params.get('latitude')
-        latitude = utils.is_float(latitude) and float(latitude)
-        longitude = self.request.params.get('longitude')
-        longitude = utils.is_float(longitude) and float(longitude)
-
+        latitude = utils.sanitize_float(self.request.params.get('latitude'), default='')
+        longitude = utils.sanitize_float(self.request.params.get('longitude'), default='')
         dest_latitude = flight.destination.latitude
         dest_longitude = flight.destination.longitude
 
@@ -261,12 +234,13 @@ class TrackHandler(AuthenticatedAPIHandler):
                 'app_version' : app_version or '',
                 'preferred_language' : preferred_language or '',
                 'push_token' : push_token or '',
-                'user_latitude' : (utils.is_float(latitude) and latitude) or '',
-                'user_longitude' : (utils.is_float(longitude) and longitude) or '',
-                'driving_time' : (utils.is_int(driving_time) and abs(int(driving_time))) or '',
-                'reminder_lead_time' : (utils.is_int(reminder_lead_time) and abs(int(reminder_lead_time))) or '',
+                'user_latitude' : latitude,
+                'user_longitude' : longitude,
+                'driving_time' : utils.sanitize_positive_int(driving_time, default=''),
+                'reminder_lead_time' : utils.sanitize_positive_int(reminder_lead_time, default=''),
                 'send_reminders' : send_reminders,
                 'send_flight_events' : send_flight_events,
+                'play_flight_sounds' : play_flight_sounds,
             })
             taskqueue.Queue('track').add(task)
 
