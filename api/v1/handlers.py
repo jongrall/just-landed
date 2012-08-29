@@ -150,7 +150,7 @@ class DelayedTrackWorker(BaseHandler):
         flight_id = params.get('flight_id')
         assert utils.is_valid_uuid(uuid)
         assert utils.is_valid_flight_id(flight_id)
-        yield source.do_track(self.request, flight_id, uuid)
+        yield source.do_track(self, flight_id, uuid)
 
 
 class TrackHandler(AuthenticatedAPIHandler):

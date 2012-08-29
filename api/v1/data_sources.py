@@ -54,7 +54,7 @@ from reporting import report_event, report_event_transactionally, log_event_tran
 
 FLIGHT_STATES = config['flight_states']
 PUSH_TYPES = config['push_types']
-debug_cache = on_development() and True
+debug_cache = on_development() and False
 debug_alerts = on_development() and False
 memcache_client = memcache.Client()
 
@@ -217,8 +217,8 @@ class FlightAwareSource (FlightDataSource):
         self.conn = Connection(self.base_url, username=uname, password=pwd)
 
     @ndb.tasklet
-    def do_track(self, request, flight_id, uuid):
-        assert request
+    def do_track(self, request_handler, flight_id, uuid):
+        assert request_handler
         assert utils.is_valid_uuid(uuid)
         assert utils.is_valid_fa_flight_id(flight_id)
         # FIXME: Assumes iOS
@@ -236,7 +236,7 @@ class FlightAwareSource (FlightDataSource):
 
         # Fire off a /track for the user, which will update their reminders
         url_scheme = (on_development() and 'http') or 'https'
-        track_url = request.uri_for('track',
+        track_url = request_handler.uri_for('track',
                                     flight_number=user_flight_num,
                                     flight_id=flight_id,
                                     _full=True,
@@ -252,7 +252,7 @@ class FlightAwareSource (FlightDataSource):
 
         full_track_url = build_url(track_url, '', args=req_args)
 
-        to_sign = request.uri_for('track',
+        to_sign = request_handler.uri_for('track',
                                    flight_number=user_flight_num,
                                    flight_id=flight_id)
 
@@ -670,7 +670,7 @@ class FlightAwareSource (FlightDataSource):
             raise tasklets.Return(flights)
 
     @ndb.tasklet
-    def process_alert(self, alert_body, request):
+    def process_alert(self, alert_body, request_handler):
         # Note: alert_body has already been validated
         alert_id = alert_body['alert_id']
         event_code = alert_body['eventcode']
@@ -762,10 +762,7 @@ class FlightAwareSource (FlightDataSource):
                     logging.info('Unhandled eventcode: %s' % event_code)
 
                 # IMPORTANT: Fire off a /track for the user, which will update their reminders
-                taskqueue.Queue('delayed-track').add(taskqueue.Task(params={
-                                                                    'flight_id' : flight_id,
-                                                                    'uuid' : u_key.string_id(),
-                                                                    }))
+                yield self.do_track(request_handler, flight_id, u_key.string_id())
 
                 logging.info('ALERT %d %s CALLBACK PROCESSED' % (alert_id, event_code.upper()))
 
