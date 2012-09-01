@@ -1,910 +1,1028 @@
-icao,iata,name
-RNX,1T,1Time Airline
-MLA,Q5,40-Mile Air
-AAA,AN,Ansett Australia
-AAF,ZI,Aigle Azur
-AAH,AQ,Aloha Airlines
-AAL,AA,American Airlines
-AAR,OZ,Asiana Airlines
-AAS,4K,Askari Aviation
-AAW,8U,Afriqiyah Airways
-AAY,G4,Allegiant Air
-TUS,M3,ABSA - Aerolinhas Brasileiras
-ACP,8V,Astral Aviation
-ADE,ZY,Ada Air
-ADR,JP,Adria Airways
-AEA,UX,Air Europa
-AEB,EM,Aero Benin
-AEE,A3,Aegean Airlines
-AEL,PE,Air Europe
-AER,KO,Alaska Central Express
-AES,,ACES Colombia
-AEU,5W,Astraeus
-AEW,VV,Aerosvit Airlines
-AEY,I9,Air Italy
-UTY,QQ,Alliance Airlines
-AFG,FG,Ariana Afghan Airlines
-AFL,SU,Aeroflot Russian Airlines
-BON,JA,Air Bosna
-AFR,AF,Air France
-ACI,SB,Air Caledonie International
-SNC,2Q,Air Cargo Carriers
-NMB,SW,Air Namibia
-SLI,5D,Aerolitoral
-AGV,7T,Air Glaciers
-AGX,,Aviogenex
-PLI,PL,Aeroper
-BMM,8A,Atlas Blue
-AHY,J2,Azerbaijan Airlines
-AIA,U3,Avies
-ABQ,ED,Airblue
-AIR,,Airlift International
-BER,AB,Air Berlin
-AIC,AI,Air India Limited
-BUB,ZB,Air Bourbon
-ABD,CC,Air Atlanta Icelandic
-THT,TN,Air Tahiti Nui
-AIZ,IZ,Arkia Israel Airlines
-AJM,JM,Air Jamaica
-ADH,AP,Air One
-RSH,S2,Air Sahara
-AMC,KM,Air Malta
-AJX,NQ,Air Japan
-AKA,,Air Korea Co. Ltd.
-AKL,4A,Air Kiribati
-AWE,HP,America West Airlines
-AWI,ZW,Air Wisconsin
-TAK,U9,Tatarstan Airlines
-ALO,,Allegheny Commuter Airlines
-RSI,,Air Sunshine
-AML,QM,Air Malawi
-AMT,TZ,ATA Airlines
-AMU,NX,Air Macau
-AMV,,AMC Airlines
-SEY,HM,Air Seychelles
-AMX,AM,AeroMéxico
-ANA,NH,All Nippon Airways
-ANE,YW,Air Nostrum
-ANG,PX,Air Niugini
-ABY,G9,Air Arabia
-ACA,AC,Air Canada
-BTI,BT,Air Baltic
-ANK,EL,Air Nippon
-ANO,TL,Airnorth
-ANT,4N,Air North Charter - Canada
-ANZ,NZ,Air New Zealand
-SMX,XM,Alitalia Express
-ARF,GV,Aero Flight
-APW,JW,Arrow Air
-ARD,2B,Aerocondor
-ARE,4C,Aires
-ARG,AR,Aerolineas Argentinas
-ASA,AS,Alaska Airlines
-ASD,4D,Air Sinai
-ASQ,EV,Atlantic Southeast Airlines
-ASZ,OB,Astrakhan Airlines
-ATC,TC,Air Tanzania
-VBW,2J,Air Burkina
-ATM,FO,Airlines Of Tasmania
-SPM,PJ,Air Saint Pierre
-AUA,OS,Austrian Airlines
-WOW,,Air Southwest
-AUB,IQ,Augsburg Airways
-TUR,,ATUR
-AUH,MO,Abu Dhabi Amiri Flight
-AUL,5N,Aeroflot-Nord
-AUR,GR,Aurigny Air Services
-AVA,AV,Avianca - Aerovias Nacionales de Colombia
-AVN,NF,Air Vanuatu
-BGD,B9,Air Bangladesh
-BIE,DR,Air Mediterranee
-TAH,,Air Moorea
-AWU,7E,Aeroline GmbH
-AWW,6G,Air Wales
-FWI,TX,Air Caraïbes
-AXB,IX,Air India Express
-AXL,XT,Air Exel
-AXM,AK,AirAsia
-AYZ,3G,Atlant-Soyuz Airlines
-AZA,AZ,Alitalia
-AZN,Z8,Amaszonas
-AZW,UM,Air Zimbabwe
-OCA,R7,Aserca Airlines
-SDM,FV,Rossiya-Russian Airlines
-EGF,MQ,American Eagle Airlines
-VUE,,AD Aviation
-VUN,VU,Air Ivoire
-BOT,BP,Air Botswana
-UPA,GS,Air Foyle
-VTA,VT,Air Tahiti
-VIM,VL,Air VIA
-WTA,FK,Africa West
-VAS,V8,ATRAN Cargo Airlines
-CCA,CA,Air China
-CDP,Q6,Aero Condor Peru
-CVA,CV,Air Chathams
-CWM,CW,Air Marshall Islands
-CYD,ZA,Access Air
-DAH,AH,Air Algerie
-DHI,KI,Adam Air
-DLA,EN,Air Dolomiti
-DNV,D9,Aeroflot-Don
-DRD,NM,Air Madrid
-EIN,EI,Aer Lingus
-FIF,OF,Air Finland
-FIX,,Airfix Aviation
-FJI,FJ,Air Pacific
-FLI,RC,Atlantic Airways
-FLZ,QH,Air Florida
-FXI,NY,Air Iceland
-GAP,2P,Air Philippines
-GIP,2U,Air Guinee Express
-GRL,GL,Air Greenland
-GTI,5Y,Atlas Air
-GUY,GG,Air Guyane
-JAB,W9,Air Bagan
-JZA,QK,Air Canada Jazz
-KKK,KK,Atlasjet
-KOR,JS,Air Koryo
-KZR,KC,Air Astana
-LBC,LV,Albanian Airlines
-LFA,,Air Alfa
-LNE,XL,Aerolane
-LUR,TD,Atlantis European Airways
-LXR,LK,Air Luxor
-MAU,MK,Air Mauritius
-MDG,MD,Air Madagascar
-MLD,9U,Air Moldova
-MPD,A7,Air Plus Comet
-NIG,AJ,Aero Contractors
-PEL,OT,Aeropelican Air Services
-REA,RE,Aer Arann
-REU,UU,Air Austral
-RIT,6K,Asian Spirit
-RKA,RK,Air Afrique
-RLA,A5,Airlinair
-RLN,QL,Aero Lanka
-RNE,20,Air Salone
-RNV,U8,Armavia
-RPB,P5,AeroRep
-RSR,BF,Aero-Service
-RSU,5L,Aerosur
-RTE,,Aeronorte
-SMJ,Z3,Avient Aviation
-SYL,R3,Aircompany Yakutia
-TAO,VW,Aeromar
-TFL,OR,Arkefly
-TOK,CG,Airlines PNG
-TRS,FL,AirTran Airways
-TSC,TS,Air Transat
-TWN,EC,Avialeasing Aviation Company
-TYR,VO,Austrian Arrows
-GLG,2K,Aerolineas Galapagos
-DRU,6R,Alrosa Mirny Air Enterprise
-BAW,BA,British Airways
-BBC,BG,Biman Bangladesh Airlines
-BHP,4T,Belair Airlines
-BHS,UP,Bahamasair
-BIH,BS,British International Helicopters
-BKF,,BF-Lento OY
-BKP,PG,Bangkok Airways
-BLF,KF,Blue1
-BLL,,Baltic Airlines
-BLS,JV,Bearskin Lake Air Service
-BLV,B3,Bellview Airlines
-BMA,BD,bmi
-BMI,WW,bmibaby
-BMJ,CH,Bemidji Airlines
-BMR,,British Midland Regional
-BPA,BV,Blue Panorama Airlines
-BPS,,Budapest Aircraft Services/Manx2
-BRG,8E,Bering Air
-BRS,,Brazilian Air Force
-BRU,B2,Belavia Belarusian Airlines
-BTV,7P,Metro Batavia
-BVT,J8,Berjaya Air
-BWG,QW,Blue Wings
-BZH,DB,Brit Air
-DAT,SN,Brussels Airlines
-IBB,NT,Binter Canarias
-JOR,0B,Blue Air
-LAJ,KJ,British Mediterranean Airways
-LZB,FB,Bulgaria Air
-NKF,8N,Barents AirLink
-ICL,5C,CAL Cargo Air Lines
-CLI,XG,Calima Aviacion
-CDN,CP,Canadian Airlines
-MPE,5T,Canadian North
-KAP,9K,Cape Air
-BWA,BW,Caribbean Airlines
-KRP,V3,Carpatair
-CPN,RV,Caspian Airlines
-CPA,CX,Cathay Pacific
-CAY,KX,Cayman Airways
-CEB,5J,Cebu Pacific
-CCG,,Central Connect Airlines
-CLW,C0,Centralwings
-CHW,,Charter Air
-CHQ,RP,Chautauqua Airlines
-CAL,CI,China Airlines
-CES,MU,China Eastern Airlines
-CSN,CZ,China Southern Airlines
-CUA,HR,China United Airlines
-CYH,3Q,Yunnan Airlines
-CIM,QI,Cimber Air
-RUS,C9,Cirrus Airlines
-SDR,CF,City Airline
-CIX,G3,City Connexion Airlines
-BCY,WX,CityJet
-CFE,CJ,BA CityFlyer
-CGK,,Click Airways
-CJC,9L,Colgan Air
-COM,OH,Comair
-CAW,MN,Comair
-UCA,C5,CommutAir
-CWK,KR,Comores Airlines
-CPZ,CP,Compass Airlines
-CFG,DE,Condor Flugdienst
-CHP,6A,Consorcio Aviaxsa
-KIS,C3,Contact Air
-COA,CO,Continental Airlines
-CMI,CS,Continental Micronesia
-VCV,V0,Conviasa
-CMP,CM,Copa Airlines
-AAQ,,Copterline
-CAI,,Corendon Airlines
-CRL,SS,Corsairfly
-CCM,XK,Corse-Mediterranee
-CAN,,Crest Aviation
-CTN,OU,Croatia Airlines
-CRO,,Crown Airways
-CUB,CU,Cubana de Aviación
-CYP,CY,Cyprus Airways
-CSA,OK,Czech Airlines
-DTR,DX,DAT Danish Air Transport
-DAO,D3,Daallo Airlines
-KHB,H8,Dalavia
-DWT,0D,Darwin Airline
-DEA,,Delta Aerotaxi
-DAL,DL,Delta Air Lines
-DNM,,Denim Air
-DJB,D8,Djibouti Airlines
-UDN,,Dniproavia
-DOA,DO,Dominicana de Aviaci
-DMO,E3,Domodedovo Airlines
-UDC,5D,DonbassAero
-HDA,KA,Dragonair
-DRK,KB,Druk Air
-DBK,,Dubrovnik Air
-DNL,,Dutch Antilles Express
-BAG,DI,dba
-EVA,BR,EVA Air
-UGX,QU,East African
-EZE,T3,Eastern Airways
-ELA,DK,Eastland Air
-ECU,,Ecuavia
-EDW,WK,Edelweiss Air
-MSR,MS,Egyptair
-ELY,LY,El Al Israel Airlines
-BRQ,UZ,El-Buraq Air Transport
-UAE,EK,Emirates Airline
-EEA,EU,Empresa Ecuatoriana De Aviacion
-ERT,B8,Eritrean Airlines
-ELL,OV,Estonian Air
-ETH,ET,Ethiopian Airlines
-ETD,EY,Etihad Airways
-ECA,UI,Eurocypria Airlines
-EEU,GJ,Eurofly Service
-ELO,K2,Eurolot
-EAL,EA,European Air Express
-EWG,EW,Eurowings
-EIA,EZ,Evergreen International Airlines
-XLA,JN,Excel Airways
-XEL,,Excel Charter
-LHN,EO,Express One International
-BTA,XE,ExpressJet
-EZY,U2,easyJet
-EFA,EF,Far Eastern Air Transport
-FIN,AY,Finnair
-WBA,FC,Finncomm Airlines
-FFM,FY,Firefly
-FAB,7F,First Air
-FCA,DP,First Choice Airways
-FLT,B5,Flightline
-FWL,RF,Florida West International Airways
-XAX,D7,AirAsia X
-LIL,TE,FlyLal
-NDC,LF,FlyNordic
-BBO,F7,Flybaboo
-BEE,BE,Flybe
-GSM,B4,Flyglobespan
-FYH,W3,Flyhy Cargo Airlines
-FOS,VY,Formosa Airlines
-FRE,FP,Freedom Air
-FRL,,Freedom Airlines
-FFT,F9,Frontier Airlines
-FTA,2F,Frontier Flying Service
-GBL,GT,GB Airways
-GIA,GA,Garuda Indonesia
-GZP,4G,Gazpromavia
-TGZ,A9,Georgian Airways
-GFG,QB,Georgian National Airlines
-GMI,ST,Germania
-GWI,4U,Germanwings
-GHB,G0,Ghana International Airlines
-GOW,G8,Go Air
-GJS,G7,GoJet Airlines
-GLO,G3,Gol Transportes Aéreos
-GAO,DC,Golden Air
-GLA,ZK,Great Lakes Airlines
-TAT,TA,Grupo TACA
-GFA,,Gulf Air
-GBA,GF,Gulf Air Bahrain
-GFT,,Gulfstream International Airlines
-HAG,H6,Hageland Aviation Services
-CHH,HU,Hainan Airlines
-HAM,2T,Haiti Ambassador Airlines
-HHI,4R,Hamburg International
-HLX,X3,TUIfly
-HLF,HF,Hapagfly
-HAL,HA,Hawaiian Airlines
-HFR,8H,Heli France
-JBA,JB,Helijet
-HEJ,T4,Hellas Jet
-FHE,HW,Hello
-OAW,2L,Helvetic Airways
-HER,UD,Hex'Air
-HWY,,Highland Airways
-ADO,HD,Hokkaido International Airlines
-HKE,UO,Hong Kong Express Airways
-QXE,QX,Horizon Air
-HZA,BN,Horizon Airlines
-IBE,IB,Iberia Airlines
-IWD,TY,Iberworld
-IBX,FW,Ibex Airlines
-RAC,,Icar Air
-ICE,FI,Icelandair
-ITX,IK,Imair Airlines
-IGO,6E,IndiGo Airlines
-IAC,IC,Indian Airlines
-IBU,I9,Indigo
-AWQ,QZ,Indonesia AirAsia
-IAA,IO,Indonesian Airlines
-ILN,D6,Interair South Africa
-SUW,ZA,Interavia Airlines
-ITK,ID,Interlink Airlines
-ISK,3L,Intersky
-IRA,IR,Iran Air
-IRC,EP,Iran Aseman Airlines
-IAW,IA,Iraqi Airways
-CGP,8L,Cargo Plus Aviation
-ISW,IF,Islas Airways
-ISV,WC,Islena De Inversiones
-ISR,6H,Israir
-IKA,GI,Itek Air
-JEX,JC,JAL Express
-JAZ,JO,JALways
-JAL,JL,Japan Airlines
-JAL,JL,Japan Airlines Domestic
-JAA,EG,Japan Asia Airways
-JTA,NU,Japan Transocean Air
-JAT,JU,Jat Airways
-JZR,J9,Jazeera Airways
-JJA,7C,Jeju Air
-JAI,9W,Jet Airways
-JSA,3K,Jetstar Asia Airways
-EXS,LS,Jet2.com
-JFU,8J,Jet4You
-JBU,B6,JetBlue Airways
-JAF,JF,Jetairfly
-JEF,,Jetflite
-JST,JQ,Jetstar Airways
-DKH,HO,Juneyao Airlines
-KNI,KD,KD Avia
-KLC,WA,KLM Cityhopper
-KLM,KL,KLM Royal Dutch Airlines
-KMF,RQ,Kam Air
-MVD,KV,Kavminvodyavia
-KDA,,Kendell Airlines
-KEN,M5,Kenmore Air
-KQA,KQ,Kenya Airways
-KFR,IT,Kingfisher Airlines
-IRK,Y9,Kish Air
-KGL,7K,Kogalymavia Air Company
-KAL,KE,Korean Air
-KSM,,Kosmos
-KJC,7B,Krasnojarsky Airlines
-KIL,GW,Kuban Airlines
-KAC,KU,Kuwait Airways
-KZU,GO,Kuzu Airlines Cargo
-LRC,LR,LACSA
-LAN,LA,LAN Airlines
-DSM,4M,Aero 2000
-LXP,LU,LAN Express
-LPE,LP,LAN Peru
-LOT,LO,LOT Polish Airlines
-LTE,XO,LTE International Airways
-LTO,L3,LTU Austria
-LTU,LT,LTU International
-LAO,QV,Lao Airlines
-LTC,,LatCharter
-LDA,NG,Lauda Air
-LIA,LI,Leeward Islands Air Transport
-LAA,LN,Libyan Arab Airlines
-LAM,LM,Linhas A
-LNI,JT,Lion Mentari Airlines
-LGW,HE,Luftfahrtgesellschaft Walter
-DLH,LH,Lufthansa
-GEC,LH,Lufthansa Cargo
-CLH,CL,Lufthansa CityLine
-LTR,L5,Lufttransport
-LGL,LG,Luxair
-MAA,M7,MasAir
-MAK,IN,MAT Macedonian Airlines
-MGL,OM,MIAT Mongolian Airlines
-MNB,MB,MNG Airlines
-MCK,CC,Macair Airlines
-IRM,W5,Mahan Air
-MAS,MH,Malaysia Airlines
-SCW,,Malmo Aviation
-SCW,TF,Malmö Aviation
-MAC,R5,Malta Air Charter
-MAH,MA,Malév
-MDL,RI,Mandala Airlines
-MDA,AE,Mandarin Airlines
-MNO,JE,Mango
-MPH,MP,Martinair
-MXL,8M,Maxair
-MYD,MW,Maya Island Air
-ISS,IG,Meridiana
-MNA,MZ,Merpati Nusantara Airlines
-ASH,YV,Mesa Airlines
-MES,XJ,Mesaba Airlines
-MXA,MX,Mexicana de Aviaci
-MEA,ME,Middle East Airlines
-MDW,JI,Midway Airlines
-MEP,YX,Midwest Airlines
-MWA,MY,Midwest Airlines Egypt
-MDV,2M,Moldavian Airlines
-MON,ZB,Monarch Airlines
-MGX,YM,Montenegro Airlines
-MAL,,Morningstar Air Express
-GAI,3R,Moskovia Airlines
-MSI,M9,Motor Sich
-MYT,VZ,MyTravel Airways
-UBA,UB,Myanma Airways
-MMM,8M,Myanmar Airways International
-MYA,,Myflug
-NAS,UE,Nasair
-NJS,NC,National Jet Systems
-NTW,CE,Nationwide Airlines
-RON,ON,Nauru Air Corporation
-RNA,RA,Nepal Airlines
-EJA,1I,NetJets
-NEA,EJ,New England Airlines
-NTJ,,NextJet
-NLY,HG,Niki
-NOK,DD,Nok Air
-NCF,,Norfolk County Flight College
-NTM,,North American Airlines
-HMR,,North American Charters
-NWA,NW,Northwest Airlines
-PLR,J3,Northwestern Air
-NAX,DY,Norwegian Air Shuttle
-TFN,,Norwegian Aviation College
-LBT,BJ,Nouvel Air Tunisie
-NVR,1I,Novair
-KNE,XY,Nas Air
-OHK,O8,Oasis Hong Kong Airlines
-BCN,,Ocean Air
-ONE,O6,Oceanair
-OAL,OA,Olympic Airlines
-OMA,WY,Oman Air
-OAE,OY,Omni Air International
-OTG,,One Two Go Airlines
-OHY,8Q,Onur Air
-ORB,R2,Orenburg Airlines
-OEA,OX,Orient Thai Airlines
-OGN,QO,Origin Pacific Airways
-OLT,OL,Ostfriesische Lufttransport
-OLA,OJ,Overland Airways
-OZJ,O7,Ozjet Airlines
-PNR,PV,PAN Air
-PBA,9Q,PB Air
-PUA,PU,PLUNA
-PMT,U4,PMTair
-PIC,BL,Jetstar Pacific
-PCO,8P,Pacific Coastal Airline
-PEC,Q8,Pacific East Asia Cargo Airlines
-PSA,,Pacific Island Aviation
-NMI,LW,Pacific Wings
-PIA,PK,Pakistan International Airlines
-PMW,I7,Paramount Airways
-PTB,,Passaredo Transportes Aereos
-PGT,PC,Pegasus Airlines
-PEN,KS,Peninsula Airways
-PAL,PR,Philippine Airlines
-PDT,PI,Piedmont Airlines
-FLG,9E,Pinnacle Airlines
-POT,,Polet
-PAO,PH,Polynesian Airlines
-POE,PD,Porter Airlines
-PGA,NI,Portugalia
-PDC,BK,Potomac Air
-PRF,PW,Precision Air
-PTI,,Privatair
-QFA,QF,Qantas
-QTR,QR,Qatar Airways
-KIN,,Kinloss Flying Training Unit
-RXA,ZL,Regional Express
-RPA,RW,Republic Airlines
-RPH,RH,Republic Express Airlines
-RAR,GZ,Air Rarotonga
-RAM,AT,Royal Air Maroc
-RBA,BI,Royal Brunei Airlines
-RJA,RJ,Royal Jordanian
-RNA,RA,Royal Nepal Airlines
-PPW,,Royal Phnom Penh Airways
-RLU,,Rusline
-RWD,WB,Rwandair Express
-RYA,,Ryan Air Services
-RYN,RD,Ryan International Airlines
-RYR,FR,Ryanair
-RAE,YS,Régional
-RZO,S4,SATA International
-SAA,SA,South African Airways
-SAI,NL,Shaheen Air International
-SAS,SK,Scandinavian Airlines System
-SAY,,ScotAirways
-SBI,S7,S7 Airlines
-SBS,BB,Seaborne Airlines
-SCE,,Scenic Airlines
-ALK,UL,SriLankan Airlines
-SCX,SY,Sun Country Airlines
-SEA,,Southeast Air
-SEH,G3,Sky Express
-SEJ,SG,Spicejet
-SFJ,7G,Star Flyer
-SGY,N5,Skagway Air Service
-SHD,,Sahara Airlines
-SAT,SP,SATA Air Acores
-SIA,SQ,Singapore Airlines
-SIB,5M,Sibaviatrans
-SIH,SI,Skynet Airlines
-SJY,SJ,Sriwijaya Air
-SMY,ZS,Sama Airlines
-SQC,SQ,Singapore Airlines Cargo
-SRH,FT,Siem Reap Airways
-SRQ,DG,South East Asian Airlines
-SSV,5G,Skyservice Airlines
-STU,FS,Servicios de Transportes A
-SUD,SD,Sudan Airways
-SVA,SV,Saudi Arabian Airlines
-SWA,WN,Southwest Airlines
-SWD,A4,Southern Winds Airlines
-SWR,LX,Swiss International Air Lines
-SWR,SR,Swissair
-SWU,,Swiss European Air Lines
-SWV,WV,Swe Fly
-SXS,XQ,SunExpress
-SYR,RB,Syrian Arab Airlines
-SYX,AL,Skywalk Airlines
-CDG,SC,Shandong Airlines
-CNO,,SAS Braathens
-CQH,9S,Spring Airlines
-CSC,3U,Sichuan Airlines
-CSH,FM,Shanghai Airlines
-CSZ,ZH,Shenzhen Airlines
-ERO,7L,Sun D'Or
-ESK,NE,SkyEurope
-HSK,,Sky Europe Airlines
-JKK,JK,Spanair
-NKS,NK,Spirit Airlines
-NSE,9R,Satena
-OZW,,Skywest Airlines
-BBR,S3,Santa Barbara Airlines
-SKU,H2,Sky Airline
-SKW,OO,SkyWest
-SKX,JZ,Skyways Express
-SKY,BC,Skymark Airlines
-SLK,MI,SilkAir
-SLM,PY,Surinam Airways
-SNB,NB,Sterling Airlines
-SNJ,6J,Skynet Asia Airways
-SOL,IE,Solomon Airlines
-SOU,,Southern Airways
-SOV,6W,Saratov Aviation Division
-SOZ,HZ,Sat Airlines
-SPI,,South Pacific Island Airways
-TCF,S5,Shuttle America
-VSV,DV,Scat Air
-TAE,EQ,TAME
-TAM,JJ,TAM Brazilian Airlines
-TAP,TP,TAP Portugal
-TAR,TU,Tunisair
-TCG,T2,Thai Air Cargo
-TCW,FQ,Thomas Cook Airlines
-TCX,MT,Thomas Cook Airlines
-TGN,,Trigana Air Service
-TGW,TR,Tiger Airways
-TGW,TT,Tiger Airways Australia
-THA,TG,Thai Airways International
-THK,,Turk Hava Kurumu Hava Taksi Isletmesi
-AIQ,FD,Thai AirAsia
-THY,TK,Turkish Airlines
-TIL,,Tajikistan International Airlines
-TJT,T7,Twin Jet
-TLA,,Translift Airways
-TMA,TL,Trans Mediterranean Airlines
-TNM,3P,Tiara Air
-TOM,BY,Thomsonfly
-TOS,PM,Tropic Air
-TPA,QT,TAMPA
-TNA,GE,TransAsia Airways
-TRA,HV,Transavia Holland
-TCV,VR,TACV
-ABS,9T,Transwest Air
-TSO,UN,Transaero Airlines
-TUA,T5,Turkmenistan Airlines
-TUI,UG,Tuninter
-TVS,QS,Travel Service
-BLX,6B,TUIfly Nordic
-DTA,DT,TAAG Angola Airlines
-HVK,,Turkish Air Force
-LAP,PZ,TAM Mercosur
-LOF,AX,Trans States Airlines
-ROT,RO,Tarom
-URN,3T,Turan Air
-TIB,8R,TRIP Linhas A
-GWY,U5,USA3000 Airlines
-UAL,UA,United Airlines
-UAC,,United Air Charters
-SVR,U6,Ural Airlines
-UKM,UF,UM Airlines
-USA,US,US Airways
-USH,,US Helicopter
-UTA,UT,UTair Aviation
-AIO,,United States Air Force
-UZB,HY,Uzbekistan Airways
-AUI,PS,Ukraine International Airlines
-VAU,VA,V Australia Airlines
-VLU,VF,Valuair
-VFC,,Vasco Air
-HVN,VN,Vietnam Airlines
-MOV,NN,VIM Airlines
-VOI,Y4,Volaris
-VDA,VI,Volga-Dnepr Airlines
-VRD,VX,Virgin America
-VEX,TV,Virgin Express
-VGN,VK,Virgin Nigeria Airways
-VIR,VS,Virgin Atlantic Airways
-VVM,ZG,Viva Macau
-VLE,VE,Volare Airlines
-VLG,VY,Vueling Airlines
-VLK,XF,Vladivostok Air
-VLO,LC,Varig Log
-VOZ,DJ,Virgin Australia
-VRN,RG,VRG Linhas Aereas
-VSP,VP,VASP
-VLM,VG,VLM Airlines
-WEB,WJ,WebJet Linhas A
-WLC,2W,Welcome Air
-WJA,WS,WestJet
-WAL,WA,Western Airlines
-WIF,WF,Widerøe
-JET,IV,Wind Jet
-WON,IW,Wings Air
-WZZ,W6,Wizz Air
-WVL,8Z,Wizz Air Hungary
-WOA,WO,World Airways
-XLF,SE,XL Airways France
-CXA,MF,Xiamen Airlines
-LLM,YL,Yamal Airlines
-IYE,IY,Yemenia
-UMK,2N,Yuzhmashavia
-TAN,,Zanair
-OOM,Z4,Zoom Airlines
-TYR,,Tyrolean Airways
-RAC,VJ,Royal Air Cambodge
-ABL,BX,Air Busan
-SXR,XW,Sky Express
-GLP,GH,Globus
-KZK,9Y,Air Kazakhstan
-JAS,JD,Japan Air System
-UBD,4H,United Airways
-FFV,5H,Fly540
-TVF,TO,Transavia France
-MKU,WP,Island Air
-UIA,B7,Uni Air
-RWZ,WZ,Red Wings
-FXX,FU,Felix Airways
-KOQ,K1,Kostromskie Avialinii
-GFY,XX,Greenfly
-ELK,,ELK Airways
-GBK,GY,Gabon Airlines
-MCA,,MCA Airlines
-MAV,ML,Maldivo Airlines
-VNP,VH,Virgin Pacific
-ESR,ZE,Eastar Jet
-JNA,LJ,Jin Air
-KW1,,Wataniya Airways
-BA1,B1,Baltic Air lines
-YCC,YC,Ciel Canadien
-YCP,CN,Canadian National Airways
-4AA,FA,Epic Holiday
-AXC,,Indochina Airlines
-FLB,,German Air Force - FLB
-LBL,L8,Line Blue
-LLC,,FlyLAL Charters
-TXW,TQ,Texas Wings
-DSY,DH,Dennis Sky
-A1F,A1,Atifly
-SZB,,Aerolineas heredas santa maria
-JRB,,Jc royal.britannica
-CA1,C1,CanXpress
-SHA,SH,Sharp Airlines
-CAP,C2,CanXplorer
-WE1,W1,World Experience Airline
-GCR,,Tianjin Airlines
-LOC,ZQ,Locair
-SQH,K5,SeaPort Airlines
-HCW,V9,Star1 Airlines
-ENJ,,Enerjet
-MXI,I6,MexicanaLink
-ISX,IP,Island Spirit
-OBS,,Orbest
-SOA,,Southern Air Charter
-SVG,,SVG Air
-CEY,,Air Century
-OLS,,Sol Lineas Aereas
-REP,P7,Regional Paraguaya
-NDN,,Transportes Aereos Cielos Andinos
-EFY,,EasyFly
-ANU,,Andalus Lineas Aereas
-DCD,,Air 26
-MTW,,Mauritania Airways
-CEL,,CEIBA Intercontinental
-LMU,UJ,AlMasria Universal Airlines
-MSE,,EgyptAir Express
-EUD,,Air Italy Egypt
-KBR,K7,KoralBlue Airlines
-WRC,,Wind Rose Aviation
-GIE,E4,Elysian Airlines
-SEN,,Sevenair
-IMP,HT,Hellenic Imperial Airways
-AAN,WD,Amsterdam Airlines
-NAK,Q9,Arik Niger
-STP,8F,STP Airways
-SJU,UQ,Skyjet Airlines
-TDK,,Transavia Denmark
-RFJ,RL,Royal Falcon
-MJX,4L,Euroline
-TRK,,Turkuaz Airlines
-VKH,VQ,Viking Hellas
-FNA,,Norlandair
-FVM,,Flugfelag Vestmannaeyja
-GDR,GP,Gadair European Airlines
-MNP,SM,Spirit of Manila Airlines
-CQN,OQ,Chongqing Airlines
-GDC,,Grand China Air
-CHB,PN,West Air China
-QAX,C3,QatXpress
-1CH,1C,OneChina
-JOY,JR,Joy Air
-JGN,,Jagson Airlines
-QFZ,,Fars Air Qeshm
-EAA,,Eastok Avia
-JPU,,Jupiter Airlines
-VIS,,Vision Air International
-KEA,,Korea Express Air
-EZA,,Eznis Airways
-PFL,,Pacific Flier
-PSB,,Syrian Pearl Airlines
-IPV,PA,Parmiss Airlines
-EUV,ES,EuropeSky
-BZE,GB,Brazil Air
-OME,MR,Homer Air
-PQW,WQ,PanAm World Airways
-VWA,YY,Virginwings
-KSY,KY,KSY
-BQB,BQ,Buquebus Líneas Aéreas
-KOL,CQ,Sochi Air
-WAU,WU,Wizz Air Ukraine
-VVN,47,88
-LMM,LQ,LCM Airlines
-T&O,&T,Tom's & co airliners
-AZU,AD,Azul
-LOO,PQ,LSM Airlines
-PZY,,Zapolyarie Airlines
-FN1,,Finlandian
-LIX,C4,LionXpress
-FDB,FZ,Fly Dubai
-MDO,D1,Domenican Airlines
-2CO,,ConneX European Airline
-AXZ,JY,Aereonautica militare
-KLS,,Kal Star Aviation
-YZZ,YZ,LSM Airlines
-ZZZ,ZP,Zabaykalskii Airlines
-XBM,,CBM America
-1QA,M4,Marysya Airlines
-WFX,,Westfalia Express VA
-BSA,BZ,Black Stallion Airways
-GER,GM,German International Air Lines
-TBZ,TB,TrasBrasil
-THS,TH,TransBrasil Airlines
-IIA,,Air Indochine
-HPY,,Happy Air
-SRB,,Solar Air
-MKG,P8,Air Mekong
-AHO,HH,Air Hamburg
-ZTT,Z6,Zabaikal Airlines
-THI,TI,TransHolding
-SZZ,,SUR Lineas Aereas
-AA1,,Aerolineas Africanas
-SA1,S1,Serbian Airlines
-TYS,YO,TransHolding System
-CCC,CB,CCML Airlines
-ELC,,Small Planet Airlines
-FBL,F1,Fly Brasil
-AUK,AU,AUOS
-CIF,1F,CB Airways UK
-3FF,3F,Fly Colombia
-TP6,T6,Trans Pas Air
-HYM,HC,Himalayan Airlines
-IG1,G1,Indya Airline Group
-TWD,,Turkish Wings Domestic
-ZXY,ZX,Japan Regio
-IXO,,OCEAN AIR CARGO
-NX1,,Nihon.jet connect
-UWW,II,LSM International
-BUU,BU,Baikotovitchestrian Airlines
-LJJ,L4,Luchsh Airlines
-QQQ,,ENTERair
-ZTF,7M,Mongolian International Air Lines
-TWB,TW,Tway Airlines
-JSR,JX,Jusur airways
-NXB,XB,NEXT Brasil
-WER,W4,AeroWorld
-ES2,E1,USA Sky Cargo
-HXK,HX,Hankook Air
-HNX,HN,Hankook Airline
-MRS,Y8,Marusya Airways
-ERR,7H,Era Alaska
-RRJ,R8,AirRussia
-HA1,H1,Hankook Air US
-SMW,,Carpatair Flight Training
-RSY,H5,I-Fly
-WTJ,,Whitejets
-VKJ,KT,VickJet
-HAY,,Hamburg Airways
-SLC,SO,Salsa d'Haiti
-KND,,Kan Air
-CUD,,Air Cudlua
-AXE,,Air Explore
-N12,12,12 North
-HCC,,Holidays Czech Airlines
-COE,,Comtel Air
-MIC,,Mint Airways
-OBT,,Orbit Airlines
-BUR,,Air Bucharest
-LAV,,AlbaStar
-MKD,6F,MAT Airways
-AWM,AW,Asian Wings Airways
-RBG,E5,Air Arabia Egypt
-EGS,,Eagles Airlines
-YEP,,YES Airways
-DSV,,Direct Aero Services
-MDP,,Medallion Air
-ORC,OI,Orchid Airlines
-AWA,Y5,Asia Wings
-GNN,,Georgian International Airlines
-BTM,,Air Batumi
-NIA,NP,Nile Air
-FDD,,Feeder Airlines
-SGG,DN,Senegal Airlines
-CX0,0X,Copenhagen Express
-BCC,8B,BusinessAir
-XOJ,,XOJET
-CR7,C7,Sky Wing Pacific
-BEU,,Bateleur Air
-AI0,PP,Air Indus
+"icao","iata","name"
+"N12","12","12 North"
+"RNX","1T","1Time Airline"
+"MLA","Q5","40-Mile Air"
+"VVN","47","88 Cyprus"
+"","1B","Abacus International"
+"TUS","M3","ABSA - Aerolinhas Brasileiras"
+"AUH","MO","Abu Dhabi Amiri Flight"
+"CYD","ZA","Access Air"
+"AES","","ACES Colombia"
+"VUE","","AD Aviation"
+"ADE","ZY","Ada Air"
+"DHI","KI","Adam Air"
+"ADR","JP","Adria Airways"
+"AEE","A3","Aegean Airlines"
+"REA","RE","Aer Arann"
+"EIN","EI","Aer Lingus"
+"AXZ","JY","Aereonautica militare"
+"DSM","4M","Aero 2000"
+"AEB","EM","Aero Benin"
+"CDP","Q6","Aero Condor Peru"
+"NIG","AJ","Aero Contractors"
+"ARF","GV","Aero Flight"
+"RLN","QL","Aero Lanka"
+"RSR","BF","Aero-Service"
+"ARD","2B","Aerocondor"
+"AFL","SU","Aeroflot Russian Airlines"
+"DNV","D9","Aeroflot-Don"
+"AUL","5N","Aeroflot-Nord"
+"GLG","2K","AeroGal: Aerolineas Galapagos"
+"LNE","XL","Aerolane"
+"AWU","7E","Aeroline GmbH"
+"AA1","","Aerolineas Africanas"
+"ARG","AR","Aerolineas Argentinas"
+"SZB","","Aerolineas heredas santa maria"
+"SLI","5D","Aerolitoral"
+"TAO","VW","Aeromar"
+"AMX","AM","AeroMéxico"
+"RTE","","Aeronorte"
+"PEL","OT","Aeropelican Air Services"
+"PLI","PL","Aeroper"
+"RPB","P5","AeroRep"
+"RSU","5L","Aerosur"
+"AEW","VV","Aerosvit Airlines"
+"WER","W4","AeroWorld"
+"WTA","FK","Africa West"
+"AAW","8U","Afriqiyah Airways"
+"AAF","ZI","Aigle Azur"
+"DCD","","Air 26"
+"RKA","RK","Air Afrique"
+"LFA","","Air Alfa"
+"DAH","AH","Air Algerie"
+"","3S","Air Antilles Express"
+"ABY","G9","Air Arabia"
+"RBG","E5","Air Arabia Egypt"
+"","3O","Air Arabia Maroc"
+"KZR","KC","Air Astana"
+"ABD","CC","Air Atlanta Icelandic"
+"REU","UU","Air Austral"
+"JAB","W9","Air Bagan"
+"BTI","BT","Air Baltic"
+"BGD","B9","Air Bangladesh"
+"BTM","","Air Batumi"
+"BER","AB","Air Berlin"
+"BON","JA","Air Bosna"
+"BOT","BP","Air Botswana"
+"BUB","ZB","Air Bourbon"
+"BUR","","Air Bucharest"
+"VBW","2J","Air Burkina"
+"ABL","BX","Air Busan"
+"ACI","SB","Air Caledonie International"
+"ACA","AC","Air Canada"
+"JZA","QK","Air Canada Jazz"
+"FWI","TX","Air Caraïbes"
+"SNC","2Q","Air Cargo Carriers"
+"","6U","Air Cargo Germany"
+"CEY","","Air Century"
+"CVA","CV","Air Chathams"
+"CCA","CA","Air China"
+"","3E","Air Choice One"
+"","3I","Air Comet Chile"
+"CUD","","Air Cudlua"
+"DLA","EN","Air Dolomiti"
+"AEA","UX","Air Europa"
+"AEL","PE","Air Europe"
+"AXL","XT","Air Exel"
+"AXE","","Air Explore"
+"FIF","OF","Air Finland"
+"FLZ","QH","Air Florida"
+"UPA","GS","Air Foyle"
+"AFR","AF","Air France"
+"AGV","7T","Air Glaciers"
+"GRL","GL","Air Greenland"
+"GIP","2U","Air Guinee Express"
+"GUY","GG","Air Guyane"
+"AHO","HH","Air Hamburg"
+"FXI","NY","Air Iceland"
+"AXB","IX","Air India Express"
+"AIC","AI","Air India Limited"
+"","CD","Air India Regional"
+"IIA","","AIR INDOCHINE"
+"AI0","PP","Air Indus"
+"AEY","I9","Air Italy"
+"EUD","","Air Italy Egypt"
+"VUN","VU","Air Ivoire"
+"AJM","JM","Air Jamaica"
+"AJX","NQ","Air Japan"
+"KZK","9Y","Air Kazakhstan"
+"AKL","4A","Air Kiribati"
+"AKA","","Air Korea"
+"KOR","JS","Air Koryo"
+"","VD","Air Libert"
+"LXR","LK","Air Luxor"
+"AMU","NX","Air Macau"
+"MDG","MD","Air Madagascar"
+"DRD","NM","Air Madrid"
+"AML","QM","Air Malawi"
+"AMC","KM","Air Malta"
+"","6T","Air Mandalay"
+"CWM","CW","Air Marshall Islands"
+"MAU","MK","Air Mauritius"
+"BIE","DR","Air Mediterranee"
+"MKG","P8","Air Mekong"
+"MLD","9U","Air Moldova"
+"TAH","","Air Moorea"
+"","TM","Air Mozambique"
+"NMB","SW","Air Namibia"
+"ANZ","NZ","Air New Zealand"
+"ANK","EL","Air Nippon"
+"ANG","PX","Air Niugini"
+"ANT","4N","Air North Charter - Canada"
+"ANE","YW","Air Nostrum"
+"ADH","AP","Air One"
+"FJI","FJ","Air Pacific"
+"GAP","2P","Air Philippines"
+"MPD","A7","Air Plus Comet"
+"RAR","GZ","Air Rarotonga"
+"RSH","S2","Air Sahara"
+"SPM","PJ","Air Saint Pierre"
+"RNE","20","Air Salone"
+"SEY","HM","Air Seychelles"
+"","BM","Air Sicilia"
+"ASD","4D","Air Sinai"
+"WOW","","Air Southwest"
+"RSI","","Air Sunshine"
+"VTA","VT","Air Tahiti"
+"THT","TN","Air Tahiti Nui"
+"ATC","TC","Air Tanzania"
+"","8T","Air Tindi"
+"TSC","TS","Air Transat"
+"AVN","NF","Air Vanuatu"
+"VIM","VL","Air VIA"
+"","G6","Air Volga"
+"AWW","6G","Air Wales"
+"AWI","ZW","Air Wisconsin"
+"AZW","UM","Air Zimbabwe"
+"","F8","Air2there"
+"AXM","AK","AirAsia"
+"XAX","D7","AirAsia X"
+"ABQ","ED","Airblue"
+"SYL","R3","Aircompany Yakutia"
+"ARE","4C","Aires"
+"FIX","","Airfix Aviation"
+"AIR","","Airlift International"
+"RLA","A5","Airlinair"
+"ATM","FO","Airlines Of Tasmania"
+"TOK","CG","Airlines PNG"
+"","4Z","Airlink South Africa"
+"ANO","TL","Airnorth"
+"RRJ","R8","AirRussia"
+"TRS","FL","AirTran Airways"
+"","NA","Al-Naser Airlines"
+"","J4","ALAK"
+"ASA","AS","Alaska Airlines"
+"AER","KO","Alaska Central Express"
+"","J5","Alaska Seaplane Service"
+"LBC","LV","Albanian Airlines"
+"LAV","","AlbaStar"
+"AZA","AZ","Alitalia"
+"","CT","Alitalia Cityliner"
+"SMX","XM","Alitalia Express"
+"ANA","NH","All Nippon Airways"
+"ALO","","Allegheny Commuter Airlines"
+"AAY","G4","Allegiant Air"
+"UTY","QQ","Alliance Airlines"
+"LMU","UJ","AlMasria Universal Airlines"
+"AAH","AQ","Aloha Airlines"
+"DRU","6R","Alrosa Mirny Air Enterprise"
+"AZN","Z8","Amaszonas"
+"AMV","","AMC Airlines"
+"AWE","HP","America West Airlines"
+"AAL","AA","American Airlines"
+"EGF","MQ","American Eagle Airlines"
+"AAN","WD","Amsterdam Airlines"
+"ANU","","Andalus Lineas Aereas"
+"AAA","AN","Ansett Australia"
+"AFG","FG","Ariana Afghan Airlines"
+"NAK","Q9","Arik Niger"
+"TFL","OR","Arkefly"
+"AIZ","IZ","Arkia Israel Airlines"
+"RNV","U8","Armavia"
+"APW","JW","Arrow Air"
+"OCA","R7","Aserca Airlines"
+"AWA","Y5","Asia Wings"
+"RIT","6K","Asian Spirit"
+"AWM","AW","Asian Wings Airways"
+"AAR","OZ","Asiana Airlines"
+"AAS","4K","Askari Aviation"
+"","8D","Astair"
+"AEU","5W","Astraeus"
+"ASZ","OB","Astrakhan Airlines"
+"ACP","8V","Astral Aviation"
+"AMT","TZ","ATA Airlines"
+"","ZF","Athens Airways"
+"A1F","A1","Atifly"
+"AYZ","3G","Atlant-Soyuz Airlines"
+"FLI","RC","Atlantic Airways"
+"ASQ","EV","Atlantic Southeast Airlines"
+"LUR","TD","Atlantis European Airways"
+"GTI","5Y","Atlas Air"
+"BMM","8A","Atlas Blue"
+"KKK","KK","Atlasjet"
+"VAS","V8","ATRAN Cargo Airlines"
+"TUR","","ATUR"
+"AUB","IQ","Augsburg Airways"
+"AUK","AU","AUOS"
+"AUR","GR","Aurigny Air Services"
+"","W7","Austral Brasil"
+"AUA","OS","Austrian Airlines"
+"TYR","VO","Austrian Arrows"
+"TWN","EC","Avialeasing Aviation Company"
+"AVA","AV","Avianca - Aerovias Nacionales de Colombia"
+"","AO","Avianova"
+"SMJ","Z3","Avient Aviation"
+"AIA","U3","Avies"
+"AGX","","Aviogenex"
+"AHY","J2","Azerbaijan Airlines"
+"AZU","AD","Azul"
+"CFE","CJ","BA CityFlyer"
+"BHS","UP","Bahamasair"
+"BUU","BU","Baikotovitchestrian Airlines"
+"","LZ","Balkan Bulgarian Airlines"
+"BA1","B1","Baltic Air lines"
+"BLL","","Baltic Airlines"
+"BKP","PG","Bangkok Airways"
+"NKF","8N","Barents AirLink"
+"BEU","","Bateleur Air"
+"BLS","JV","Bearskin Lake Air Service"
+"BHP","4T","Belair Airlines"
+"BRU","B2","Belavia Belarusian Airlines"
+"BLV","B3","Bellview Airlines"
+"BMJ","CH","Bemidji Airlines"
+"BRG","8E","Bering Air"
+"BVT","J8","Berjaya Air"
+"BKF","","BF-Lento OY"
+"BBC","BG","Biman Bangladesh Airlines"
+"IBB","NT","Binter Canarias"
+"BSA","BZ","Black Stallion Airways"
+"JOR","0B","Blue Air"
+"BPA","BV","Blue Panorama Airlines"
+"BWG","QW","Blue Wings"
+"BLF","KF","Blue1"
+"BMA","BD","bmi"
+"BMI","WW","bmibaby"
+"","01","Bobb Air Freight"
+"BZE","GB","BRAZIL AIR"
+"BRS","","Brazilian Air Force"
+"BZH","DB","Brit Air"
+"BAW","BA","British Airways"
+"BIH","BS","British International Helicopters"
+"LAJ","KJ","British Mediterranean Airways"
+"BMR","","British Midland Regional"
+"DAT","SN","Brussels Airlines"
+"BPS","","Budapest Aircraft Services/Manx2"
+"LZB","FB","Bulgaria Air"
+"BQB","BQ","Buquebus Líneas Aéreas"
+"","4P","Business Aviation"
+"BCC","8B","BusinessAir"
+"","XV","BVI Airways"
+"ICL","5C","CAL Cargo Air Lines"
+"CLI","XG","Calima Aviacion"
+"","QC","Camair-co"
+"","K6","Cambodia Angkor Air"
+"CDN","CP","Canadian Airlines"
+"YCP","CN","Canadian National Airways"
+"MPE","5T","Canadian North"
+"CAP","C2","CanXplorer"
+"CA1","C1","CanXpress"
+"KAP","9K","Cape Air"
+"CGP","8L","Cargo Plus Aviation"
+"BWA","BW","Caribbean Airlines"
+"","KW","Carnival Air Lines"
+"KRP","V3","Carpatair"
+"SMW","","Carpatair Flight Training"
+"CPN","RV","Caspian Airlines"
+"CPA","CX","Cathay Pacific"
+"","OC","Catovair"
+"","NS","Caucasus Airlines"
+"CAY","KX","Cayman Airways"
+"CIF","1F","CB Airways UK"
+"XBM","","CBM America"
+"CCC","CB","CCML Airlines"
+"CEB","5J","Cebu Pacific"
+"CEL","","CEIBA Intercontinental"
+"CCG","","Central Connect Airlines"
+"CLW","C0","Centralwings"
+"CHW","","Charter Air"
+"CHQ","RP","Chautauqua Airlines"
+"CAL","CI","China Airlines"
+"CES","MU","China Eastern Airlines"
+"CSN","CZ","China Southern Airlines"
+"","9C","China SSS"
+"","KN","China United"
+"CUA","HR","China United Airlines"
+"CQN","OQ","Chongqing Airlines"
+"","99","Ciao Air"
+"YCC","YC","Ciel Canadien"
+"CIM","QI","Cimber Air"
+"RUS","C9","Cirrus Airlines"
+"SDR","CF","City Airline"
+"CIX","G3","City Connexion Airlines"
+"BCY","WX","CityJet"
+"CGK","","Click Airways"
+"","QA","Click Mexicana"
+"","DQ","Coastal Air"
+"CJC","9L","Colgan Air"
+"COM","OH","Comair"
+"CAW","MN","Comair South Africa"
+"UCA","C5","CommutAir"
+"CWK","KR","Comores Airlines"
+"","E9","Compagnie Africaine d'Aviation"
+"CPZ","CP","Compass Airlines"
+"COE","","Comtel Air"
+"CFG","DE","Condor Flugdienst"
+"","XZ","Congo Express"
+"2CO","","ConneX European Airline"
+"CHP","6A","Consorcio Aviaxsa"
+"KIS","C3","Contact Air"
+"COA","CO","Continental Airlines"
+"","CO","Continental Express"
+"CMI","CS","Continental Micronesia"
+"VCV","V0","Conviasa"
+"CMP","CM","Copa Airlines"
+"CX0","0X","Copenhagen Express"
+"AAQ","","Copterline"
+"CAI","","Corendon Airlines"
+"CRL","SS","Corsairfly"
+"CCM","XK","Corse-Mediterranee"
+"CAN","","Crest Aviation"
+"CTN","OU","Croatia Airlines"
+"CRO","","Crown Airways"
+"CUB","CU","Cubana de Aviación"
+"CYP","CY","Cyprus Airways"
+"","YK","Cyprus Turkish Airlines"
+"CSA","OK","Czech Airlines"
+"DAO","D3","Daallo Airlines"
+"KHB","H8","Dalavia"
+"","DA","Dana Air"
+"","V5","Danube Wings"
+"DWT","0D","Darwin Airline"
+"DTR","DX","DAT Danish Air Transport"
+"BAG","DI","dba"
+"DKN","","Deccan Aviation"
+"DLK","","Deccan Aviation Lanka"
+"DEA","","Delta Aerotaxi"
+"DAL","DL","Delta Air Lines"
+"DNM","","Denim Air"
+"DSY","DH","Dennis Sky"
+"","2A","Deutsche Bahn"
+"DSV","","Direct Aero Services"
+"DJB","D8","Djibouti Airlines"
+"UDN","","Dniproavia"
+"MDO","D1","Domenican Airlines"
+"DOA","DO","Dominicana de Aviaci"
+"DMO","E3","Domodedovo Airlines"
+"UDC","5D","DonbassAero"
+"HDA","KA","Dragonair"
+"DRK","KB","Druk Air"
+"DBK","","Dubrovnik Air"
+"DNL","","Dutch Antilles Express"
+"","H7","Eagle Air"
+"EGS","","Eagles Airlines"
+"UGX","QU","East African"
+"ESR","ZE","Eastar Jet"
+"EZE","T3","Eastern Airways"
+"ELA","DK","Eastland Air"
+"EAA","","Eastok Avia"
+"EFY","","EasyFly"
+"EZY","U2","easyJet"
+"","DS","EasyJet Switzerland"
+"ECU","","Ecuavia"
+"EDW","WK","Edelweiss Air"
+"MSR","MS","Egyptair"
+"MSE","","EgyptAir Express"
+"ELY","LY","El Al Israel Airlines"
+"BRQ","UZ","El-Buraq Air Transport"
+"ELK","","ELK Airways"
+"GIE","E4","Elysian Airlines"
+"UAE","EK","Emirates Airline"
+"EEA","EU","Empresa Ecuatoriana De Aviacion"
+"ENJ","","Enerjet"
+"QQQ","","ENTERair"
+"4AA","FA","Epic Holiday"
+"ERR","7H","Era Alaska"
+"ERT","B8","Eritrean Airlines"
+"ELL","OV","Estonian Air"
+"ETH","ET","Ethiopian Airlines"
+"ETD","EY","Etihad Airways"
+"","RZ","Euro Exec Express"
+"ECA","UI","Eurocypria Airlines"
+"EEU","GJ","Eurofly Service"
+"MJX","4L","Euroline"
+"ELO","K2","Eurolot"
+"EAL","EA","European Air Express"
+"EUV","ES","EuropeSky"
+"EWG","EW","Eurowings"
+"EVA","BR","EVA Air"
+"EIA","EZ","Evergreen International Airlines"
+"XLA","JN","Excel Airways"
+"XEL","","Excel Charter"
+"LHN","EO","Express One International"
+"BTA","XE","ExpressJet"
+"EZA","","Eznis Airways"
+"EFA","EF","Far Eastern Air Transport"
+"QFZ","","Fars Air Qeshm"
+"FDD","","Feeder Airlines"
+"FXX","FU","Felix Airways"
+"FN1","","Finlandian"
+"FIN","AY","Finnair"
+"WBA","FC","Finncomm Airlines"
+"FFM","FY","Firefly"
+"FAB","7F","First Air"
+"FCA","DP","First Choice Airways"
+"FLT","B5","Flightline"
+"FWL","RF","Florida West International Airways"
+"FVM","","Flugfelag Vestmannaeyja"
+"","6I","Fly 6ix"
+"FBL","F1","Fly Brasil"
+"3FF","3F","Fly Colombia"
+"FDB","FZ","Fly Dubai"
+"FFV","5H","Fly540"
+"BBO","F7","Flybaboo"
+"BEE","BE","Flybe"
+"GSM","B4","Flyglobespan"
+"FYH","W3","Flyhy Cargo Airlines"
+"LIL","TE","FlyLal"
+"LLC","","FlyLAL Charters"
+"NDC","LF","FlyNordic"
+"FOS","VY","Formosa Airlines"
+"FRE","FP","Freedom Air"
+"FRL","","Freedom Airlines"
+"FFT","F9","Frontier Airlines"
+"FTA","2F","Frontier Flying Service"
+"","JH","Fuji Dream Airlines"
+"GBK","GY","Gabon Airlines"
+"GDR","GP","Gadair European Airlines"
+"GIA","GA","Garuda Indonesia"
+"GZP","4G","Gazpromavia"
+"GBL","GT","GB Airways"
+"","GK","Genesis"
+"TGZ","A9","Georgian Airways"
+"GNN","","Georgian International Airlines"
+"GFG","QB","Georgian National Airlines"
+"FLB","","German Air Force - FLB"
+"GER","GM","German International Air Lines"
+"GMI","ST","Germania"
+"GWI","4U","Germanwings"
+"GHB","G0","Ghana International Airlines"
+"GLP","GH","Globus"
+"","GN","GNB Linhas Aereas"
+"GOW","G8","Go Air"
+"GJS","G7","GoJet Airlines"
+"GLO","G3","Gol Transportes Aéreos"
+"GAO","DC","Golden Air"
+"","YD","Gomelavia"
+"GDC","","Grand China Air"
+"GLA","ZK","Great Lakes Airlines"
+"GFY","XX","Greenfly"
+"TAT","TA","Grupo TACA"
+"","6P","Gryphon Airlines"
+"GFA","","Gulf Air"
+"GBA","GF","Gulf Air Bahrain"
+"GFT","","Gulfstream International Airlines"
+"HAG","H6","Hageland Aviation Services"
+"CHH","HU","Hainan Airlines"
+"HAM","2T","Haiti Ambassador Airlines"
+"","7Z","Halcyonair"
+"HAY","","Hamburg Airways"
+"HHI","4R","Hamburg International"
+"HXK","HX","Hankook Air"
+"HA1","H1","Hankook Air US"
+"HNX","HN","Hankook Airline"
+"HLF","HF","Hapagfly"
+"HPY","","Happy Air"
+"","H3","Harbour Air"
+"HAL","HA","Hawaiian Airlines"
+"","BH","Hawkair"
+"HFR","8H","Heli France"
+"JBA","JB","Helijet"
+"HEJ","T4","Hellas Jet"
+"IMP","HT","Hellenic Imperial Airways"
+"FHE","HW","Hello"
+"OAW","2L","Helvetic Airways"
+"HER","UD","Hex'Air"
+"HWY","","Highland Airways"
+"HYM","HC","Himalayan Airlines"
+"ADO","HD","Hokkaido International Airlines"
+"HCC","","Holidays Czech Airlines"
+"OME","MR","Homer Air"
+"HKE","UO","Hong Kong Express Airways"
+"QXE","QX","Horizon Air"
+"HZA","BN","Horizon Airlines"
+"","G5","Huaxia"
+"RSY","H5","I-Fly"
+"IBE","IB","Iberia Airlines"
+"IWD","TY","Iberworld"
+"IBX","FW","Ibex Airlines"
+"RAC","","Icar Air"
+"ICE","FI","Icelandair"
+"ITX","IK","Imair Airlines"
+"IAC","IC","Indian Airlines"
+"IBU","I9","Indigo"
+"IGO","6E","IndiGo Airlines"
+"AXC","","Indochina Airlines"
+"AWQ","QZ","Indonesia AirAsia"
+"IAA","IO","Indonesian Airlines"
+"IG1","G1","Indya Airline Group"
+"ILN","D6","Interair South Africa"
+"SUW","ZA","Interavia Airlines"
+"ITK","ID","Interlink Airlines"
+"ISK","3L","Intersky"
+"IRA","IR","Iran Air"
+"IRC","EP","Iran Aseman Airlines"
+"IAW","IA","Iraqi Airways"
+"MKU","WP","Island Air"
+"","IS","Island Airlines"
+"ISX","IP","Island Spirit"
+"ISW","IF","Islas Airways"
+"ISV","WC","Islena De Inversiones"
+"ISR","6H","Israir"
+"IKA","GI","Itek Air"
+"JGN","","Jagson Airlines"
+"JEX","JC","JAL Express"
+"JAZ","JO","JALways"
+"JAS","JD","Japan Air System"
+"JAL","JL","Japan Airlines"
+"JAL","JL","Japan Airlines Domestic"
+"JAA","EG","Japan Asia Airways"
+"ZXY","ZX","Japan Regio"
+"JTA","NU","Japan Transocean Air"
+"JAT","JU","Jat Airways"
+"JZR","J9","Jazeera Airways"
+"JRB","","JC Royal Britannica"
+"JJA","7C","Jeju Air"
+"JAI","9W","Jet Airways"
+"","QJ","Jet Airways of the U.S."
+"EXS","LS","Jet2.com"
+"JFU","8J","Jet4You"
+"JAF","JF","Jetairfly"
+"JBU","B6","JetBlue Airways"
+"JEF","","Jetflite"
+"JST","JQ","Jetstar Airways"
+"JSA","3K","Jetstar Asia Airways"
+"PIC","BL","Jetstar Pacific"
+"JNA","LJ","Jin Air"
+"","3B","JobAir"
+"JOY","JR","Joy Air"
+"DKH","HO","Juneyao Airlines"
+"JPU","","Jupiter Airlines"
+"JSR","JX","Jusur airways"
+"KLS","","Kal Star Aviation"
+"KMF","RQ","Kam Air"
+"KND","","Kan Air"
+"MVD","KV","Kavminvodyavia"
+"KNI","KD","KD Avia"
+"KDA","","Kendell Airlines"
+"KEN","M5","Kenmore Air"
+"KQA","KQ","Kenya Airways"
+"KFR","IT","Kingfisher Airlines"
+"KIN","","Kinloss Flying Training Unit"
+"IRK","Y9","Kish Air"
+"KLC","WA","KLM Cityhopper"
+"KLM","KL","KLM Royal Dutch Airlines"
+"KGL","7K","Kogalymavia Air Company"
+"KBR","K7","KoralBlue Airlines"
+"KEA","","Korea Express Air"
+"KAL","KE","Korean Air"
+"KSM","","Kosmos"
+"KOQ","K1","Kostromskie avialinii"
+"KJC","7B","Krasnojarsky Airlines"
+"KSY","KY","KSY"
+"KIL","GW","Kuban Airlines"
+"KAC","KU","Kuwait Airways"
+"KZU","GO","Kuzu Airlines Cargo"
+"LPR","MJ","L"
+"LRC","LR","LACSA"
+"LAN","LA","LAN Airlines"
+"LXP","LU","LAN Express"
+"LPE","LP","LAN Peru"
+"LAO","QV","Lao Airlines"
+"LTC","","LatCharter"
+"LDA","NG","Lauda Air"
+"LMM","LQ","LCM AIRLINES"
+"LIA","LI","Leeward Islands Air Transport"
+"LAA","LN","Libyan Arab Airlines"
+"LBL","L8","Line Blue"
+"LAM","LM","Linhas A"
+"LNI","JT","Lion Mentari Airlines"
+"LIX","C4","LionXpress"
+"LOC","ZQ","Locair"
+"LOT","LO","LOT Polish Airlines"
+"LOO","PQ","LSM Airlines Slowbird"
+"UWW","II","LSM International"
+"LTE","XO","LTE International Airways"
+"LTO","L3","LTU Austria"
+"LTU","LT","LTU International"
+"LJJ","L4","Luchsh Airlines"
+"LGW","HE","Luftfahrtgesellschaft Walter"
+"DLH","LH","Lufthansa"
+"GEC","LH","Lufthansa Cargo"
+"CLH","CL","Lufthansa CityLine"
+"LTR","L5","Lufttransport"
+"","L7","Lugansk Airlines"
+"LGL","LG","Luxair"
+"MCK","CC","Macair Airlines"
+"","DM","Maersk"
+"IRM","W5","Mahan Air"
+"MAS","MH","Malaysia Airlines"
+"","Q2","Maldivian"
+"","8Q","Maldivian Air Taxi"
+"MAV","ML","Maldivo Airlines"
+"SCW","","Malmo Aviation"
+"SCW","TF","Malmö Aviation"
+"MAC","R5","Malta Air Charter"
+"MAH","MA","Malév"
+"MDL","RI","Mandala Airlines"
+"MDA","AE","Mandarin Airlines"
+"MNO","JE","Mango"
+"MPH","MP","Martinair"
+"MRS","Y8","Marusya Airways"
+"1QA","M4","Marysya Airlines"
+"MAA","M7","MasAir"
+"MKD","6F","MAT Airways"
+"MAK","IN","MAT Macedonian Airlines"
+"MTW","","Mauritania Airways"
+"MXL","8M","Maxair"
+"MYD","MW","Maya Island Air"
+"MCA","","MCA Airlines"
+"","9H","MDLR Airlines"
+"","7Y","Med Airways"
+"MDP","","Medallion Air"
+"ISS","IG","Meridiana"
+"MNA","MZ","Merpati Nusantara Airlines"
+"ASH","YV","Mesa Airlines"
+"MES","XJ","Mesaba Airlines"
+"BTV","7P","Metro Batavia"
+"MXA","MX","Mexicana de Aviaci"
+"MXI","I6","MexicanaLink"
+"MGL","OM","MIAT Mongolian Airlines"
+"MEA","ME","Middle East Airlines"
+"MDW","JI","Midway Airlines"
+"MEP","YX","Midwest Airlines"
+"MWA","MY","Midwest Airlines Egypt"
+"MIC","","Mint Airways"
+"MNB","MB","MNG Airlines"
+"MDV","2M","Moldavian Airlines"
+"MON","ZB","Monarch Airlines"
+"ZTF","7M","Mongolian International Air Lines"
+"MGX","YM","Montenegro Airlines"
+"MAL","","Morningstar Air Express"
+"GAI","3R","Moskovia Airlines"
+"MSI","M9","Motor Sich"
+"UBA","UB","Myanma Airways"
+"MMM","8M","Myanmar Airways International"
+"MYA","","Myflug"
+"MYT","VZ","MyTravel Airways"
+"","8I","Myway Airlines"
+"","N1","N1 Peru"
+"KNE","XY","Nas Air"
+"NAS","UE","Nasair"
+"NJS","NC","National Jet Systems"
+"NTW","CE","Nationwide Airlines"
+"RON","ON","Nauru Air Corporation"
+"RNA","RA","Nepal Airlines"
+"EJA","1I","NetJets"
+"NEA","EJ","New England Airlines"
+"NXB","XB","NEXT Brasil"
+"NTJ","","NextJet"
+"NX1","","Nihon.jet connect"
+"NLY","HG","Niki"
+"NIA","NP","Nile Air"
+"NOK","DD","Nok Air"
+"","Y7","NordStar Airlines"
+"NCF","","Norfolk County Flight College"
+"FNA","","Norlandair"
+"","N0","Norte Lineas Aereas"
+"NTM","","North American Airlines"
+"HMR","","North American Charters"
+"","U7","Northern Dene Airways"
+"NWA","NW","Northwest Airlines"
+"PLR","J3","Northwestern Air"
+"NAX","DY","Norwegian Air Shuttle"
+"TFN","","Norwegian Aviation College"
+"LBT","BJ","Nouvel Air Tunisie"
+"NVR","1I","Novair"
+"OHK","O8","Oasis Hong Kong Airlines"
+"BCN","","Ocean Air"
+"IXO","","Ocean Air Cargo"
+"ONE","O6","Oceanair"
+"","O2","Oceanic Airlines"
+"OAL","OA","Olympic Airlines"
+"OMA","WY","Oman Air"
+"OAE","OY","Omni Air International"
+"OTG","","One Two Go Airlines"
+"1CH","1C","OneChina"
+"OHY","8Q","Onur Air"
+"OBS","","Orbest"
+"OBT","","Orbit Airlines"
+"ORC","OI","Orchid Airlines"
+"ORB","R2","Orenburg Airlines"
+"OEA","OX","Orient Thai Airlines"
+"OGN","QO","Origin Pacific Airways"
+"OLT","OL","Ostfriesische Lufttransport"
+"OLA","OJ","Overland Airways"
+"OZJ","O7","Ozjet Airlines"
+"PCO","8P","Pacific Coastal Airline"
+"PEC","Q8","Pacific East Asia Cargo Airlines"
+"PFL","","Pacific Flier"
+"PSA","","Pacific Island Aviation"
+"NMI","LW","Pacific Wings"
+"PIA","PK","Pakistan International Airlines"
+"","5P","Pal airlines"
+"PNR","PV","PAN Air"
+"","7Q","Pan Am World Airways Dominicana"
+"PQW","WQ","PanAm World Airways"
+"","HI","Papillon Grand Canyon Helicopters"
+"PMW","I7","Paramount Airways"
+"IPV","PA","Parmiss Airlines"
+"PTB","","Passaredo Transportes Aereos"
+"PBA","9Q","PB Air"
+"PGT","PC","Pegasus Airlines"
+"","6D","Pelita"
+"PEN","KS","Peninsula Airways"
+"","P9","Peruvian Airlines"
+"PAL","PR","Philippine Airlines"
+"PDT","PI","Piedmont Airlines"
+"FLG","9E","Pinnacle Airlines"
+"PUA","PU","PLUNA"
+"PMT","U4","PMTair"
+"POT","","Polet"
+"","YQ","Polet Airlines"
+"PAO","PH","Polynesian Airlines"
+"POE","PD","Porter Airlines"
+"PGA","NI","Portugalia"
+"PDC","BK","Potomac Air"
+"PRF","PW","Precision Air"
+"","PF","Primera Air"
+"PTI","","Privatair"
+"","P0","Proflight Commuter Services"
+"QFA","QF","Qantas"
+"QTR","QR","Qatar Airways"
+"QAX","C3","QatXpress"
+"","R6","RACSA"
+"","PT","Red Jet Andes"
+"","QY","Red Jet Canada"
+"","4X","Red Jet Mexico"
+"RWZ","WZ","Red Wings"
+"","Z7","REDjet"
+"","FN","Regional Airlines"
+"RXA","ZL","Regional Express"
+"REP","P7","Regional Paraguaya"
+"RPA","RW","Republic Airlines"
+"RPH","RH","Republic Express Airlines"
+"","R4","Rossiya"
+"SDM","FV","Rossiya-Russian Airlines"
+"RAC","VJ","Royal Air Cambodge"
+"RAM","AT","Royal Air Maroc"
+"RBA","BI","Royal Brunei Airlines"
+"","69","Royal European Airlines"
+"RFJ","RL","Royal Falcon"
+"RJA","RJ","Royal Jordanian"
+"RNA","RA","Royal Nepal Airlines"
+"PPW","","Royal Phnom Penh Airways"
+"RLU","","Rusline"
+"RWD","WB","Rwandair Express"
+"RYA","","Ryan Air Services"
+"RYN","RD","Ryan International Airlines"
+"RYR","FR","Ryanair"
+"RAE","YS","Régional"
+"SBI","S7","S7 Airlines"
+"","4Q","Safi Airlines"
+"SHD","","Sahara Airlines"
+"","S6","Salmon Air"
+"SLC","SO","Salsa d'Haiti"
+"","SZ","Salzburg arrows"
+"SMY","ZS","Sama Airlines"
+"BBR","S3","Santa Barbara Airlines"
+"SOV","6W","Saratov Aviation Division"
+"CNO","","SAS Braathens"
+"SOZ","HZ","Sat Airlines"
+"SAT","SP","SATA Air Acores"
+"RZO","S4","SATA International"
+"NSE","9R","SATENA"
+"SVA","SV","Saudi Arabian Airlines"
+"SAS","SK","Scandinavian Airlines System"
+"VSV","DV","Scat Air"
+"SCE","","Scenic Airlines"
+"SAY","","ScotAirways"
+"SBS","BB","Seaborne Airlines"
+"SQH","K5","SeaPort Airlines"
+"SGG","DN","Senegal Airlines"
+"","YR","SENIC AIRLINES"
+"SA1","S1","Serbian Airlines"
+"STU","FS","Servicios de Transportes A"
+"SEN","","Sevenair"
+"","5E","SGA Airlines"
+"SAI","NL","Shaheen Air International"
+"CDG","SC","Shandong Airlines"
+"CSH","FM","Shanghai Airlines"
+"SHA","SH","Sharp Airlines"
+"CSZ","ZH","Shenzhen Airlines"
+"TCF","S5","Shuttle America"
+"SIB","5M","Sibaviatrans"
+"CSC","3U","Sichuan Airlines"
+"SRH","FT","Siem Reap Airways"
+"SLK","MI","SilkAir"
+"SIA","SQ","Singapore Airlines"
+"SQC","SQ","Singapore Airlines Cargo"
+"SGY","N5","Skagway Air Service"
+"SKU","H2","Sky Airline"
+"HSK","","Sky Europe Airlines"
+"SEH","G3","Sky Express"
+"","RS","Sky Regional"
+"CR7","C7","Sky Wing Pacific"
+"ESK","NE","SkyEurope"
+"SJU","UQ","Skyjet Airlines"
+"SKY","BC","Skymark Airlines"
+"SIH","SI","Skynet Airlines"
+"SNJ","6J","Skynet Asia Airways"
+"SSV","5G","Skyservice Airlines"
+"SYX","AL","Skywalk Airlines"
+"SKX","JZ","Skyways Express"
+"SKW","OO","SkyWest"
+"OZW","","Skywest Airlines"
+"","XR","Skywest Australia"
+"ELC","","Small Planet Airlines"
+"","6Y","SmartLynx Airlines"
+"KOL","CQ","SOCHI AIR"
+"OLS","","Sol Lineas Aereas"
+"SRB","","Solar Air"
+"SOL","IE","Solomon Airlines"
+"SAA","SA","South African Airways"
+"SRQ","DG","South East Asian Airlines"
+"SPI","","South Pacific Island Airways"
+"SEA","","Southeast Air"
+"SOA","","Southern Air Charter"
+"SOU","","Southern Airways"
+"SWD","A4","Southern Winds Airlines"
+"SWA","WN","Southwest Airlines"
+"JKK","JK","Spanair"
+"SEJ","SG","Spicejet"
+"NKS","NK","Spirit Airlines"
+"MNP","SM","Spirit of Manila Airlines"
+"CQH","9S","Spring Airlines"
+"ALK","UL","SriLankan Airlines"
+"SJY","SJ","Sriwijaya Air"
+"SFJ","7G","Star Flyer"
+"","2I","Star Peru"
+"HCW","V9","Star1 Airlines"
+"","S9","Starbow Airlines"
+"","DZ","Starline.kz"
+"SNB","NB","Sterling Airlines"
+"STP","8F","STP Airways"
+"","VC","Strategic Airlines"
+"SUD","SD","Sudan Airways"
+"SCX","SY","Sun Country Airlines"
+"ERO","7L","Sun D'Or"
+"SXS","XQ","SunExpress"
+"","WG","Sunwing"
+"SZZ","","SUR Lineas Aereas"
+"SLM","PY","Surinam Airways"
+"SVG","","SVG Air"
+"SWV","WV","Swe Fly"
+"SWU","","Swiss European Air Lines"
+"SWR","LX","Swiss International Air Lines"
+"SWR","SR","Swissair"
+"SYR","RB","Syrian Arab Airlines"
+"PSB","","Syrian Pearl Airlines"
+"DTA","DT","TAAG Angola Airlines"
+"","T0","TACA Peru"
+"TCV","VR","TACV"
+"","7J","Tajik Air"
+"TIL","","Tajikistan International Airlines"
+"TAM","JJ","TAM Brazilian Airlines"
+"LAP","PZ","TAM Mercosur"
+"TAE","EQ","TAME"
+"TPA","QT","TAMPA"
+"TAP","TP","TAP Portugal"
+"ROT","RO","Tarom"
+"TAK","U9","Tatarstan Airlines"
+"TXW","TQ","Texas Wings"
+"TCG","T2","Thai Air Cargo"
+"AIQ","FD","Thai AirAsia"
+"THA","TG","Thai Airways International"
+"TCX","MT","Thomas Cook Airlines"
+"TCW","FQ","Thomas Cook Airlines Belgium"
+"TOM","BY","Thomsonfly"
+"GCR","","Tianjin Airlines"
+"TNM","3P","Tiara Air"
+"TGW","TR","Tiger Airways"
+"TGW","TT","Tiger Airways Australia"
+"TMA","TL","Trans Mediterranean Airlines"
+"TP6","T6","Trans Pas Air"
+"LOF","AX","Trans States Airlines"
+"TSO","UN","Transaero Airlines"
+"TNA","GE","TransAsia Airways"
+"TDK","","Transavia Denmark"
+"TVF","TO","Transavia France"
+"TRA","HV","Transavia Holland"
+"THS","TH","TransBrasil Airlines"
+"THI","TI","TransHolding"
+"TYS","YO","TransHolding System"
+"TLA","","Translift Airways"
+"NDN","","Transportes Aereos Cielos Andinos"
+"ABS","9T","Transwest Air"
+"TBZ","TB","TrasBrasil"
+"TVS","QS","Travel Service"
+"TGN","","Trigana Air Service"
+"TIB","8R","TRIP Linhas A"
+"TOS","PM","Tropic Air"
+"TUI","X3","TUIfly"
+"BLX","6B","TUIfly Nordic"
+"TAR","TU","TunisAir"
+"TUX","UG","TunisAir Express"
+"URN","3T","Turan Air"
+"THK","","Turk Hava Kurumu Hava Taksi Isletmesi"
+"HVK","","Turkish Air Force"
+"THY","TK","Turkish Airlines"
+"TWD","","Turkish Wings Domestic"
+"TUA","T5","Turkmenistan Airlines"
+"TRK","","Turkuaz Airlines"
+"TWB","TW","Tway Airlines"
+"TJT","T7","Twin Jet"
+"TYR","","Tyrolean Airways"
+"AUI","PS","Ukraine International Airlines"
+"UKM","UF","UM Airlines"
+"UIA","B7","Uni Air"
+"UAC","","United Air Charters"
+"UAL","UA","United Airlines"
+"UBD","4H","United Airways"
+"AIO","","United States Air Force"
+"SVR","U6","Ural Airlines"
+"USA","US","US Airways"
+"USH","","US Helicopter"
+"","UH","US Helicopter Corporation"
+"ES2","E1","Usa Sky Cargo"
+"GWY","U5","USA3000 Airlines"
+"UTA","UT","UTair Aviation"
+"","UR","UTair-Express"
+"UZB","HY","Uzbekistan Airways"
+"VAU","VA","V Australia Airlines"
+"VLU","VF","Valuair"
+"VLO","LC","Varig Log"
+"VFC","","Vasco Air"
+"VSP","VP","VASP"
+"VKJ","KT","VickJet"
+"HVN","VN","Vietnam Airlines"
+"VKH","VQ","Viking Hellas"
+"MOV","NN","VIM Airlines"
+"","V6","VIP Ecuador"
+"VRD","VX","Virgin America"
+"VIR","VS","Virgin Atlantic Airways"
+"VOZ","DJ","Virgin Australia"
+"VEX","TV","Virgin Express"
+"VGN","VK","Virgin Nigeria Airways"
+"VNP","VH","Virgin Pacific"
+"VWA","YY","Virginwings"
+"VIS","","Vision Air International"
+"VVM","ZG","Viva Macau"
+"VLK","XF","Vladivostok Air"
+"VLM","VG","VLM Airlines"
+"VLE","VE","Volare Airlines"
+"VOI","Y4","Volaris"
+"VDA","VI","Volga-Dnepr Airlines"
+"VRN","RG","VRG Linhas Aereas"
+"VLG","VY","Vueling Airlines"
+"KW1","","Wataniya Airways"
+"","7W","Wayraper"
+"WEB","WJ","WebJet Linhas A"
+"WLC","2W","Welcome Air"
+"CHB","PN","West Air China"
+"","8O","West Coast Air"
+"WAL","WA","Western Airlines"
+"WFX","","Westfalia Express VA"
+"WJA","WS","WestJet"
+"WTJ","","Whitejets"
+"WIF","WF","Widerøe"
+"JET","IV","Wind Jet"
+"WRC","","Wind Rose Aviation"
+"","WM","Windward Islands Airways"
+"WON","IW","Wings Air"
+"WZZ","W6","Wizz Air"
+"WVL","8Z","Wizz Air Hungary"
+"WAU","WU","Wizz Air Ukraine"
+"WOA","WO","World Airways"
+"WE1","W1","World Experience Airline"
+"CXA","MF","Xiamen Airlines"
+"SEU","SE","XL Airways France"
+"XOJ","","XOJET"
+"","XN","Xpressair"
+"LLM","YL","Yamal Airlines"
+"","HK","Yangon Airways"
+"","Y1","Yellowstone Club Private Shuttle"
+"IYE","IY","Yemenia"
+"YEP","","YES Airways"
+"","YT","Yeti Airways"
+"YZZ","YZ","Yours Air Lines"
+"CYH","3Q","Yunnan Airlines"
+"UMK","2N","Yuzhmashavia"
+"ZTT","Z6","ZABAIKAL AIRLINES"
+"ZZZ","ZP","Zabaykalskii Airlines"
+"","ZJ","Zambezi Airlines"
+"","K8","Zambia Skyways"
+"TAN","","Zanair"
+"PZY","","Zapolyarie Airlines"
+"","Z2","Zest Air"
+"OOM","Z4","Zoom Airlines"
+"","ZZ","Zz"
