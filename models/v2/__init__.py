@@ -437,7 +437,7 @@ class iOSUser(_User):
             user.app_version = app_version
         if preferred_language:
             user.preferred_language = preferred_language
-        if push_token is not None:
+        if push_token:
             user.push_token = push_token
         if user_latitude is not None and user_longitude is not None:
             user.last_known_location = ndb.GeoPt(user_latitude, lon=user_longitude)
