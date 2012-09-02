@@ -729,7 +729,7 @@ airlines_iata_to_icao = {
     'UN' : 'TSO',
     'UO' : 'HKE',
     'UP' : 'BHS',
-    'US' : 'USA',
+    'US' : 'AWE',
     'UT' : 'UTA',
     'UU' : 'REU',
     'UX' : 'AEA',
