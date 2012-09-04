@@ -51,7 +51,6 @@ class SearchHandler(AuthenticatedAPIHandler):
         sanitized_f_num = utils.sanitize_flight_number(flight_number)
 
         if not utils.valid_flight_number(flight_number):
-            # FIXME: Temp hack until iOS version fixes flight number alert msg
             if utils.is_int(sanitized_f_num):
                 raise FlightNotFoundException(flight_number)
             else:
