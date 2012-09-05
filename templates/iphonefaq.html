@@ -63,69 +63,91 @@
     </style>
 </head>
 <body>
+    <a name="usecase"></a>
     <div class="question">
         <h1>What does Just Landed do?</h1>
         <p>Just Landed tracks flights arriving at major airports and tells you when to leave for the airport to pick someone up. We currently support the US, UK, France and Canada, and are adding more countries soon. The app also sends you push notifications when flights take off / land / are delayed etc.</p>
     </div>
 
+    <a name="audience"></a>
     <div class="question">
         <h1>Who is Just Landed for?</h1>
         <p>We built Just Landed to make airport pickup easier. Just Landed is designed around this use case, rather than for the person flying. Until now, most of us either leave too early for the airport and waste time waiting in the terminal, or disappoint whomever we&rsquo;re picking up by arriving late.</p>
     </div>
 
+    <a name="howto"></a>
     <div class="question">
         <h1>How do I use Just Landed?</h1>
-        <p>Just search for a flight using its flight number, and tap on it to begin tracking the flight. Once you&rsquo;re tracking the flight we will send you important updates via push notification, as well as automatic reminders to leave for the airport.</p>
+        <p>Just search for a flight using its flight number, and tap on it to begin tracking the flight. Once you&rsquo;re tracking the flight we will send important updates to your phone via push notification, as well as automatic reminders to leave for the airport.</p>
     </div>
 
+    <a name="difference"></a>
     <div class="question">
         <h1>How is Just Landed different from other flight trackers?</h1>
         <p>Just Landed is the only app that tells you when to leave for the airport to pick someone up. Unlike a calendar alert, Just Landed constantly adjusts your reminders based on your location and the latest flight data and traffic conditions. Our goal is to get you to the airport precisely on time. It also features dead-simple flight search and avoids the information overload and clutter of other flight tracking apps.</p>
     </div>
 
+    <a name="calculation"></a>
     <div class="question">
         <h1>How does Just Landed calculate when I should leave for the airport?</h1>
         <p>Whenever you&rsquo;re tracking a flight, Just Landed also tracks your current location, even when the app is in the background or your phone is locked &mdash; without draining your battery. We use your approximate location to figure out the driving time to the airport, taking into account current traffic conditions. Just Landed combines this with real-time flight data and estimates of the time for passengers to de-board and reach the terminal, to get you to the airport at precisely the right time.</p>
     </div>
 
+    <a name="flightnotfound"></a>
     <div class="question">
         <h1>Why can&rsquo;t Just Landed find the flight I&rsquo;m looking for?</h1>
-        <p>We license real-time flight data from a company that specializes in flights within the US &amp; Canada (and a handful of other countries). They provide data on most flights in their primary coverage area, but some private aircraft and commercial flights may not be available for tracking (some airlines don&rsquo;t share their data). If you&rsquo;re unable to find a flight, and are unhappy about it, please <a href="mailto:support@getjustlanded.com?subject=Unable%20to%20find%20a%20flight.">let us know</a>.</p>
+        <p>We license real-time flight data from a company that specializes in flights within the US &amp; Canada (and a handful of other countries) and our data is improving all the time. Flight data is usually acquired as a result of direct negotiations with airlines and government agencies. As a result, some flights may not be available for tracking if they&rsquo;ve decided not to share data, or have not reached an agreement with our provider. If you&rsquo;re unable to find a flight, and are unhappy about it, please <a href="mailto:support@getjustlanded.com?subject=Unable%20to%20find%20a%20flight.">let us know</a>.</p>
 
-        <p>If the app gives you a &quot;Flight Not Found&quot; error: make sure you have entered the airline code correctly as well as the flight number e.g. &quot;VX969&quot; and not just &quot;969&quot;; check that the flight you are looking for is arriving in the next 48 hours (we only have data for flights landing up to 48 hours in the future). If you&rsquo;re still stuck, please <a href="mailto:support@getjustlanded.com?subject=Unable%20to%20find%20a%20flight.">let us know</a>.</p>
+        <p>If you see flight search results showing up for your query, but don&rsquo;t see the particular flight you want, realize that the lookup screen shows scheduled arrival times in the next 48 hours, not departure times &mdash; the flight may be there, just not under the time you expected. If it really is missing, please <a href="mailto:support@getjustlanded.com?subject=Unable%20to%20find%20a%20flight.">let us know</a> and we&rsquo;ll be able to help.</p>
 
-        <p>If you see flight search results showing up for your query, but don&rsquo;t see the particular flight you want, realize that the lookup screen shows scheduled arrival times, not departure times &mdash; the flight may be there, just not under the time you expected. If it really is missing, please <a href="mailto:support@getjustlanded.com?subject=Unable%20to%20find%20a%20flight.">let us know</a> and we&rsquo;ll be able to help.</p>
-
-        <p>This version of Just Landed can track domestic and international flights arriving at US, UK, French and Canadian airports. Other countries may work but are not officially supported. If there&rsquo;s enough demand for global international flight tracking, we may license global flight data from other companies. You can let us know what you need by <a href="mailto:support@getjustlanded.com?subject=Need%20international%20flight%20tracking.">sending us feedback</a>.</p>
+        <p>The current version of Just Landed can track domestic and international flights arriving at US, UK, French and Canadian airports. Other countries may work but are not officially supported yet.</p>
+    </div>
+    
+    <a name="48hrs"></a>
+    <div class="question">
+        <h1>Why can&rsquo;t I track flights more than 48 hours out?</h1>
+        <p>Currently you can track flights up to 48 hours in advance of landing. Unfortunately this is an external limitation imposed on us by our flight data provider &mdash; they only provide data for flights arriving in the next 48 hours. This data is pulled from the airlines and government agencies, usually as a result of individual negotiations with each airline, and subject to government regulations. This is something we&rsquo;re actively working on improving in the future.</p>
     </div>
 
+    <a name="numberformat"></a>
     <div class="question">
         <h1>Why can&rsquo;t I lookup a flight by entering &quot;969&quot;, for example, instead of &quot;VX969&quot;?</h1>
-        <p>Unfortunately, with almost 100,000 flights a day globally, entering a single number like &quot;969&quot; isn&rsquo;t enough information to uniquely identify your flight. A number like &quot;969&quot; may be used by many airlines, and there may be literally hundreds of matching flights in the next 48 hours.</p>
+        <p>Unfortunately, with almost 100,000 flights a day globally, entering a single number like &quot;969&quot; isn&rsquo;t enough information to uniquely identify your flight. A number like &quot;969&quot; may be used by many airlines, and there may be literally hundreds of matching flights.</p>
         <p>Instead of making you search through all of those, we ask you to supply the airline code and flight number. This is the same information printed on airline tickets, on arrivals boards at the airport, and in travel itineraries that your friends &amp; family can hopefully send to you.</p>
-        <p>If you don&rsquo;t know the airline code you need, don&rsquo;t worry! Version 1.2 and later of Just Landed features a handy airline lookup tool on the main search screen that allows you to search for airlines by name. This tool will then pre-fill the airline code for you.</p>
+        <p>If you don&rsquo;t know the airline code you need, don&rsquo;t worry! Version 1.2 and later of Just Landed features a handy airline lookup tool on the main search screen that allows you to search for airlines by name.</p>
     </div>
 
+    <a name="notworking"></a>
     <div class="question">
         <h1>Why isn&rsquo;t the app showing me when to leave for the airport or giving me directions?</h1>
         <p>Several things can prevent Just Landed from telling you when to leave for the airport. Usually the problem is that the app can&rsquo;t get your location. Check that you have location services enabled and allowed for Just Landed and that you have cellphone reception.<p>
         <p>Another possibility is that you are more than 200 miles from the destination airport of the flight. In this case, we assume you&rsquo;re too far away to be picking someone up, and so we don&rsquo;t show you directions or estimates for when to go to the airport.</p>
         <p>Finally, you also need to have enabled push notifications for Just Landed. You can change these settings, and the location settings, via Apple&rsquo;s iOS Settings app. If you&rsquo;re still stuck, please <a href="mailto:support@getjustlanded.com?subject=App%20not%20showing%20when%20to%20leave%20for%20the%20airport.">let us know</a> and we&rsquo;ll be happy to help.</p>
     </div>
+    
+    <a name="timesdifferent"></a>
+    <div class="question">
+        <h1>Why does the app show different arrival times compared to other sources?</h1>
+        <p>Since flight arrival times are typically estimates, the estimate will vary depending on who you ask, based on a mix of public and private information that each provider has. We get our flight data from a company that has estimated runway landing times, whereas many providers use estimated gate arrival times. The airports report yet another set of times based on air traffic control estimates.</p>
+        <p>The airlines will also typically pad their arrival times by 15 minutes or more to allow them some wiggle room in the schedule that they show to the public. We don&rsquo;t include this padding in our times.</p>
+    </div>
 
+    <a name="departures"></a>
     <div class="question">
         <h1>Why isn&rsquo;t the app showing me departure information for my flight?</h1>
           <p>Just Landed is designed to help you pick someone up at the airport on time. The focus of the app is on arrival information and predicting when you should leave for the airport to pick someone up. It is not well suited for use by the person traveling.</p>
           <p>To keep things simple, since the departure gate and boarding time etc. are not necessary information to have when picking someone up, they are not shown by the app.</p>
     </div>
 
+    <a name="battery"></a>
     <div class="question">
         <h1>I think the app may be draining my battery. Why does it track my location in the background?</h1>
-        <p>Just Landed uses a form of background location monitoring called &quot;significant location change monitoring&quot; that was introduced in iOS 4. We do this when you&rsquo;re tracking a flight, even when the app is closed. This ensures that your &quot;leave for the airport&quot; reminders remain accurate and automatically adjust even if you happen to move location while the app is in the background or closed.</p>
-        <p>This form of location monitoring uses dramatically less power than your phone&rsquo;s GPS does because it instead simply listens for when you change cellphone towers. Unfortunately, the iOS user interface does not visually distinguish between this form of monitoring, and the more power-hungry GPS usage (it uses the same purple arrow).</p>
-        <p>This has caused some confusion and negative reviews of the app. However, the fact is that the app does not drain your battery &mdash; we&rsquo;ve made sure of that by actually measuring battery usage and lifetime while running Just Landed in the background and moving location.</p>
+        <p>Just Landed uses a form of background location monitoring called &quot;geofencing&quot; that was introduced in iOS 4. We do this when you&rsquo;re tracking a flight, even when the app is closed. This ensures that your &quot;leave for the airport&quot; reminders remain accurate and automatically adjust even if you happen to move location while the app is in the background or closed.</p>
+        <p>This form of location monitoring uses dramatically less power than your phone&rsquo;s GPS does because it instead simply listens for when you change cellphone towers. Unfortunately, the iOS user interface does not visually distinguish between this form of monitoring, and the more power-hungry GPS usage (it uses a similar purple arrow).</p>
+        <p>This has caused some confusion and negative reviews of the app. However, the fact is that the app does not drain your battery &mdash; we&rsquo;ve made sure of that by actually measuring battery usage and lifetime while running Just Landed in the background and moving location. If you don&rsquo;t want to use this location monitoring feature, you can disable it in Just Landed&rsquo;s app settings (accessible via the iOS Settings app) with the caveat that your alerts are no longer guaranteed to be accurate if you move location.</p>
     </div>
 
+    <a name="untrack"></a>
     <div class="question">
         <h1>How do I stop tracking a flight?</h1>
         <p>To manually stop tracking a flight, just tap the button in the top left of the track screen (the screen that shows all the information for the flight you&rsquo;re tracking).</p>
@@ -133,34 +155,40 @@
         <p>Once you stop tracking a flight, you will no longer receive any alerts for that flight and can track a different flight. Also, if you forget to stop tracking a flight, the app will automatically do that for you once it notices that the flight you were tracking is old (if it landed more than 2 hours ago).</p>
     </div>
 
+    <a name="noreminder"></a>
     <div class="question">
         <h1>I never got a reminder to leave for the airport, what gives?</h1>
         <p>We&rsquo;ve built Just Landed to be as reliable as possible. However, there are a few unavoidable scenarios in which you may not receive a reminder to leave for the airport: your device is turned off or has no reception and cannot receive push notifications; our hosting provider is experiencing an outage; you have disabled push notifications. Outages at our hosting provider are expected to be very rare (their last one was 2 years ago).</p>
     </div>
 
+    <a name="sounds"></a>
     <div class="question">
         <h1>How do I turn off the alert sounds?</h1>
-        <p>Simply put your phone in silent mode. Just Landed will respect the device settings.</p>
+        <p>Simply put your phone in silent mode. Just Landed will respect the device settings. You can also disable specific alerts and change the sounds via Just Landed&rsquo;s app settings (accessible via the iOS Settings app).</p>
     </div>
 
+    <a name="android"></a>
     <div class="question">
         <h1>When will Just Landed be available for Android?</h1>
         <p>If you&rsquo;d like to see an Android version, please <a href="mailto:support@getjustlanded.com?subject=Just%20Landed%20for%20Android.">let us know</a>.</p>
     </div>
 
+    <a name="internationalflights"></a>
     <div class="question">
         <h1>Why doesn&rsquo;t Just Landed have all international flights?</h1>
-        <p>We wanted Just Landed to be as cheap as possible for our users (currently it&rsquo;s free). We currently support tracking international flights that are arriving in the US, UK, France or Canada. Unfortunately, global international flight data is quite expensive, which would force us to charge more, so we&rsquo;re launching without it. If you need global international flight tracking, please <a href="mailto:support@getjustlanded.com?subject=Need%20international%20flight%20tracking.">let us know</a>.</p>
+        <p>We wanted Just Landed to be as cheap as possible for our users. We currently support tracking international flights that are arriving in the US, UK, France or Canada. Unfortunately, global international flight data is quite expensive, which would force us to charge more, so we&rsquo;re launching without it. If you need global international flight tracking, please <a href="mailto:support@getjustlanded.com?subject=Need%20international%20flight%20tracking.">let us know</a>.</p>
     </div>
 
+    <a name="delayedalerts"></a>
     <div class="question">
         <h1>Why are take-off and landing alerts sometimes delayed?</h1>
         <p>For &ldquo;security reasons&rdquo;, the FAA requires that some flight data be delayed by up to 15 minutes. Sorry, we don&rsquo;t make the rules.</p>
     </div>
-
+    
+    <a name="bug"></a>
     <div class="question">
         <h1>Help! I encountered a problem or bug.</h1>
-        <p>If you&rsquo;re stuck or have a problem, please use the feedback feature on the previous screen &ndash; we&rsquo;re happy to help and will try our best to respond promptly.</p>
+        <p>If you&rsquo;re stuck or have a problem, please use the feedback feature on the app&rsquo;s about screen &ndash; we&rsquo;re happy to help and will try our best to respond promptly.</p>
         <p>If you want to report a bug, please be sure to include steps we can follow to reproduce the bug. We appreciate your help making Just Landed better!</p>
     </div>
 </body>
