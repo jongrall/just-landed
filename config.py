@@ -354,7 +354,7 @@ config['far_from_airport'] = 200.0
 # Cache expiration for driving route data when using real-time traffic
 config['traffic_cache_time'] = 900
 
-# Bing Maps Credentials
+# Bing Maps Credentials (admin@getjustlanded.com)
 config['bing_maps'] = {
     'key' : 'AgxrJjwYLm84MqrzSfMO8NehyoZkE639by3KZi2lGrg0NEVpKEbRo2hS2ONwxo75',
 }
