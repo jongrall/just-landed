@@ -822,8 +822,7 @@ class Flight(object):
     def is_old_flight(self):
         """Returns true if the flight is definitely old."""
         if self.has_landed:
-            arrival_timestamp = self.actual_arrival_time
-            arrival_time = datetime.utcfromtimestamp(arrival_timestamp)
+            arrival_time = datetime.utcfromtimestamp(self.actual_arrival_time)
             hours_ago = datetime.utcnow() - timedelta(hours=config['flight_old_hours'])
             return arrival_time < hours_ago
         else:
