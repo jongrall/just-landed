@@ -50,11 +50,11 @@ a {
 }
 
 p {
-    margin: 10px 0 10px 0;
+	margin: 10px 0;
 }
 
 p:last-child {
-    margin-bottom: 0;
+	margin-bottom: 0;
 }
 
 .centered {
@@ -64,6 +64,7 @@ p:last-child {
 .question {
 	text-align: left;
     padding: 15px;
+    margin: 0;
     border-bottom: 1px solid #b6afa5;
     -webkit-box-shadow: 0 1px rgba(255, 255, 255, 0.7);
     box-shadow: 0 1px rgba(255, 255, 255, 0.7);
