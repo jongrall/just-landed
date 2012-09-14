@@ -132,6 +132,8 @@ class StaticHandler(BaseHandler):
 
     def get(self, page_name="", context={}, use_cache=True):
         # Optimization: use memcache to cache static page content
+        use_cache = use_cache and not on_development()
+        
         if use_cache:
             page_cache_key = '%s_%s' % (page_name, VERSION_CHKSM)
             cached_page = memcache.get(page_cache_key)
