@@ -17,6 +17,14 @@
     display: none;
 }
 
+#app-store-button-desktop {
+	display: none;
+}
+
+#app-store-button-iphone {
+	display: block;
+}
+
 #details {
     float: none;
     width: 320px;

@@ -87,6 +87,10 @@
 
 /* App Store Button */
 
+#app-store-button-iphone {
+	display: none;
+}
+
 a.app-store-button {
     display: block;
     background-color: #ff5b00;
