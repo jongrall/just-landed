@@ -55,3 +55,11 @@ p:last-child {
     -webkit-box-shadow: 0 1px rgba(255, 255, 255, 0.7);
     box-shadow: 0 1px rgba(255, 255, 255, 0.7);
 }
+
+#footer {
+    display: none;
+}
+
+#copyright {
+    display: none;
+}
