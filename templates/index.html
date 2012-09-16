@@ -9,7 +9,7 @@
         <!-- iPHONE PREVIEW -->
         <div id="iphone" style="background-image: url('/static/images/homepage/{{ version }}/iphone.png');">
         	<!-- Video Play Buttons -->
-            <img src="/static/images/homepage/{{ version }}/video_play_retina.png" id="video-button" class="paused" width="80" height="80" />
+            <img src="/static/images/homepage/{{ version }}/video_play_retina.png" id="video-button" class="paused" width="82" height="83" />
             
         	<!-- iPhone Glare -->
             <div id="iphone-glare" style="background-image: url('/static/images/homepage/{{ version }}/iphone_glare.png');"></div>
@@ -92,11 +92,11 @@
         
         $('#iphone').hover(
         	function() {
-	        	$videoButton.fadeIn(200);
+	        	$videoButton.show();
         	},
         	function() {
         		if (!$videoButton.hasClass('paused')) {
-	        		$videoButton.fadeOut(200);
+	        		$videoButton.hide();
 	        	}
         	}
         );
