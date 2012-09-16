@@ -8,14 +8,20 @@
     <div class="centered clear">
         <!-- iPHONE PREVIEW -->
         <div id="iphone" style="background-image: url('/static/images/homepage/{{ version }}/iphone.png');">
+        	<!-- Video Play Buttons -->
+            <img src="/static/images/homepage/{{ version }}/video_play_retina.png" id="video-button" class="paused" width="80" height="80" />
+            
+        	<!-- iPhone Glare -->
             <div id="iphone-glare" style="background-image: url('/static/images/homepage/{{ version }}/iphone_glare.png');"></div>
-            <video width="280" height="420" preload="auto" autoplay="autoplay" loop="loop" poster="/static/movies/{{ version }}/poster.jpg">
+            
+            <!-- HTML5 Video -->
+            <video width="280" height="420" preload="auto" loop="loop" poster="/static/movies/{{ version }}/poster.jpg">
                 <source src="/static/movies/{{ version }}/jl_screencast.mp4" type="video/mp4" />
                 <source src="/static/movies/{{ version }}/jl_screencast.ogv" type="video/ogg" />
             </video>
 
             <!-- SCREENSHOT FALLBACK -->
-            <img src="/static/images/homepage/{{ version }}/app_screenshot.png" width="281" height="421" style="display: none;" />
+            <img src="/static/images/homepage/{{ version }}/app_screenshot.png" id="image-fallback" width="281" height="421" style="display: none;" />
         </div>
 
         <!-- APP DETAILS -->
@@ -56,22 +62,43 @@
     {{ block.super }}
 
     <script type="text/javascript">
+    	var $videoButton = $('#video-button');
+    	
         $(document).ready(function() {
             // Show the fallback image only if the browser doesn't support <video>
             if (Modernizr.video) {
-                $('#iphone img').hide();
+                $('#image-fallback').hide();
             } else {
-                $('#iphone img').show()
+                $('#image-fallback').show()
             }
         });
 
         $('#iphone').click(function(){
             if ($('video').get(0).paused) {
+            	// Play the video
                 $('video').get(0).play();
+                
+                // Change to pause and hide
+                $videoButton.attr('src', '/static/images/homepage/{{ version }}/video_pause_retina.png').removeClass('paused').hide();
             }
             else {
+            	// Pause the video
                 $('video').get(0).pause();
+                
+                // Change to play and show
+                $videoButton.attr('src', '/static/images/homepage/{{ version }}/video_play_retina.png').addClass('paused').show();
             }
         });
+        
+        $('#iphone').hover(
+        	function() {
+	        	$videoButton.fadeIn(200);
+        	},
+        	function() {
+        		if (!$videoButton.hasClass('paused')) {
+	        		$videoButton.fadeOut(200);
+	        	}
+        	}
+        );
     </script>
 {% endblock %}
