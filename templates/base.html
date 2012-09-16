@@ -19,7 +19,6 @@
     {% block extra_head %}{% endblock %}
 
     <!-- JAVASCRIPT -->
-    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
     <script type="text/javascript">Rot13={map:null,convert:function(a){Rot13.init();var b="";for(i=0;i<a.length;i++){var c=a.charAt(i);b+=c>="A"&&c<="Z"||c>="a"&&c<="z"?Rot13.map[c]:c}return b},init:function(){if(Rot13.map!=null)return;var a=new Array;var b="abcdefghijklmnopqrstuvwxyz";for(i=0;i<b.length;i++)a[b.charAt(i)]=b.charAt((i+13)%26);for(i=0;i<b.length;i++)a[b.charAt(i).toUpperCase()]=b.charAt((i+13)%26).toUpperCase();Rot13.map=a},write:function(a){document.write(Rot13.convert(a))}}</script>
     <script type="text/javascript" src="/static/javascript/{{ version }}/modernizer.js"></script>
     <script type="text/javascript">
@@ -47,19 +46,28 @@
     <!-- FOOTER -->
     {% block footer %}
         <div id="footer" class="clear">
-            <a href="/about">About</a>
-            <a href="/iphonefaq">F.A.Q.</a>
-            <a href="/terms">Terms</a>
-            <a href="/privacy">Privacy</a>
-            <a href="http://www.twitter.com/justlanded" target="_blank">Twitter</a>
-            <a href="http://www.facebook.com/justlandedapp" target="_blank">Facebook</a>
+        	<span style="position: relative; left: -20px;">
+            	<a href="/about">About</a>
+            	<a href="/iphonefaq">FAQ</a>
+            	<a href="/terms">Terms</a>
+            	<a href="/privacy">Privacy</a>
+            	<span style="position: relative; top: 8px; left: -6px;"><iframe src="//www.facebook.com/plugins/like.php?href=http%3A%2F%2Fwww.getjustlanded.com&amp;send=false&amp;layout=standard&amp;width=51&amp;show_faces=false&amp;action=like&amp;colorscheme=light&amp;font&amp;height=24&amp;appId=267879999907678" scrolling="no" frameborder="0" style="border: none; overflow: hidden; width: 51px; height: 24px;" allowTransparency="true"></iframe></span>
+            	<span style="position: relative; top: 6px; left: 15px;"><a href="https://twitter.com/share" class="twitter-share-button" data-url="http://www.getjustlanded.com" data-text="The @justlanded iPhone app makes it easy to pick people up at the airport on time!" data-related="justlanded" data-count="none">Tweet</a></span>
+        	</span>
+            
+            <p id="copyright"><a href="/">&copy; 2012 Just Landed. Little Details LLC. All Rights Reserved.</a></p>
         </div>
+<<<<<<< HEAD
 
         <p id="copyright"><a href="/">&copy; 2012 Just Landed&trade; Little Details LLC. All Rights Reserved.</a></p>
+=======
+>>>>>>> Share Buttons
     {% endblock %}
 
     <!-- JAVASCRIPT -->
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
     <script type="text/javascript" src="/static/javascript/{{ version }}/master.js"></script>
+    <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

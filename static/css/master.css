@@ -110,32 +110,30 @@ ol li {
 
 #footer {
     text-align: center;
-    padding: 80px 0 20px 0;
+    margin: 100px 0 40px 0;
     color: #77a0bf;
     opacity: 0.5;
     -webkit-transition: opacity 0.2s linear;
 }
 
-#copyright {
-    text-align: center;
-    padding: 0px 0 40px 0;
-    color: #77a0bf;
-    opacity: 0.5;
-    font-size: 12px;
-    -webkit-transition: opacity 0.2s linear;
-}
-
-#footer:hover, #copyright:hover {
+#footer:hover {
     opacity: 1;
 }
 
-#footer a, #copyright a {
+#footer a {
     color: #77a0bf;
     margin: 0 30px 0 0;
 }
 
-#footer a:hover, #copyright a:hover {
+#footer a:hover {
     color: #4d7fa5;
+}
+
+#copyright {
+    text-align: center;
+    padding: 14px 0 0 0;
+    font-size: 14px;
+    -webkit-transition: opacity 0.2s linear;
 }
 
 /* Forms
