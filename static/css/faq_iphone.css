@@ -61,6 +61,10 @@ p:last-child {
 	width: inherit;
 }
 
+.backlink {
+    display: none;
+}
+
 .question {
 	text-align: left;
     padding: 15px;

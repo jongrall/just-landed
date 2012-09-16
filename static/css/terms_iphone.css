@@ -27,6 +27,10 @@ body {
     width: inherit;
 }
 
+.backlink {
+    display: none;
+}
+
 h1 {
     display: none;
 }
