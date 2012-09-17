@@ -29,12 +29,21 @@
     cursor: pointer;
 }
 
-#iphone #video-button {
+#video-button {
+	width: 83px;
+	height: 86px;
+	background-repeat: no-repeat;
+	background-size: 83px 180px;
+	background-position: 0 0;
 	position: absolute;
 	top: 260px;
 	left: 127px;
 	z-index: 9999;
 	-webkit-transition: opacity 0.2s ease-in-out;
+}
+
+#iphone:hover #video-button {
+	background-position: 0 -95px;
 }
 
 #iphone #iphone-glare {

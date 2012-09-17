@@ -9,7 +9,7 @@
         <!-- iPHONE PREVIEW -->
         <div id="iphone" style="background-image: url('/static/images/homepage/{{ version }}/iphone.png');">
         	<!-- Video Play Buttons -->
-            <img src="/static/images/homepage/{{ version }}/video_play_retina.png" id="video-button" class="paused" width="82" height="83" />
+            <div id="video-button" class="paused" style="background-image: url('/static/images/homepage/{{ version }}/video_play_retina.png');"></div>
             
         	<!-- iPhone Glare -->
             <div id="iphone-glare" style="background-image: url('/static/images/homepage/{{ version }}/iphone_glare.png');"></div>
@@ -79,14 +79,14 @@
                 $('video').get(0).play();
                 
                 // Change to pause and hide
-                $videoButton.attr('src', '/static/images/homepage/{{ version }}/video_pause_retina.png').removeClass('paused').hide();
+                $videoButton.attr('style', 'background-image: url("/static/images/homepage/{{ version }}/video_pause_retina.png");').removeClass('paused').hide();
             }
             else {
             	// Pause the video
                 $('video').get(0).pause();
                 
                 // Change to play and show
-                $videoButton.attr('src', '/static/images/homepage/{{ version }}/video_play_retina.png').addClass('paused').show();
+                $videoButton.attr('src', 'background-image: url("/static/images/homepage/{{ version }}/video_play_retina.png");').addClass('paused').show();
             }
         });
         
