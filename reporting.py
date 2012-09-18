@@ -67,6 +67,7 @@ FA_SET_ALERT = 'FlightAware.SetAlert'
 FA_GET_ALERTS = 'FlightAware.GetAlerts'
 FA_DELETED_ALERT = 'FlightAware.DeletedAlert'
 FA_FLIGHT_ALERT_CALLBACK = 'FlightAware.AlertCallback'
+FS_FLIGHT_STATUS = 'FlightStats.FlightStatus'
 GOOG_FETCH_DRIVING_TIME = 'Google.DrivingTime'
 BING_FETCH_DRIVING_TIME = 'Bing.DrivingTime'
 
@@ -194,7 +195,7 @@ class _UserEvent(_Event):
 
     """
     user_id = ndb.StringProperty(required=True)
-    datasource = ndb.StringProperty('source', choices=['FlightAware, FlightStats'], default='FlightAware')
+    datasource = ndb.StringProperty('source', choices=['FlightAware', 'FlightStats'], default='FlightAware')
 
 
 class FlightSearchEvent(_UserEvent):

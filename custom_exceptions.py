@@ -53,6 +53,11 @@ class FlightAwareUnavailableError(FlightDataUnavailableError):
     def __init__(self):
         super(FlightAwareUnavailableError, self).__init__()
         self.message = 'FlightAware API is unavailable.'
+        
+class FlightStatsUnavailableError(FlightDataUnavailableError):
+    def __init__(self):
+        super(FlightStatsUnavailableError, self).__init__()
+        self.message = 'FlightStats API is unavailable.'      
 
 class InvalidFlightNumberException(Exception):
     def __init__(self, flight_number=''):

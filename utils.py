@@ -255,6 +255,27 @@ def is_old_fa_flight(raw_fa_flight_data):
     else:
         return False
 
+def is_old_fs_flight(raw_fs_flight_data):
+    """Tests whether a FlightStats flight is old or not."""
+    arrival_time = (raw_fs_flight_data['operationalTimes'].get('actualGateArrival',{}).get('dateUtc') or 
+                        raw_fs_flight_data['operationalTimes'].get('actualRunwayArrival',{}).get('dateUtc'))
+    sched_arrival_time = raw_fs_flight_data['operationalTimes'].get('flightPlanPlannedArrival',{}).get('dateUtc')
+    hours_ago = datetime.utcnow() - timedelta(hours=config['flight_old_hours'])
+    
+    # Flight has arrived
+    if arrival_time:
+        arrival_time = date_from_datestring(arrival_time)
+        return arrival_time < hours_ago
+    
+    # Flight was cancelled or not operational, see if it is old
+    elif sched_arrival_time and raw_fs_flight_data['status'] in ['C', 'NO']:
+        sched_arrival_time = date_from_datestring(sched_arrival_time)
+        return sched_arrival_time < hours_ago
+    
+    # Not arrived, not cancelled => not old
+    else:
+        return False
+    
 ###############################################################################
 """Flight Utilities"""
 ###############################################################################
@@ -319,6 +340,9 @@ def is_valid_flight_id(flight_id):
 def is_valid_fa_flight_id(flight_id):
     """Tests whether a flight id is a valid FlightAware flight ID."""
     return is_valid_flight_id(flight_id) and len(flight_id.split('-')) > 1
+
+def is_valid_fs_flight_id(flight_id):
+    return is_int(flight_id) and int(flight_id) > 0
 
 def is_valid_fa_alert_body(alert_body):
     """Tests whether a FlightAware alert body is valid."""
@@ -404,12 +428,19 @@ def at_airport(user_lat, user_lon, airport_lat, airport_lon):
 """Date & Time Utilities"""
 ###############################################################################
 
+def date_from_datestring(datestring=''):
+    assert datestring and isinstance(datestring, basestring), 'Must be a date string.'
+    return datetime.strptime(datestring.replace('.000Z', ' UTC'),'%Y-%m-%dT%H:%M:%S %Z')
+
 def timestamp(date=None):
   """Returns the passed in date as an integer timestamp of seconds since the epoch."""
   if not date:
     return None
-  assert isinstance(date, datetime), 'Expected a datetime object'
-  return int(time.mktime(date.timetuple()))
+  assert isinstance(date, (datetime, basestring)), 'Date must be either an ISO-8601 time string or a datetime object.'
+  if isinstance(date, datetime):
+      return int(time.mktime(date.timetuple()))
+  else:
+      return int(time.mktime(date_from_datestring(date).timetuple()))
 
 ZERO = timedelta(0)
 HOUR = timedelta(hours=1)

@@ -39,7 +39,7 @@ from google.appengine.ext.ndb import tasklets
 from google.appengine.api.urlfetch import DownloadError
 from google.appengine.runtime.apiproxy_errors import CapabilityDisabledError
 
-from config import config, on_development, flightaware_credentials
+from config import config, on_development, flightaware_credentials, flightstats_credentials
 from connections import Connection, build_url
 from models.v2 import (Airport, FlightAwareTrackedFlight, iOSUser,
     Origin, Destination, Flight)
@@ -54,7 +54,7 @@ from reporting import report_event, report_event_transactionally, log_event_tran
 
 FLIGHT_STATES = config['flight_states']
 PUSH_TYPES = config['push_types']
-debug_cache = on_development() and False
+debug_cache = on_development() and True
 debug_alerts = on_development() and False
 memcache_client = memcache.Client()
 
@@ -1044,6 +1044,314 @@ class FlightAwareSource (FlightDataSource):
         remote_addr = request.remote_addr
         return utils.is_trusted_flightaware_host(remote_addr)
 
+###############################################################################
+"""FlightStats"""
+###############################################################################
+
+class FlightStatsSource (FlightDataSource):
+    """Defines a flight data source interface that subclasses should implement."""
+    @classmethod
+    def flight_info_cache_key(cls, flight_id):
+        assert utils.is_valid_fs_flight_id(flight_id)
+        return "%s-flight_status-%s" % (cls.__name__, flight_id)
+
+    @classmethod
+    def flight_result_cache_key(cls, flight_id):
+        assert utils.is_valid_fs_flight_id(flight_id)
+        return "%s-flight_result-%s" % (cls.__name__, flight_id)
+
+    @classmethod
+    def lookup_flights_cache_key(cls, flight_num):
+        assert utils.valid_flight_number(flight_num)
+        return "%s-lookup_flights-%s" % (cls.__name__,
+                                        utils.sanitize_flight_number(flight_num))
+
+    @classmethod
+    def clear_flight_info_cache(cls, flight_id):
+        flight_cache_key = cls.flight_info_cache_key(flight_id)
+        flight_result_cache_key = cls.flight_result_cache_key(flight_id)
+        keys = [flight_cache_key, flight_result_cache_key]
+
+        # Optimization: multi-key delete
+        if memcache.delete_multi(keys) and debug_cache:
+            logging.info('DELETED FS INFO CACHE KEYS %s' % keys)
+
+    @classmethod
+    def clear_flight_lookup_cache(cls, flight_numbers=[]):
+        # De-dupe
+        flight_numbers = set(flight_numbers)
+        cache_keys = [cls.lookup_flights_cache_key(f_num) for f_num in flight_numbers]
+
+        if cache_keys:
+            # Optimization: Multi-key delete
+            if memcache.delete_multi(cache_keys) and debug_cache:
+                logging.info('DELETED FS LOOKUP CACHE KEYS %s' % cache_keys)
+    
+    @property
+    def base_url(self):
+        """Returns the base URL of the API used by the datasource."""
+        return "https://api.flightstats.com/flex" # HTTPS required
+        
+    @property
+    def api_key_mapping(self):
+        """Returns a mapping of keys from the commercial API to keys used
+        by the Just Landed API which is in turn consumed by our clients. This
+        translation ensures that new datasources don't break clients.
+
+        """
+        return config['flightstats']['key_mapping']
+    
+    def __init__(self):
+        app_id, key = flightstats_credentials()
+        self.conn = Connection(self.base_url,
+                              default_headers={'appId' : app_id, 'appKey' : key})
+        
+    def build_api_url(self, api_name='', api_version='v2', query=''):
+        return ('/%s/rest/%s/json/%s' % (api_name, api_version, query))
+        
+    def raw_flight_data_to_flight(self, data, sanitized_flight_num, return_none_on_error=False):
+        try:
+            if data and utils.valid_flight_number(sanitized_flight_num):
+                def operational_time(key='', default=0):
+                    op_time = data['operationalTimes'].get(key,{}).get('dateUtc')
+                    if op_time:
+                        return utils.timestamp(op_time)
+                    else:
+                        return default
+                        
+                def extract_airport(key):
+                    fields_to_keep = [
+                        'city',
+                        'iata',
+                        'icao',
+                        'latitude',
+                        'longitude',
+                        'name',
+                        'timeZoneRegionName'
+                    ]
+                    mapping = {
+                        'iata' : 'iataCode',
+                        'icao' : 'icaoCode',
+                        'timeZoneRegionName' : 'timezone',
+                    }
+                    airport = utils.sub_dict_strict(data.get(key,{}), fields_to_keep)
+                    return utils.map_dict_keys(airport, mapping)
+                
+                sanitized_data = {
+                    'actualArrivalTime': operational_time('actualRunwayArrival'),
+                    'actualDepartureTime' : operational_time('actualRunwayDeparture'),
+                    'diverted' : data['status'] == 'D',
+                    'estimatedArrivalTime' : operational_time('estimatedRunwayArrival', -1),
+                    'flightID' : data['flightId'],
+                    'flightNumber' : sanitized_flight_num,
+                    'airlineName' : data['carrier']['name'],
+                    'lastUpdated' : utils.timestamp(datetime.utcnow()),
+                    'scheduledDepartureTime' : operational_time('publishedDeparture', -1),
+                }
+                
+                duration_mins = int(data['flightDurations'].get('scheduledAirMinutes') or 
+                                data['flightDurations'].get('scheduledBlockMinutes'))
+                sanitized_data['scheduledFlightDuration'] = duration_mins * 60
+                
+                origin_info = extract_airport('departureAirport')
+                destination_info = extract_airport('arrivalAirport')
+
+                # Give up if the origin or destination is missing
+                if not origin_info or not destination_info:
+                    return
+
+                origin, destination = Origin(origin_info), Destination(destination_info)
+
+                flight = Flight(sanitized_data)
+                flight.origin = origin
+                flight.destination = destination
+
+                # Convert aircraft type
+                aircraft_type_iata = (data.get('flightEquipment',{}).get('actualEquipment', {}).get('iata') or 
+                                        data.get('flightEquipment',{}).get('scheduledEquipment', {}).get('iata'))
+                flight.aircraft_type = aircraft_types.type_to_major_type(aircraft_type_iata, iata=True)
+
+                # Clean up airport names
+                flight.origin.name = utils.proper_airport_name(flight.origin.name)
+                flight.destination.name = utils.proper_airport_name(flight.destination.name)
+
+                return flight
+
+        except Exception as e:
+            if return_none_on_error:
+                logging.exception(e) # Report it, but recover gracefully
+                utils.sms_report_exception(e)
+                return
+            else:
+                raise # Re-raise the exception
+
+    def register_alert_endpoint(self, **kwargs):
+        """Registers a Just Landed endpoint with the 3rd party API. This
+        endpoint will handle flight status callbacks e.g. by triggering push
+        notifications to clients.
+
+        """
+        pass
+
+    def flight_info(self, flight_id, **kwargs):
+        """Looks up and returns a specific Flight. The amount of information
+        returned depends on whether or not the flight is en route or whether it
+        is commercial, private or international.
+
+        """
+        pass
+
+    @ndb.tasklet
+    def lookup_flights(self, flight_number, **kwargs):
+        """Concrete implementation of lookup_flights for the FlightStats datasource."""
+        sanitized_f_num = utils.sanitize_flight_number(flight_number)
+        lookup_cache_key = FlightStatsSource.lookup_flights_cache_key(sanitized_f_num)
+        
+        # Optimization: check memcache for flight lookup results
+        flights = memcache.get(lookup_cache_key)
+        
+        def cache_stale():
+            for f in flights:
+                if f.is_old_flight:
+                    return True
+            return False
+        
+        if flights is not None and not cache_stale():
+            if debug_cache:
+                logging.info('FLIGHTSTATS LOOKUP CACHE HIT')
+            raise tasklets.Return(flights)
+        else:
+            if debug_cache:
+                logging.info('FLIGHTSTATS LOOKUP CACHE MISS')
+        
+            flight_data = []
+            try:
+                carrier, flight_num_digits = utils.split_flight_number(flight_number)
+                two_hours_ago = datetime.utcnow() - timedelta(hours=2)
+                dates = [two_hours_ago + timedelta(days=count) for count in 
+                            xrange(config['flightstats']['num_days_to_lookup'])]
+                datepaths = ['%d/%d/%d' % (date.year, date.month, date.day) for date in dates]
+                
+                # If we can't split the flight number, give up
+                if not carrier or not flight_num_digits:
+                    raise FlightNotFoundException(sanitized_f_num)
+                results = yield [self.conn.get_json(self.build_api_url(api_name='flightstatus',
+                                            query=('flight/status/%s/%s/arr/%s' % 
+                                                   (carrier, flight_num_digits, datepath))),
+                                            args={'utc' : 'true',
+                                                  'extendedOptions' : 'useInlinedReferences'})
+                                                  for datepath in datepaths]
+            except DownloadError:
+                raise FlightStatsUnavailableError()
+    
+            for data in results:
+                report_event(reporting.FS_FLIGHT_STATUS)
+                if isinstance(data, dict) and data.get('error'):
+                    raise FlightNotFoundException(sanitized_f_num)
+    
+            # Merge and de-dupe the results
+            results = [result['flightStatuses'] for result in results]
+            all_flight_results = [f for result in results for f in result]
+            flight_ids = set()
+            unique_results = []
+            for f in all_flight_results:
+                if f['flightId'] in flight_ids:
+                    continue
+                else:
+                    unique_results.append(f)
+                    flight_ids.add(f['flightId'])
+            
+            # Filter out old flights before conversion to Flight
+            unique_results = [f for f in unique_results if not utils.is_old_fs_flight(f)]
+            
+            # Convert raw flight data to instances of Flight
+            flights = [self.raw_flight_data_to_flight(flight_data,
+                                                      sanitized_f_num,
+                                                      return_none_on_error=True)
+                                for flight_data in unique_results]
+            flights = [f for f in flights if f is not None] # Filter out bad results
+        
+            # If there are no good flights left, raise CurrentFlightNotFound
+            if len(flights) == 0:
+                raise CurrentFlightNotFoundException(sanitized_f_num)
+        
+            # Optimization: cache flight info so /track doesn't have cache miss on selecting a flight
+            flights_to_cache = {}
+            for f in flights:
+                cache_key = FlightStatsSource.flight_result_cache_key(f.flight_id)
+                flights_to_cache[cache_key] = f
+        
+            # Optimization: set multiple memcache keys in one async rpc
+            cache_flights_rpc = memcache_client.set_multi_async(
+                flights_to_cache,
+                time=config['flightaware']['flight_from_lookup_cache_time'])
+        
+            # Sort by departure date (earliest first)
+            flights.sort(key=lambda f: f.scheduled_departure_time)
+        
+            if not memcache.set(lookup_cache_key, flights,
+                                config['flightstats']['flight_lookup_cache_time']):
+                logging.error('Unable to cache FlightStats lookup response!')
+            elif debug_cache:
+                logging.info('FLIGHTSTATS LOOKUP CACHE SET')
+        
+            def flights_cached_successfully():
+                result = cache_flights_rpc.get_result()
+                if result is None:
+                    return False
+                status_set = set(result.values())
+                return ('ERROR' not in status_set) and ('NOT_STORED' not in status_set)
+        
+            if not flights_cached_successfully():
+                logging.error('Unable to cache some FlightStats flight info on lookup.')
+            elif debug_cache:
+                logging.info('CACHED %d FLIGHTS FROM FLIGHTSTATS LOOKUP', len(flights))
+        
+            raise tasklets.Return(flights)
+
+    def process_alert(self, alert_body):
+        """Processes an incoming alert body posted to a Just Landed endpoint
+        by a 3rd party API callback and returns an instance of a FlightAlert
+        to the Just Landed application.
+
+        """
+        pass
+
+    def set_alert(self, **kwargs):
+        """Registers a callback with the 3rd party API for a specific flight.
+
+        Returns the alert key.
+
+        """
+        pass
+
+    def delete_alert(self, alert_id):
+        """Deletes a callback from the 3rd party API e.g. when a flight is no
+        longer being tracked by the user.
+
+        """
+        pass
+
+    def track_flight(self, flight_id, flight_num, **kwargs):
+        """Marks a flight as tracked. If there is a uuid supplied, we also mark
+        the user as tracking the flight. If there is a push_token, we set an
+        alert and make sure the user is notified of incoming alerts for that
+        flight.
+
+        """
+        pass
+
+    def untrack_flight(self, flight_id, **kwargs):
+        """Stops tracking a flight. If there are alerts set and no users tracking
+        the flight any longer, we delete & disable the alerts.
+
+        """
+        pass
+
+    def authenticate_remote_request(self, request):
+        """Returns True if the incoming request is in fact from the trusted
+        3rd party datasource, False otherwise."""
+        return True
 
 ###############################################################################
 """Driving Time Data Sources"""

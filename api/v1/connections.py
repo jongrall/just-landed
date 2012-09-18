@@ -25,10 +25,11 @@ def build_url(base, path, args={}):
 
 class Connection(object):
     """Connection class to help with making HTTP requests."""
-    def __init__(self, base_url, username=None, password=None):
+    def __init__(self, base_url, username=None, password=None, default_headers={}):
         self._base_url = base_url
         self._auth = None
         self._ssl = False
+        self._default_headers = default_headers
         if username:
             assert password
             self._username = username
@@ -40,6 +41,7 @@ class Connection(object):
     @ndb.tasklet
     def request(self, url, payload=None, method='GET', headers={}, deadline=20):
         """Helper for making asynchornous HTTP requests."""
+        headers.update(self._default_headers)
         if self._auth:
             headers.update({
                 'Authorization': 'Basic %s' % self._auth,

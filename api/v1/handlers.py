@@ -18,14 +18,15 @@ from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 
 from main import BaseHandler, BaseAPIHandler, AuthenticatedAPIHandler
-from data_sources import FlightAwareSource, BingMapsDistanceSource, GoogleDistanceSource
+from data_sources import FlightAwareSource, FlightStatsSource, BingMapsDistanceSource, GoogleDistanceSource
 from custom_exceptions import *
 import utils
 
 from reporting import log_event, FlightSearchEvent, FlightSearchMissEvent, UserAtAirportEvent
 
-# Currently using FlightAware for flight data
+# Currently using FlightAware for flight data, FlightStats as fallback
 source = FlightAwareSource()
+fallback_source = FlightStatsSource()
 
 # Bing maps driving distance with Google as fallback
 distance_source = BingMapsDistanceSource()
@@ -56,21 +57,39 @@ class SearchHandler(AuthenticatedAPIHandler):
             else:
                 raise InvalidFlightNumberException(flight_number)
 
-        try:
-            log_event(FlightSearchEvent, user_id=uuid, flight_number=sanitized_f_num)
-            flights = yield source.lookup_flights(flight_number)
+        # Try primary datasource first, then the fallback
+        calls_to_try = [(source, flight_number), (fallback_source, flight_number)]
+        
+        # Try to translate their airline code to ICAO if first try fails
+        translated_f_num = utils.translate_flight_number_to_icao(flight_number)
+        if translated_f_num and translated_f_num != flight_number:
+            calls_to_try.insert(1, (source, translated_f_num))
+        
+        flights = []
+        for flight_source, f_num in calls_to_try:
+            try:
+                logging.info('SEARCHING')
+                log_event(FlightSearchEvent, 
+                            user_id=uuid, 
+                            flight_number=f_num,
+                            datasource=((isinstance(flight_source, FlightAwareSource) and 'FlightAware') or
+                                        'FlightStats'))
+                flights = yield flight_source.lookup_flights(f_num)
+                break # Exit the loop at the first success
+            
+            except CurrentFlightNotFoundException as e:
+                raise e # Not worth trying again, we found the flight but it's old
 
-        except CurrentFlightNotFoundException as e:
-            raise e # Not worth trying again, we found the flight but it's old
-
-        except FlightNotFoundException as e:
-            log_event(FlightSearchMissEvent, user_id=uuid, flight_number=sanitized_f_num)
-            # Flight lookup failed, see if we can translate their airline code
-            translated_f_num = utils.translate_flight_number_to_icao(flight_number)
-            if not translated_f_num:
-                raise e
-            flights = yield source.lookup_flights(translated_f_num)
-
+            except FlightNotFoundException as e:
+                log_event(FlightSearchMissEvent, 
+                            user_id=uuid, 
+                            flight_number=f_num,
+                            datasource=((isinstance(flight_source, FlightAwareSource) and 'FlightAware') or
+                                        'FlightStats'))
+                
+        if not flights:
+            raise FlightNotFoundException(flight_number)
+        
         flight_data = [f.dict_for_client() for f in flights]
         self.respond(flight_data)
 

@@ -340,6 +340,61 @@ def flightaware_credentials():
     app_mode = config['app']['mode']
     creds = config['flightaware'][app_mode]
     return creds['username'], creds['key']
+    
+    
+config['flightstats'] = {
+    # Credentials
+    'development' : {
+        'app_id' : 'd51d9640',
+        'key' : '01dfef3e110e1ea6556e0c3182d85110',
+    },
+    
+    'staging' : {
+        'app_id' : '62e0f757',
+        'key' : '73643d7daf2d7443ec5f4447aee750b4',
+    },
+    
+    'production' : {
+        'app_id' : '62e0f757',
+        'key' : 'e895b282959c7be40edbfac91f977953',
+    },
+    
+    'num_days_to_lookup' : 3,
+    
+    # Cache expiration for flight data from /search
+    'flight_lookup_cache_time' : 1800,
+    
+    # Cache expiration for fight data from /search that will be used by /track
+    'flight_from_lookup_cache_time' : 120,
+    
+    # Cache expiration time for flight data from /track
+    'flight_cache_time' : 3600,
+        
+    # Mapping of FlightStats API response keys to Just Landed API response keys
+    'key_mapping' : {
+        'flightId' : 'flightID',
+    },
+        
+    # Fields that should be retained from a /flightstatus response
+    'flight_info_fields' : [
+        'flightId',
+        'carrier',
+        'flightNumber',
+        'departureAirport',
+        'arrivalAirport',
+        'status',
+        'operationalTimes',
+        'flightDurations',
+        'airportResources',
+        'flightEquipment',
+    ], 
+}
+
+
+def flightstats_credentials():
+    app_mode = config['app']['mode']
+    creds = config['flightstats'][app_mode]
+    return creds['app_id'], creds['key']
 
 ###############################################################################
 """Driving Time Settings"""
