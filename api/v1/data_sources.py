@@ -1138,15 +1138,20 @@ class FlightStatsSource (FlightDataSource):
                     return utils.map_dict_keys(airport, mapping)
                 
                 sanitized_data = {
-                    'actualArrivalTime': operational_time('actualRunwayArrival'),
-                    'actualDepartureTime' : operational_time('actualRunwayDeparture'),
+                    'actualArrivalTime': operational_time('actualRunwayArrival',
+                                                operational_time('actualGateArrival')),
+                    'actualDepartureTime' : operational_time('actualRunwayDeparture',
+                                                operational_time('actualGateDeparture')),
                     'diverted' : data['status'] == 'D',
-                    'estimatedArrivalTime' : operational_time('estimatedRunwayArrival', -1),
+                    'estimatedArrivalTime' : operational_time('estimatedRunwayArrival',
+                                                operational_time('estimatedGateArrival',
+                                                    operational_time('scheduledGateArrival', -1))),
                     'flightID' : data['flightId'],
                     'flightNumber' : sanitized_flight_num,
                     'airlineName' : data['carrier']['name'],
                     'lastUpdated' : utils.timestamp(datetime.utcnow()),
-                    'scheduledDepartureTime' : operational_time('publishedDeparture', -1),
+                    'scheduledDepartureTime' : operational_time('publishedDeparture',
+                                                operational_time('scheduledGateDeparture', -1)),
                 }
                 
                 duration_mins = int(data['flightDurations'].get('scheduledAirMinutes') or 
@@ -1261,6 +1266,7 @@ class FlightStatsSource (FlightDataSource):
                     unique_results.append(f)
                     flight_ids.add(f['flightId'])
             
+            logging.info(unique_results)
             # Filter out old flights before conversion to Flight
             unique_results = [f for f in unique_results if not utils.is_old_fs_flight(f)]
             
