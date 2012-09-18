@@ -86,6 +86,45 @@ class Airport(ndb.Model):
                     longitude=utils.round_coord(self.location.lon),
                     timezone=self.timezone_name,
                     name=utils.proper_airport_name(self.name))
+            
+                    
+class Airline(ndb.Model):
+    """ Model associated with an Airline entity stored in the GAE datastore.
+
+    Fields:
+    - `icao_code` : The ICAO code of the airline.
+    - `iata_code` : The IATA code of the airline.
+    - `name` : The name of the airline.
+
+    """
+    icao_code = ndb.StringProperty('icao')
+    iata_code = ndb.StringProperty('iata')
+    name = ndb.TextProperty(required=True)
+    
+    @classmethod
+    @ndb.tasklet
+    def get_by_icao_code(cls, icao_code):
+        qry = cls.query(cls.icao_code == icao_code)
+        airline = yield qry.get_async()
+        raise tasklets.Return(airline)
+
+    @classmethod
+    @ndb.tasklet
+    def get_by_iata_code(cls, iata_code):
+        qry = cls.query(cls.iata_code == iata_code)
+        airline = yield qry.get_async()
+        raise tasklets.Return(airline)
+        
+    @classmethod
+    @ndb.tasklet
+    def name_for_code(cls, airline_code):
+        qry = cls.query(ndb.OR(cls.iata_code == airline_code,
+                               cls.icao_code == airline_code))
+        airline = yield qry.get_async()
+        if airline:
+            raise tasklets.Return(airline.name)
+        else:
+            raise tasklets.Return('')
 
 
 class FlightReminder(ndb.Model):
@@ -673,6 +712,14 @@ class Flight(object):
     @aircraft_type.setter
     def aircraft_type(self, value):
         self._data['aircraftType'] = value
+        
+    @property
+    def airline_name(self):
+        return self._data.get('airlineName')
+
+    @airline_name.setter
+    def airline_name(self, value):
+        self._data['airlineName'] = value
 
     @property
     def actual_arrival_time(self):
@@ -721,6 +768,14 @@ class Flight(object):
     @flight_id.setter
     def flight_id(self, value):
         self._data['flightID'] = value
+
+    @property
+    def flight_name(self):
+        return self._data.get('flightName')
+    
+    @flight_name.setter
+    def flight_name(self, value):
+        self._data['flightName'] = value
 
     @property
     def flight_number(self):

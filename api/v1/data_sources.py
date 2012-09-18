@@ -41,7 +41,7 @@ from google.appengine.runtime.apiproxy_errors import CapabilityDisabledError
 
 from config import config, on_development, flightaware_credentials
 from connections import Connection, build_url
-from models.v2 import (Airport, FlightAwareTrackedFlight, iOSUser,
+from models.v2 import (Airport, Airline, FlightAwareTrackedFlight, iOSUser,
     Origin, Destination, Flight)
 from custom_exceptions import *
 from notifications import *
@@ -268,6 +268,7 @@ class FlightAwareSource (FlightDataSource):
                             deadline=120,
                             validate_certificate=full_track_url.startswith('https'))
 
+    @ndb.tasklet
     def raw_flight_data_to_flight(self, data, sanitized_flight_num, airport_info={}, return_none_on_error=False):
         try:
             if data and utils.valid_flight_number(sanitized_flight_num):
@@ -293,6 +294,19 @@ class FlightAwareSource (FlightDataSource):
                 flight.flight_number = sanitized_flight_num
                 flight.origin = origin
                 flight.destination = destination
+                
+                # Figure out the airline name
+                airline_code, f_num_digits = utils.split_flight_number(sanitized_flight_num)
+                airline_name = ''
+                if airline_code is not None:
+                    airline_name = yield Airline.name_for_code(airline_code)
+                flight.airline_name = airline_name
+
+                # Figure out the flight name
+                if airline_name:
+                    flight.flight_name = '%s %s' % (airline_name, f_num_digits)
+                else:
+                    flight.flight_name = ''
 
                 # Convert flight duration to integer number of seconds
                 ete = data['scheduledFlightDuration']
@@ -312,15 +326,15 @@ class FlightAwareSource (FlightDataSource):
                 flight.origin.city = flight.origin.city.split(', ')[0]
                 flight.destination.city = flight.destination.city.split(', ')[0]
 
-                return flight
+                raise tasklets.Return(flight)
 
         except FlightDurationUnknown as e:
             if return_none_on_error:
                 logging.exception(e) # Report it, but recover gracefully
                 utils.sms_report_exception(e)
-                return
+                raise tasklets.Return()
             else:
-                raise # Re-raise the exception
+                raise e # Re-raise the exception
 
     @ndb.tasklet
     def airport_info(self, airport_code, flight_num='', raise_not_found=True):
@@ -524,7 +538,7 @@ class FlightAwareSource (FlightDataSource):
                 airport_codes = [flight_data['origin'], flight_data['destination']]
                 airports = yield [self.airport_info(code, sanitized_f_num) for code in airport_codes]
                 airport_info = dict(zip(airport_codes, airports))
-                flight = self.raw_flight_data_to_flight(flight_data, sanitized_f_num, airport_info)
+                flight = yield self.raw_flight_data_to_flight(flight_data, sanitized_f_num, airport_info)
 
             # We now have flight and airline_data
             fields = config['flightaware']['airline_flight_info_fields']
@@ -625,11 +639,11 @@ class FlightAwareSource (FlightDataSource):
                     utils.sms_report_exception(e)
 
             # Convert raw flight data to instances of Flight
-            flights = [self.raw_flight_data_to_flight(data,
+            flights = yield [self.raw_flight_data_to_flight(data,
                                                       sanitized_f_num,
                                                       airport_info,
                                                       return_none_on_error=True)
-                                for data in flight_data]
+                                    for data in flight_data]
             flights = [f for f in flights if f is not None] # Filter out bad results
 
             # If there are no good flights left, raise CurrentFlightNotFound

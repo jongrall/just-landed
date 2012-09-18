@@ -268,7 +268,6 @@ IATA_CODE_RE = re.compile('\A[A-Z0-9]{3}\Z')
 ICAO_CODE_RE = re.compile('\A[A-Z0-9]{4}\Z')
 AIRLINE_IATA_CODE_RE = re.compile('\A[A-Z0-9]{2}\Z')
 AIRLINE_ICAO_CODE_RE = re.compile('\A[A-Z0-9]{3}\Z')
-airlines_icao_to_iata = dictinvert(airlines_iata_to_icao)
 
 def sanitize_flight_number(f_num):
     """Cleans up a flight number - strips leading zeros from flight number, extra
@@ -351,19 +350,18 @@ def translate_flight_number_to_icao(f_num):
                     return None
     return None
 
-def split_flight_number(f_num, as_iata=True):
+def split_flight_number(f_num, prefer_icao=True):
     if valid_flight_number(f_num):
         f_num_san = sanitize_flight_number(f_num)
         matched_code = AIRLINE_CODE_RE.match(f_num_san)
         if matched_code:
             airline_code = matched_code.group(0)
             f_num_digits = f_num_san[len(airline_code):]
-            # Translate the airline code to/from ICAO/IATA as needed
-            if is_valid_airline_icao(airline_code) and as_iata:
-                airline_code = (airlines_icao_to_iata.get(airline_code) and 
-                               airlines_icao_to_iata.get(airline_code)[0])
-            elif is_valid_airline_iata(airline_code) and not as_iata:
-                airline_code = airlines_iata_to_icao.get(airline_code)
+            # If we prefer ICAO codes, try to convert to ICAO
+            if prefer_icao and is_valid_airline_iata(airline_code):
+                icao_result = airlines_iata_to_icao.get(airline_code)
+                if is_valid_airline_icao(icao_result):
+                    airline_code = icao_result
             # Ensure the flight number is still valid
             if airline_code and valid_flight_number(airline_code + f_num_digits):
                 return airline_code, f_num_digits
