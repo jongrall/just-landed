@@ -1,0 +1,2 @@
+#!/bin/bash
+appcfg.py upload_data --config_file=airline_loader.yaml --filename=airlines.csv --kind=Airline --rps_limit=25 --num_threads=5 --application=dev~just-landed --url=http://localhost:8082/_ah/remote_api
