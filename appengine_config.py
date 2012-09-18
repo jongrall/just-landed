@@ -22,7 +22,7 @@ appstats_MAX_DEPTH = 10
 
 def webapp_add_wsgi_middleware(app):
     # Optimization: only add appstats middleware in the development environment
-appstats_enabled = False
+    appstats_enabled = False
     if not appstats_enabled or on_production():
         return app
 
