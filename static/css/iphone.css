@@ -73,3 +73,7 @@ a.app-store-button img {
 #footer a {
     margin-right: 20px;
 }
+
+#footer .footer-wrapper {
+	left: 0;
+}

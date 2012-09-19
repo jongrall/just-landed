@@ -129,6 +129,11 @@ ol li {
     color: #4d7fa5;
 }
 
+#footer .footer-wrapper {
+	position: relative;
+	left: -20px;
+}
+
 #copyright {
     text-align: center;
     padding: 14px 0 0 0;
