@@ -38,7 +38,7 @@ class Connection(object):
             self._ssl = True
 
     @ndb.tasklet
-    def request(self, url, payload=None, method='GET', headers={}, deadline=20):
+    def request(self, url, payload=None, method='GET', headers={}, deadline=10):
         """Helper for making asynchornous HTTP requests."""
         if self._auth:
             headers.update({
@@ -51,7 +51,7 @@ class Connection(object):
         raise ndb.Return(result)
 
     @ndb.tasklet
-    def get_json(self, path, args, payload=None, headers={}, deadline=20):
+    def get_json(self, path, args, payload=None, headers={}, deadline=10):
         """Convenience function for issuing a JSON GET request."""
         url = build_url(self._base_url, path, args)
         result = yield self.request(url, payload=payload, method='GET', headers=headers,

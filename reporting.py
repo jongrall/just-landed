@@ -22,7 +22,6 @@ import json
 
 from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
-from google.appengine.api.urlfetch import DownloadError
 from google.appengine.ext import ndb
 from google.appengine.ext.ndb import tasklets
 

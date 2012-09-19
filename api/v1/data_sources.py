@@ -37,7 +37,8 @@ from google.appengine.api import memcache, taskqueue
 from google.appengine.ext import ndb
 from google.appengine.ext.ndb import tasklets
 from google.appengine.api.urlfetch import DownloadError
-from google.appengine.runtime.apiproxy_errors import CapabilityDisabledError
+from google.appengine.runtime.apiproxy_errors import (CapabilityDisabledError,
+DeadlineExceededError)
 
 from config import config, on_development, flightaware_credentials
 from connections import Connection, build_url
@@ -373,7 +374,7 @@ class FlightAwareSource (FlightDataSource):
                     try:
                         result = yield self.conn.get_json('/AirportInfo',
                                                         args={'airportCode':airport_code})
-                    except DownloadError:
+                    except (DownloadError, DeadlineExceededError) as e:
                         raise FlightAwareUnavailableError()
 
                     report_event(reporting.FA_AIRPORT_INFO)
@@ -431,7 +432,7 @@ class FlightAwareSource (FlightDataSource):
             result = yield self.conn.get_json('/RegisterAlertEndpoint',
                                             args={'address': endpoint_url,
                                                   'format_type': 'json/post'})
-        except DownloadError:
+        except (DownloadError, DeadlineExceededError) as e:
             raise FlightAwareUnavailableError()
 
         error = result.get('error')
@@ -504,7 +505,7 @@ class FlightAwareSource (FlightDataSource):
                                                         args={'faFlightID': flight_id,
                                                               'howMany': 1})
                     report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
-                except DownloadError:
+                except (DownloadError, DeadlineExceededError) as e:
                     raise FlightAwareUnavailableError()
 
                 if airline_data.get('error'):
@@ -523,7 +524,7 @@ class FlightAwareSource (FlightDataSource):
                     flight_data, airline_data = yield to_fetch
                     report_event(reporting.FA_FLIGHT_INFO_EX)
                     report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
-                except DownloadError:
+                except (DownloadError, DeadlineExceededError) as e:
                     raise FlightAwareUnavailableError()
 
                 if flight_data.get('error'):
@@ -599,7 +600,7 @@ class FlightAwareSource (FlightDataSource):
                                                     args={'ident': sanitized_f_num,
                                                     'howMany': 15,
                                                     'offset' : offset})
-                except DownloadError:
+                except (DownloadError, DeadlineExceededError) as e:
                     raise FlightAwareUnavailableError()
 
                 report_event(reporting.FA_FLIGHT_INFO_EX)
@@ -808,7 +809,7 @@ class FlightAwareSource (FlightDataSource):
                                     'ident': flight_num,
                                     'channels': channels,
                                     'max_weekly': 1000})
-        except DownloadError:
+        except (DownloadError, DeadlineExceededError) as e:
             raise FlightAwareUnavailableError()
 
         error = result.get('error')
@@ -829,7 +830,7 @@ class FlightAwareSource (FlightDataSource):
     def get_all_alerts(self):
         try:
             result = yield self.conn.get_json('/GetAlerts', args={})
-        except DownloadError:
+        except (DownloadError, DeadlineExceededError) as e:
             raise FlightAwareUnavailableError()
 
         report_event(reporting.FA_GET_ALERTS)
@@ -849,7 +850,7 @@ class FlightAwareSource (FlightDataSource):
         try:
             result = yield self.conn.get_json('/DeleteAlert',
                                             args={'alert_id':alert_id})
-        except DownloadError:
+        except (DownloadError, DeadlineExceededError) as e:
             raise FlightAwareUnavailableError()
 
         report_event(reporting.FA_DELETED_ALERT)
@@ -1154,7 +1155,7 @@ class GoogleDistanceSource (DrivingTimeDataSource):
 
             try:
                 data = yield self.conn.get_json('/json', args=params)
-            except DownloadError:
+            except (DownloadError, DeadlineExceededError) as e:
                 raise GoogleDistanceAPIUnavailableError()
 
             report_event(reporting.GOOG_FETCH_DRIVING_TIME)
@@ -1250,7 +1251,7 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
 
             try:
                 data = yield self.conn.get_json('/Routes', args=params)
-            except DownloadError:
+            except (DownloadError, DeadlineExceededError) as e:
                 raise BingMapsUnavailableError()
 
             report_event(reporting.BING_FETCH_DRIVING_TIME)
