@@ -374,7 +374,7 @@ class FlightAwareSource (FlightDataSource):
                     try:
                         result = yield self.conn.get_json('/AirportInfo',
                                                         args={'airportCode':airport_code})
-                    except (DownloadError, DeadlineExceededError) as e:
+                    except (DownloadError, DeadlineExceededError, ValueError) as e:
                         raise FlightAwareUnavailableError()
 
                     report_event(reporting.FA_AIRPORT_INFO)
@@ -432,7 +432,7 @@ class FlightAwareSource (FlightDataSource):
             result = yield self.conn.get_json('/RegisterAlertEndpoint',
                                             args={'address': endpoint_url,
                                                   'format_type': 'json/post'})
-        except (DownloadError, DeadlineExceededError) as e:
+        except (DownloadError, DeadlineExceededError, ValueError) as e:
             raise FlightAwareUnavailableError()
 
         error = result.get('error')
@@ -505,7 +505,7 @@ class FlightAwareSource (FlightDataSource):
                                                         args={'faFlightID': flight_id,
                                                               'howMany': 1})
                     report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
-                except (DownloadError, DeadlineExceededError) as e:
+                except (DownloadError, DeadlineExceededError, ValueError) as e:
                     raise FlightAwareUnavailableError()
 
                 if airline_data.get('error'):
@@ -524,7 +524,7 @@ class FlightAwareSource (FlightDataSource):
                     flight_data, airline_data = yield to_fetch
                     report_event(reporting.FA_FLIGHT_INFO_EX)
                     report_event(reporting.FA_AIRLINE_FLIGHT_INFO)
-                except (DownloadError, DeadlineExceededError) as e:
+                except (DownloadError, DeadlineExceededError, ValueError) as e:
                     raise FlightAwareUnavailableError()
 
                 if flight_data.get('error'):
@@ -600,7 +600,7 @@ class FlightAwareSource (FlightDataSource):
                                                     args={'ident': sanitized_f_num,
                                                     'howMany': 15,
                                                     'offset' : offset})
-                except (DownloadError, DeadlineExceededError) as e:
+                except (DownloadError, DeadlineExceededError, ValueError) as e:
                     raise FlightAwareUnavailableError()
 
                 report_event(reporting.FA_FLIGHT_INFO_EX)
@@ -809,7 +809,7 @@ class FlightAwareSource (FlightDataSource):
                                     'ident': flight_num,
                                     'channels': channels,
                                     'max_weekly': 1000})
-        except (DownloadError, DeadlineExceededError) as e:
+        except (DownloadError, DeadlineExceededError, ValueError) as e:
             raise FlightAwareUnavailableError()
 
         error = result.get('error')
@@ -830,7 +830,7 @@ class FlightAwareSource (FlightDataSource):
     def get_all_alerts(self):
         try:
             result = yield self.conn.get_json('/GetAlerts', args={})
-        except (DownloadError, DeadlineExceededError) as e:
+        except (DownloadError, DeadlineExceededError, ValueError) as e:
             raise FlightAwareUnavailableError()
 
         report_event(reporting.FA_GET_ALERTS)
@@ -850,7 +850,7 @@ class FlightAwareSource (FlightDataSource):
         try:
             result = yield self.conn.get_json('/DeleteAlert',
                                             args={'alert_id':alert_id})
-        except (DownloadError, DeadlineExceededError) as e:
+        except (DownloadError, DeadlineExceededError, ValueError) as e:
             raise FlightAwareUnavailableError()
 
         report_event(reporting.FA_DELETED_ALERT)
