@@ -5,6 +5,7 @@
 *.xcscheme
 bin
 build
+dist
 develop-eggs
 downloads
 eggs
@@ -13,7 +14,6 @@ parts
 test-coverage
 .DS_Store
 .coverage
-simplylisted/web/static/src/
 *~
 *bulkloader-progress*
 *bulkloader-log*
