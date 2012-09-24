@@ -9,7 +9,6 @@ python_preamble:
 - import: google.appengine.ext.bulkload.bulkloader_wizard
 - import: google.appengine.ext.db
 - import: google.appengine.api.datastore
-- import: google.appengine.api.users
 - import: uploadutil
 
 transformers:

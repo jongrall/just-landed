@@ -1,0 +1,29 @@
+#!/bin/bash
+OPTIONS=""
+APPLICATION=""
+URL=""
+
+case "$1" in
+'development')
+    OPTIONS="--rps_limit=25 --num_threads=5"
+    APPLICATION="dev~just-landed"
+    URL="http://localhost:8082/_ah/remote_api"
+    ;;
+'staging')
+    APPLICATION="s~just-landed-staging"
+    URL="https://just-landed-staging.appspot.com/_ah/remote_api"
+    ;;
+
+'production')
+    APPLICATION="s~just-landed"
+    URL="https://just-landed.appspot.com/_ah/remote_api"
+    ;;
+*)
+    echo "Please specify the desired environment: 'development', 'staging' or 'production'."
+    exit 1
+    ;;
+esac
+
+appcfg.py upload_data --email=webmaster@getjustlanded.com --config_file=airport_loader.yaml --filename=airports_rev.csv --kind=Airport $OPTIONS --application=$APPLICATION --url=$URL
+rm bulkloader*
+exit 0
