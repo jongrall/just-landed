@@ -1,3 +1,1 @@
-recursive-include server *.yaml Makefile
-recursive-include server/static *
-recursive-include server/templates *
+recursive-include server *
