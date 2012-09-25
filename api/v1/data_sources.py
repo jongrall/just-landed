@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """data_sources.py: This module defines all the data sources that power
 the Just Landed app.
 
@@ -48,7 +46,7 @@ from custom_exceptions import *
 from notifications import *
 
 import utils
-import aircraft_types
+from data import aircraft_types
 
 import reporting
 from reporting import report_event, report_event_transactionally, log_event_transactionally, FlightTrackedEvent
@@ -295,7 +293,7 @@ class FlightAwareSource (FlightDataSource):
                 flight.flight_number = sanitized_flight_num
                 flight.origin = origin
                 flight.destination = destination
-                
+
                 # Figure out the airline name
                 airline_code, f_num_digits = utils.split_flight_number(sanitized_flight_num)
                 airline_name = ''
@@ -453,7 +451,7 @@ class FlightAwareSource (FlightDataSource):
         """
         flight_number = kwargs.get('flight_number')
         use_cache = kwargs.get('use_cache')
-        
+
         # Default to using cache if not specified
         if use_cache is None:
             use_cache = True
@@ -492,7 +490,7 @@ class FlightAwareSource (FlightDataSource):
                 flight = memcache.get(flight_result_cache_key)
             elif debug_cache:
                 logging.info('IGNORING LOOKUP CACHE')
-                
+
             airline_data = None
 
             if flight:
@@ -706,7 +704,7 @@ class FlightAwareSource (FlightDataSource):
         else:
             flight_num = stored_flight.user_flight_num
             alerted_flight = None
-            
+
             # Cache freshness: clear memcache keys for lookup
             FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
@@ -905,18 +903,18 @@ class FlightAwareSource (FlightDataSource):
         send_reminders = kwargs.get('send_reminders')
         send_flight_events = kwargs.get('send_flight_events')
         play_flight_sounds = kwargs.get('play_flight_sounds')
-        
+
         flight = Flight.from_dict(flight_data)
         flight_id = flight.flight_id
         user_key = ndb.Key(iOSUser, uuid) # FIXME: Assumes iOS
         flight_key = ndb.Key(FlightAwareTrackedFlight, flight_id, parent=user_key)
         now = datetime.utcnow()
         alert_id = 0
-                
+
         # Set an alert_id if we don't have one or it isn't enabled
         existing_flight = yield flight_key.get_async()
         if not existing_flight or existing_flight.alert_id == 0:
-            alert_id = yield self.set_alert(flight_id=flight_id)        
+            alert_id = yield self.set_alert(flight_id=flight_id)
 
         @ndb.tasklet
         def track_txn():
@@ -997,22 +995,22 @@ class FlightAwareSource (FlightDataSource):
             # delayed tracking tasks.
             if driving_time and not already_tracking:
                 delayed_track_tasks = []
-                
+
                 # Allow for 75% fluctuation in driving time
                 first_check_time = utils.leave_now_time(flight,
                                                         (driving_time * 1.75))
-                                                        
+
                 # Check again at leave soon minus 1 min, want to beat the cron job
                 second_check_time = utils.leave_soon_time(flight,
                                                           driving_time,
                                                           tracked_flight.reminder_lead_time) - timedelta(seconds=60)
-                                                          
+
                 check_times = [first_check_time, second_check_time]
                 delayed_track_tasks = [taskqueue.Task(params={
                                                         'flight_id' : flight_id,
                                                         'uuid' : uuid
                                                         }, eta=ct) for ct in check_times if ct > now]
-                
+
                 # Optimization: batch task add
                 if delayed_track_tasks:
                     taskqueue.Queue('delayed-track').add(delayed_track_tasks, transactional=True)
@@ -1112,7 +1110,7 @@ class GoogleDistanceSource (DrivingTimeDataSource):
     @ndb.tasklet
     def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
         """Implements driving_time method of DrivingTimeDataSource.
-        
+
         Fields:
         - `origin_lat` : The latitude of the origin to route from.
         - `origin_lon` : The longitude of the origin to route from.
@@ -1120,18 +1118,18 @@ class GoogleDistanceSource (DrivingTimeDataSource):
         - `dest_lon` : The longitude of the destination to route to.
         - `use_cache` : Whether or not to use memcache. Will always update the cache
                         when fetching new data regardless of whether this is set.
-                        
+
         """
         driving_cache_key = GoogleDistanceSource.driving_cache_key(origin_lat,
                                                                    origin_lon,
                                                                    dest_lat,
                                                                    dest_lon)
         use_cache = kwargs.get('use_cache')
-        
+
         # Default to using cache if not specified
         if use_cache is None:
             use_cache = True
-        
+
         time = None
         if use_cache:
             time = memcache.get(driving_cache_key)
@@ -1207,7 +1205,7 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
     @ndb.tasklet
     def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
         """Implements driving_time method of DrivingTimeDataSource.
-        
+
         Fields:
         - `origin_lat` : The latitude of the origin to route from.
         - `origin_lon` : The longitude of the origin to route from.
@@ -1215,18 +1213,18 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
         - `dest_lon` : The longitude of the destination to route to.
         - `use_cache` : Whether or not to use memcache. Will always update the cache
                         when fetching new data regardless of whether this is set.
-                        
+
         """
         driving_cache_key = BingMapsDistanceSource.driving_cache_key(origin_lat,
                                                                     origin_lon,
                                                                     dest_lat,
-                                                                    dest_lon)                                                        
+                                                                    dest_lon)
         use_cache = kwargs.get('use_cache')
-        
+
         # Default to using cache if not specified
         if use_cache is None:
             use_cache = True
-        
+
         time = None
         if use_cache:
             time = memcache.get(driving_cache_key)

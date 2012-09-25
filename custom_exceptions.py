@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """custom_exceptions.py: defines all the exceptions thrown by Just Landed."""
 
 __author__ = "Jon Grall"
@@ -63,7 +61,7 @@ class FlightNotFoundException(Exception):
     def __init__(self, flight=''):
         self.message = 'Flight not found: %s' % flight
         self.code = 404 # Not found
-        
+
 class CurrentFlightNotFoundException(FlightNotFoundException):
     def __init__(self, flight=''):
         super(CurrentFlightNotFoundException, self).__init__()

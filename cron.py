@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """cron.py: Handlers for cron jobs."""
 
 __author__ = "Jon Grall"

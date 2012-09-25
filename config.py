@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """config.py: This module contains all settings for the Just Landed app."""
 
 __author__ = "Jon Grall"

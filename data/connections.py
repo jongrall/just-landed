@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """connections.py: Utilities for fetching URLs using urllib2 and urllib."""
 
 __author__ = "Jon Grall"

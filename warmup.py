@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """warmup.py: Pre-caching Application Code via a Warmup Handler."""
 
 __author__ = "Jon Grall"
@@ -19,11 +17,11 @@ if LIB_DIR not in sys.path:
 class WarmupWorker(webapp.RequestHandler):
     """Optimization: Warmup handler that pre-caches application code."""
     def get(self):
-        import aircraft_types
         import api.v1
         import config
         import cron
         import custom_exceptions
+        import data
         import main
         import models.v2
         import notifications

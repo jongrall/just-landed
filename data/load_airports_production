@@ -1,2 +1,0 @@
-#!/bin/bash
-appcfg.py upload_data --config_file=airport_loader.yaml --filename=airports_rev.csv --kind=Airport --application=s~just-landed --url=https://just-landed.appspot.com/_ah/remote_api

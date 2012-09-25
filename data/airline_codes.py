@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """airline_codes.py: Utilities for mapping airline IATA codes to ICAO codes."""
 
 __author__ = "Jon Grall"

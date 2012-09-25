@@ -9,8 +9,6 @@ python_preamble:
 - import: google.appengine.ext.bulkload.bulkloader_wizard
 - import: google.appengine.ext.db
 - import: google.appengine.api.datastore
-- import: google.appengine.api.users
-- import: uploadutil
 
 transformers:
 - kind: Airline
@@ -19,10 +17,6 @@ transformers:
     encoding: utf-8
     columns: from_header
   property_map:
-    - property: __key__
-      external_name: key
-      import_transform: uploadutil.make_key
-
     - property: icao
       external_name: icao
       import_transform: transform.none_if_empty(unicode)

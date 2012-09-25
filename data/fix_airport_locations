@@ -19,7 +19,7 @@ from connections import Connection
 GOOGLE_PLACES_KEY = 'AIzaSyCN0SpDuAhLxC9bH9gFsGMO2PPlNo7PDLw'
 MAX_TO_PROCESS = 0
 
-def main():
+def scrub_locations():
     # Load the files
     src_count = len(open('airports.csv', 'rU').readlines())
 
@@ -161,4 +161,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    scrub_locations()

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """uploadutil.py: Helper functions used in the transformation of airport data
 when bulk uploading from airports.csv to the datastore.
 

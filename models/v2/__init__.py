@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """models.py: This module defines model classes used by the Just Landed app.
 
 Some of these models are persisted to the GAE datastore, while others exist only
@@ -86,8 +84,8 @@ class Airport(ndb.Model):
                     longitude=utils.round_coord(self.location.lon),
                     timezone=self.timezone_name,
                     name=utils.proper_airport_name(self.name))
-            
-                    
+
+
 class Airline(ndb.Model):
     """ Model associated with an Airline entity stored in the GAE datastore.
 
@@ -100,7 +98,7 @@ class Airline(ndb.Model):
     icao_code = ndb.StringProperty('icao')
     iata_code = ndb.StringProperty('iata')
     name = ndb.TextProperty(required=True)
-    
+
     @classmethod
     @ndb.tasklet
     def get_by_icao_code(cls, icao_code):
@@ -114,7 +112,7 @@ class Airline(ndb.Model):
         qry = cls.query(cls.iata_code == iata_code)
         airline = yield qry.get_async()
         raise tasklets.Return(airline)
-        
+
     @classmethod
     @ndb.tasklet
     def name_for_code(cls, airline_code):
@@ -322,7 +320,7 @@ class FlightAwareTrackedFlight(_TrackedFlight):
             self.reminder_lead_time = reminder_lead_time
             if debug_datastore:
                 logging.info('FLIGHT REMINDER LEAD TIME CHANGED %d' % reminder_lead_time)
-                
+
         # If we have driving time, update their reminders
         if driving_time is not None:
             self.set_or_update_flight_reminders(flight, driving_time)
@@ -466,7 +464,7 @@ class iOSUser(_User):
         raise tasklets.Return(user)
 
     @classmethod
-    def create(cls, uuid, app_version=None, preferred_language=None, 
+    def create(cls, uuid, app_version=None, preferred_language=None,
                user_latitude=None, user_longitude=None, push_token=None,
                send_reminders=None, send_flight_events=None, play_flight_sounds=None):
         assert utils.is_valid_uuid(uuid)
@@ -480,11 +478,11 @@ class iOSUser(_User):
             user.push_token = push_token
         if user_latitude is not None and user_longitude is not None:
             user.last_known_location = ndb.GeoPt(user_latitude, lon=user_longitude)
-            
+
         user.update_push_settings(send_reminders=send_reminders,
                                   send_flight_events=send_flight_events,
-                                  play_flight_sounds=play_flight_sounds)    
-                                          
+                                  play_flight_sounds=play_flight_sounds)
+
         if debug_datastore:
             logging.info('CREATED NEW USER %s' % uuid)
         return user
@@ -497,7 +495,7 @@ class iOSUser(_User):
         for setting in PUSH_SETTINGS:
             settings.append(PushNotificationSetting(name=setting, value=True))
         return settings
-        
+
     def update_push_settings(self, send_reminders=None, send_flight_events=None,
                              play_flight_sounds=None):
         # Add any missing settings
@@ -505,7 +503,7 @@ class iOSUser(_User):
         missing_settings = [name for name in PUSH_SETTINGS if name not in existing_settings]
         for setting in missing_settings:
             self.push_settings.append(PushNotificationSetting(name=setting, value=True))
-                             
+
         for setting in self.push_settings:
             if setting.name in REMINDER_TYPES and send_reminders is not None:
                 setting.value = bool(send_reminders)
@@ -516,7 +514,7 @@ class iOSUser(_User):
             elif setting.name == PUSH_SETTINGS.PLAY_FLIGHT_SOUNDS and play_flight_sounds is not None:
                 setting.value = bool(play_flight_sounds)
 
-    def update(self, app_version=None, preferred_language=None, 
+    def update(self, app_version=None, preferred_language=None,
                user_latitude=None, user_longitude=None, push_token=None,
                send_reminders=None, send_flight_events=None, play_flight_sounds=None):
         if debug_datastore:
@@ -525,7 +523,7 @@ class iOSUser(_User):
         # Only update the version if it has changed
         if app_version and app_version != self.app_version:
             self.app_version = app_version
-            
+
         # Only update the language if it has changed
         if preferred_language and preferred_language != self.preferred_language:
             self.preferred_language = preferred_language
@@ -542,11 +540,11 @@ class iOSUser(_User):
             self.push_token = push_token
             if debug_datastore:
                 logging.info('USER PUSH TOKEN UPDATED')
-                
+
         # Update the push settings
         self.update_push_settings(send_reminders=send_reminders,
                                   send_flight_events=send_flight_events,
-                                  play_flight_sounds=play_flight_sounds)   
+                                  play_flight_sounds=play_flight_sounds)
 
     def wants_notification_type(self, push_type):
         assert push_type
@@ -554,7 +552,7 @@ class iOSUser(_User):
             if setting.name == push_type:
                 return setting.value
         return True # Default is True
-    
+
     def wants_flight_sounds(self):
         for setting in self.push_settings:
             if setting.name == PUSH_SETTINGS.PLAY_FLIGHT_SOUNDS:
@@ -712,7 +710,7 @@ class Flight(object):
     @aircraft_type.setter
     def aircraft_type(self, value):
         self._data['aircraftType'] = value
-        
+
     @property
     def airline_name(self):
         return self._data.get('airlineName')
@@ -772,7 +770,7 @@ class Flight(object):
     @property
     def flight_name(self):
         return self._data.get('flightName')
-    
+
     @flight_name.setter
     def flight_name(self, value):
         self._data['flightName'] = value

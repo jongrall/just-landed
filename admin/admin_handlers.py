@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """admin_handlers.py: Module that defines admin web handlers."""
 
 __author__ = "Jon Grall"

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """utils.py: Utility methods used by the Just Landed app."""
 
 __author__ = "Jon Grall"
@@ -24,7 +22,7 @@ from google.appengine.ext import webapp
 from config import config, api_secret, on_production
 from lib.twilio.rest import TwilioRestClient
 from lib import ipaddr, pysolar
-from airline_codes import airlines_iata_to_icao
+from data.airline_codes import airlines_iata_to_icao
 
 EARTH_RADIUS = 6378135
 METERS_IN_MILE = 1609.344
@@ -51,7 +49,7 @@ def text_to_html(text):
 
     lines = [reindent(line).rstrip() for line in text.splitlines()]
     return '<br />'.join(lines)
-        
+
 def sub_dict_strict(somedict, somekeys):
     """Returns a new dictionary containing only the keys specified. If specified
     keys are not present in the dictionary, it will raise a KeyError (strict).
@@ -159,7 +157,7 @@ def sanitize_int(s, default=None):
         return int(s)
     else:
         return default
-        
+
 def sanitize_float(s, default=None):
     if is_float(s):
         return float(s)
@@ -171,7 +169,7 @@ def sanitize_bool(s, default=True):
         return bool(int(s))
     else:
         return default
-        
+
 def sanitize_positive_int(s, default=None):
     if is_int(s):
         return abs(int(s))

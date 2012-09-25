@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """handlers.py: This module defines the Just Landed API handlers. All
 requests by Just Landed clients are routed through here.
 
@@ -158,15 +156,15 @@ class TrackHandler(AuthenticatedAPIHandler):
         send_reminders = self.request.params.get('send_reminders')
         send_flight_events = self.request.params.get('send_flight_events')
         play_flight_sounds = self.request.params.get('play_flight_sounds')
-        
+
         # /track requests from server should not use the cache - we want the latest data
         use_cache = self.client != 'Server'
-                
+
         assert utils.is_valid_uuid(uuid)
-        
+
         if not utils.is_valid_flight_id(flight_id):
             raise InvalidFlightNumberException(flight_id)
-        
+
         # Get the current flight information
         flight = yield source.flight_info(flight_id=flight_id,
                                           flight_number=flight_number,
@@ -316,7 +314,7 @@ class AlertHandler(BaseAPIHandler):
 
             # Optimization: defer processing the alert
             content_header = self.request.headers.get('Content-Type') or 'text/plain'
-            
+
             # FIXME: Ugly hack to introduce a delay in alert processing. This is needed
             # because there is a propagation delay in FlightAware's system that means
             # /FlightInfoEx is not guaranteed to immediately return consistent data after an alert.

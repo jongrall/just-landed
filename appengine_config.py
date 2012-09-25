@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """appengine_config.py: Additional App-Engine specific config."""
 
 __author__ = "Jon Grall"

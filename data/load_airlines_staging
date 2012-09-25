@@ -1,2 +1,0 @@
-#!/bin/bash
-appcfg.py upload_data --config_file=airline_loader.yaml --filename=airlines.csv --kind=Airline --application=s~just-landed-staging --url=https://just-landed-staging.appspot.com/_ah/remote_api
