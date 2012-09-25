@@ -18,8 +18,6 @@ standardized in config.py so that switching to new data sources in the future
 will not break clients that are expecting a specific API from the JustLanded
 server.
 
-TODO: Document request & response formats.
-
 """
 
 __author__ = "Jon Grall"
@@ -35,8 +33,7 @@ from google.appengine.api import memcache, taskqueue
 from google.appengine.ext import ndb
 from google.appengine.ext.ndb import tasklets
 from google.appengine.api.urlfetch import DownloadError
-from google.appengine.runtime.apiproxy_errors import (CapabilityDisabledError,
-DeadlineExceededError)
+from google.appengine.runtime.apiproxy_errors import DeadlineExceededError
 
 from config import config, on_development, flightaware_credentials
 from connections import Connection, build_url
@@ -49,7 +46,7 @@ import utils
 from data import aircraft_types
 
 import reporting
-from reporting import report_event, report_event_transactionally, log_event_transactionally, FlightTrackedEvent
+from reporting import report_event, log_event_transactionally, FlightTrackedEvent
 
 FLIGHT_STATES = config['flight_states']
 PUSH_TYPES = config['push_types']
@@ -58,7 +55,7 @@ debug_alerts = on_development() and False
 memcache_client = memcache.Client()
 
 ###############################################################################
-"""Flight Data Sources"""
+# Flight Data Sources
 ###############################################################################
 
 class FlightDataSource (object):
@@ -150,7 +147,7 @@ class FlightDataSource (object):
 
 
 ###############################################################################
-"""FlightAware"""
+# FlightAware
 ###############################################################################
 
 
@@ -190,7 +187,7 @@ class FlightAwareSource (FlightDataSource):
 
         # Optimization: multi-key delete
         if memcache.delete_multi(keys) and debug_cache:
-            logging.info('DELETED FLIGHT INFO CACHE KEYS %s' % keys)
+            logging.info('DELETED FLIGHT INFO CACHE KEYS %s', keys)
 
     @classmethod
     def clear_flight_lookup_cache(cls, flight_numbers=[]):
@@ -201,7 +198,7 @@ class FlightAwareSource (FlightDataSource):
         if cache_keys:
             # Optimization: Multi-key delete
             if memcache.delete_multi(cache_keys) and debug_cache:
-                logging.info('DELETED LOOKUP CACHE KEYS %s' % cache_keys)
+                logging.info('DELETED LOOKUP CACHE KEYS %s', cache_keys)
 
     @property
     def base_url(self):
@@ -212,6 +209,7 @@ class FlightAwareSource (FlightDataSource):
         return config['flightaware']['key_mapping']
 
     def __init__(self):
+        super(FlightAwareSource, self).__init__()
         uname, pwd = flightaware_credentials()
         self.conn = Connection(self.base_url, username=uname, password=pwd)
 
@@ -229,7 +227,7 @@ class FlightAwareSource (FlightDataSource):
 
         # Don't track if we don't need to
         if (not flight or not user.push_enabled or not flight.has_unsent_reminders):
-           return
+            raise tasklets.Return()
 
         user_flight_num = flight.user_flight_num
 

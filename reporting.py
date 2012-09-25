@@ -21,7 +21,6 @@ import json
 from google.appengine.api import taskqueue
 from google.appengine.api import urlfetch
 from google.appengine.ext import ndb
-from google.appengine.ext.ndb import tasklets
 
 from main import BaseHandler
 from config import config, on_development, on_staging, google_analytics_account, domain_name
@@ -34,7 +33,7 @@ from lib import pyga
 debug_reporting = on_development() and False
 
 ###############################################################################
-"""Flight Counters"""
+# Flight Counters
 ###############################################################################
 
 FLIGHT_TAKEOFF = 'Flight.Takeoff'
@@ -45,7 +44,7 @@ FLIGHT_CHANGE = 'Flight.Change'
 FLIGHT_TERMINAL_CHANGE = 'Flight.TerminalChange'
 
 ###############################################################################
-"""Cron Counters"""
+# Cron Counters
 ###############################################################################
 
 UNTRACKED_OLD_FLIGHT = 'Cron.UntrackedOldFlight'
@@ -54,7 +53,7 @@ SENT_LEAVE_NOW_NOTIFICATION = 'Cron.SentLeaveNow'
 DELETED_ORPHANED_ALERT = 'Cron.DeletedOrphanedAlert'
 
 ###############################################################################
-"""3rd Party API Usage Counters"""
+# 3rd Party API Usage Counters
 ###############################################################################
 
 FA_AIRPORT_INFO = 'FlightAware.AirportInfo'
@@ -68,7 +67,7 @@ GOOG_FETCH_DRIVING_TIME = 'Google.DrivingTime'
 BING_FETCH_DRIVING_TIME = 'Bing.DrivingTime'
 
 ###############################################################################
-"""Reporting Service"""
+# Reporting Service
 ###############################################################################
 
 class ReportingService(object):
@@ -84,6 +83,7 @@ class MixpanelService(ReportingService):
 
     """
     def __init__(self):
+        super(MixpanelService, self).__init__()
         self._report_url = 'http://api.mixpanel.com/track/?data=' # HTTPS supported but not used
 
         if on_development():
@@ -98,7 +98,7 @@ class MixpanelService(ReportingService):
         assert isinstance(event_name, basestring) and len(event_name)
 
         if debug_reporting:
-            logging.info('Reporting event: %s' % event_name)
+            logging.info('Reporting event: %s', event_name)
 
         # Add in the token
         properties['token'] = self._token
@@ -129,6 +129,7 @@ class GoogleAnalyticsService(ReportingService):
     """A concrete implementation of an event reporting service. Service is
     provided by Google Analytics."""
     def __init__(self):
+        super(GoogleAnalyticsService, self).__init__()
         from pyga.requests import Tracker
         from pyga.entities import Visitor
         from pyga.entities import Event
@@ -143,7 +144,7 @@ class GoogleAnalyticsService(ReportingService):
         from pyga.entities import Session
 
         if debug_reporting:
-            logging.info('Reporting event: %s' % event_name)
+            logging.info('Reporting event: %s', event_name)
 
         props = (properties and unicode(properties)) or None
         event = self._eventClass(category='GAE Server',
@@ -160,7 +161,7 @@ class GoogleAnalyticsService(ReportingService):
             logging.exception(e)
 
 ###############################################################################
-"""Events Stored in the Datastore"""
+# Events Stored in the Datastore
 ###############################################################################
 
 class _Event(ndb.Model):
@@ -237,9 +238,8 @@ class UserAtAirportEvent(_UserEvent):
     def unique_key(cls, **kwargs):
         return '_'.join([kwargs['user_id'], kwargs['flight_id']])
 
-
 ###############################################################################
-"""Report Helper Methods"""
+# Report Helper Methods
 ###############################################################################
 
 def _defer_report(event_name, transactional, **properties):
@@ -263,9 +263,8 @@ def report_event_transactionally(event_name, **properties):
     """
     _defer_report(event_name, True, **properties)
 
-
 ###############################################################################
-"""Datastore Report Helper Methods"""
+# Datastore Report Helper Methods
 ###############################################################################
 
 def get_class(class_path):
@@ -297,9 +296,8 @@ def log_event_transactionally(event_cls, **properties):
     """
     _defer_ds_log(event_cls, True, **properties)
 
-
 ###############################################################################
-"""Reporting Handlers"""
+# Reporting Handlers
 ###############################################################################
 
 service = GoogleAnalyticsService()

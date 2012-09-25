@@ -12,12 +12,13 @@ from google.appengine.ext import webapp
 # Add lib to the system path
 LIB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib')
 if LIB_DIR not in sys.path:
-  sys.path[0:0] = [LIB_DIR]
+    sys.path[0:0] = [LIB_DIR]
 
 class WarmupWorker(webapp.RequestHandler):
     """Optimization: Warmup handler that pre-caches application code."""
     def get(self):
-        import api.v1
+        import api.v1.data_sources
+        import api.v1.handlers
         import config
         import cron
         import custom_exceptions
@@ -27,4 +28,3 @@ class WarmupWorker(webapp.RequestHandler):
         import notifications
         import reporting
         import utils
-        import web_handlers

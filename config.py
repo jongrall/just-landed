@@ -11,23 +11,23 @@ from google.appengine.api import app_identity
 app_id = app_identity.get_application_id()
 
 ###############################################################################
-"""Enum Helper Class."""
+# Enum Helper Class.
 ###############################################################################
 
 class Enum(set):
-  """Solution for Enums
+    """Solution for Enums
 
-  Usage:
-  Animals = Enum(["DOG", "CAT", "Horse"])
-  print Animals.DOG
-  """
-  def __getattr__(self, name):
-    if name in self:
-      return name
-    raise AttributeError
+    Usage:
+    Animals = Enum(["DOG", "CAT", "Horse"])
+    print Animals.DOG
+    """
+    def __getattr__(self, name):
+        if name in self:
+            return name
+        raise AttributeError
 
 ###############################################################################
-"""App Configuration."""
+# App Configuration.
 ###############################################################################
 
 config = {}
@@ -37,31 +37,31 @@ config['app'] = {}
 config['maintenance_in_progress'] = False
 
 if os.environ.get('SERVER_SOFTWARE', '').startswith('Dev'):
-  config['app']['mode'] = 'development'
+    config['app']['mode'] = 'development'
 
 elif app_id == 'just-landed':
-  config['app']['mode'] = 'production'
+    config['app']['mode'] = 'production'
 
 elif app_id == 'just-landed-staging':
-  config['app']['mode'] = 'staging'
+    config['app']['mode'] = 'staging'
 
 def on_production():
-  """Returns true if the app is running in production."""
-  return config['app']['mode'] == 'production'
+    """Returns true if the app is running in production."""
+    return config['app']['mode'] == 'production'
 
 def on_staging():
-  """Returns true if the app is running on staging."""
-  return config['app']['mode'] == 'staging'
+    """Returns true if the app is running on staging."""
+    return config['app']['mode'] == 'staging'
 
 def on_development():
-  """Returns true if the app is running on the development server."""
-  return config['app']['mode'] == 'development'
+    """Returns true if the app is running on the development server."""
+    return config['app']['mode'] == 'development'
 
 # Template directory
 config['template_dir'] = os.path.join(os.path.dirname(__file__), 'templates')
 
 ###############################################################################
-"""Flight Tracking Settings."""
+# Flight Tracking Settings.
 ###############################################################################
 
 # Buffer within which a flight is said to be "on time". Buffer is in seconds.
@@ -229,7 +229,7 @@ def api_secret(client='iOS'):
     return config['api_credentials'][app_mode][client]['secret']
 
 ###############################################################################
-"""Flight Data API Keys & Settings"""
+# Flight Data API Keys & Settings
 ###############################################################################
 
 def fa_alert_url():
@@ -342,7 +342,7 @@ def flightaware_credentials():
     return creds['username'], creds['key']
 
 ###############################################################################
-"""Driving Time Settings"""
+# Driving Time Settings
 ###############################################################################
 
 # Number of miles to the airport below which driving estimate isn't needed
@@ -360,7 +360,7 @@ config['bing_maps'] = {
 }
 
 ###############################################################################
-"""Mixpanel API Tokens for Server-Side Event Tracking"""
+# Mixpanel API Tokens for Server-Side Event Tracking
 ###############################################################################
 
 config['mixpanel'] = {
@@ -376,7 +376,7 @@ config['mixpanel'] = {
 }
 
 ###############################################################################
-"""Push Notification Settings & API Keys"""
+# Push Notification Settings & API Keys
 ###############################################################################
 
 config['urbanairship'] = {
@@ -424,7 +424,7 @@ def stackmob_credentials():
     return config['stackmob'][app_mode]
 
 ###############################################################################
-"""Twilio Configuration"""
+# Twilio Configuration
 ###############################################################################
 
 config['twilio'] = {
@@ -434,7 +434,7 @@ config['twilio'] = {
 }
 
 ###############################################################################
-"""Google Analytics Accounts"""
+# Google Analytics Accounts
 ###############################################################################
 
 config['google_analytics'] = {
@@ -454,7 +454,7 @@ def google_analytics_account():
     return config['google_analytics'][app_mode]['account_id']
 
 ###############################################################################
-"""Outage Detection & Exception Reporting Settings"""
+# Outage Detection & Exception Reporting Settings
 ###############################################################################
 
 # Phone numbers of admins to notify via SMS
