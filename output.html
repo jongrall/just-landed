@@ -1,0 +1,280 @@
+
+<HTML>
+    <HEAD>
+        <TITLE> CloneDigger Report </TITLE>
+        <script type="text/javascript">
+        function unhide(divID) {
+            var item = document.getElementById(divID);
+            if (item) {
+                item.className=(item.className=='hidden')?'unhidden':'hidden';
+            }
+        }
+</script>
+
+<style type="text/css">
+.hidden { display: none; }
+.unhidden { display: block; }
+.preformatted {
+        border: 1px dashed #3c78b5;
+    font-size: 11px;
+        font-family: Courier;
+    margin: 10px;
+        line-height: 13px;
+}
+.preformattedHeader {
+    background-color: #f0f0f0;
+        border-bottom: 1px dashed #3c78b5;
+    padding: 3px;
+        text-align: center;
+}
+.preformattedContent {
+    background-color: #f0f0f0;
+    padding: 3px;
+}
+<!--
+<div class="preformatted"><div class="preformattedContent">
+<pre>Clone Digger
+</pre>
+</div></div>
+-->
+
+</style>
+
+    </HEAD>
+    <BODY>
+    
+    
+    <P>Source files: 26</P>
+        <a href = "javascript:unhide('files');">Click here to show/hide file names</a><div id="files" class="hidden"><P><B>Source files:</B><BR>./setup.py, <BR>./server/__init__.py, <BR>./server/appengine_config.py, <BR>./server/config.py, <BR>./server/cron.py, <BR>./server/custom_exceptions.py, <BR>./server/main.py, <BR>./server/notifications.py, <BR>./server/reporting.py, <BR>./server/simulate_read_only.py, <BR>./server/utils.py, <BR>./server/warmup.py, <BR>./server/admin/__init__.py, <BR>./server/admin/admin_handlers.py, <BR>./server/api/__init__.py, <BR>./server/api/v1/__init__.py, <BR>./server/api/v1/connections.py, <BR>./server/api/v1/data_sources.py, <BR>./server/api/v1/handlers.py, <BR>./server/data/__init__.py, <BR>./server/data/aircraft_types.py, <BR>./server/data/airline_codes.py, <BR>./server/data/connections.py, <BR>./server/data/uploadutil.py, <BR>./server/models/__init__.py, <BR>./server/models/v2/__init__.py</P></div>
+        <P>Clones detected: 7</P>
+        <P>104 of 4209 lines are duplicates (2.47%) </P>
+<P>
+<B>Parameters<BR> </B>
+clustering_threshold = 10<BR>
+distance_threshold = 3<BR>
+size_threshold = 5<BR>
+hashing_depth = 1<BR>
+clusterize_using_hash = False<BR>
+clusterize_using_dcup = False<BR>
+</P> 
+        
+    <B>Time elapsed</B><BR>Construction of AST : 0.94 seconds<BR>
+Building statement hash : 0.01 seconds<BR>
+Building patterns : 2.73 seconds<BR>
+Marking similar statements : 4.59 seconds<BR>
+Finding similar sequences of statements : 0.70 seconds<BR>
+Refining candidates : 25.64 seconds<BR>
+ Total time: 34.62<BR>
+ Started at: Mon Sep 24 23:16:59 2012<BR>
+ Finished at: Mon Sep 24 23:17:08 2012
+    <P><B>Clone # 1</B><BR>Distance between two fragments = 1 <BR>Clone size = 12<TABLE NOWRAP WIDTH=100% BORDER=1><TD>Source file "./server/api/v1/data_sources.py"<BR>The first line is 1123</TD><TD></TD><TD>Source file "./server/api/v1/data_sources.py"<BR>The first line is 1218</TD></TR><TR>
+<TD>
+driving_cache_key = <span style="color: rgb(255, 0, 0);">GoogleDistanceSource</span>.driving_cache_key(origin_lat, origin_lon, dest_lat, dest_lon)</TD>
+<TD style="width: 10px;" BGCOLOR=RED> </TD><TD>
+driving_cache_key = <span style="color: rgb(255, 0, 0);">BingMapsDistanceSource</span>.driving_cache_key(origin_lat, origin_lon, dest_lat, dest_lon)</TD>
+</TR>
+<TR>
+<TD>
+use_cache = kwargs.get('use_cache')</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+use_cache = kwargs.get('use_cache')</TD>
+</TR>
+<TR>
+<TD>
+if use_cache is None:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;use_cache = True</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+if use_cache is None:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;use_cache = True</TD>
+</TR>
+<TR>
+<TD>
+time = None</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+time = None</TD>
+</TR>
+<TR>
+<TD>
+if use_cache:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;time = memcache.get(driving_cache_key)<BR>
+elif debug_cache:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;logging.info('IGNORING DRIVING CACHE')</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+if use_cache:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;time = memcache.get(driving_cache_key)<BR>
+elif debug_cache:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;logging.info('IGNORING DRIVING CACHE')</TD>
+</TR>
+</TABLE> </P> <HR><BR>
+<P><B>Clone # 2</B><BR>Distance between two fragments = 2 <BR>Clone size = 9<TABLE NOWRAP WIDTH=100% BORDER=1><TD>Source file "./server/api/v1/connections.py"<BR>The first line is 5</TD><TD></TD><TD>Source file "./server/data/connections.py"<BR>The first line is 3</TD></TR><TR>
+<TD>
+__author__ = 'Jon Grall'</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+__author__ = 'Jon Grall'</TD>
+</TR>
+<TR>
+<TD>
+__copyright__ = 'Copyright 2012, Just Landed LLC'</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+__copyright__ = 'Copyright 2012, Just Landed LLC'</TD>
+</TR>
+<TR>
+<TD>
+__email__ = 'jon@littledetails.net'</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+__email__ = 'jon@littledetails.net'</TD>
+</TR>
+<TR>
+<TD>
+def build_url(base, path, args={}):<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;url = (base) + (path)<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;if args:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;encoded_args = <span style="color: rgb(255, 0, 0);">urllib.urlencode</span>(args)<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;url = ((url) + ('?')) + (encoded_args)<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;return url</TD>
+<TD style="width: 10px;" BGCOLOR=RED> </TD><TD>
+def build_url(base, path, args={}):<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;url = (base) + (path)<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;if args:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;encoded_args = <span style="color: rgb(255, 0, 0);">urlencode</span>(args)<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;url = ((url) + ('?')) + (encoded_args)<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;return url</TD>
+</TR>
+</TABLE> </P> <HR><BR>
+<P><B>Clone # 3</B><BR>Distance between two fragments = 2 <BR>Clone size = 8<TABLE NOWRAP WIDTH=100% BORDER=1><TD>Source file "./server/utils.py"<BR>The first line is 145</TD><TD></TD><TD>Source file "./server/utils.py"<BR>The first line is 135</TD></TR><TR>
+<TD>
+def <span style="color: rgb(255, 0, 0);">is_float</span>(s):<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;try:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: rgb(255, 0, 0);">float</span>(s)<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return True<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;except ValueError:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return False<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;except TypeError:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return False</TD>
+<TD style="width: 10px;" BGCOLOR=RED> </TD><TD>
+def <span style="color: rgb(255, 0, 0);">is_int</span>(s):<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;try:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: rgb(255, 0, 0);">int</span>(s)<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return True<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;except ValueError:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return False<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;except TypeError:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return False</TD>
+</TR>
+</TABLE> </P> <HR><BR>
+<P><B>Clone # 4</B><BR>Distance between two fragments = 0 <BR>Clone size = 6<TABLE NOWRAP WIDTH=100% BORDER=1><TD>Source file "./server/main.py"<BR>The first line is 5</TD><TD></TD><TD>Source file "./server/warmup.py"<BR>The first line is 3</TD></TR><TR>
+<TD>
+__author__ = 'Jon Grall'</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+__author__ = 'Jon Grall'</TD>
+</TR>
+<TR>
+<TD>
+__copyright__ = 'Copyright 2012, Just Landed LLC'</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+__copyright__ = 'Copyright 2012, Just Landed LLC'</TD>
+</TR>
+<TR>
+<TD>
+__email__ = 'jon@littledetails.net'</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+__email__ = 'jon@littledetails.net'</TD>
+</TR>
+<TR>
+<TD>
+LIB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib')</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+LIB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib')</TD>
+</TR>
+<TR>
+<TD>
+if LIB_DIR not in sys.path:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;sys.path[0:0] = [LIB_DIR]</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+if LIB_DIR not in sys.path:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;sys.path[0:0] = [LIB_DIR]</TD>
+</TR>
+</TABLE> </P> <HR><BR>
+<P><B>Clone # 5</B><BR>Distance between two fragments = 2 <BR>Clone size = 6<TABLE NOWRAP WIDTH=100% BORDER=1><TD>Source file "./server/data/connections.py"<BR>The first line is 23</TD><TD></TD><TD>Source file "./server/api/v1/connections.py"<BR>The first line is 29</TD></TR><TR>
+<TD>
+self.<span style="color: rgb(255, 0, 0);">_auth</span> = <span style="color: rgb(255, 0, 0);">None</span></TD>
+<TD style="width: 10px;" BGCOLOR=RED> </TD><TD>
+self.<span style="color: rgb(255, 0, 0);">_ssl</span> = <span style="color: rgb(255, 0, 0);">False</span></TD>
+</TR>
+<TR>
+<TD>
+if username:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;assert password<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self._username = username<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self._password = password<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self._auth = ('%s:%s') % ((username, password)).encode('base64')[:-1]</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+if username:<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;assert password<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self._username = username<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self._password = password<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self._auth = ('%s:%s') % ((username, password)).encode('base64')[:-1]</TD>
+</TR>
+</TABLE> </P> <HR><BR>
+<P><B>Clone # 6</B><BR>Distance between two fragments = 2 <BR>Clone size = 6<TABLE NOWRAP WIDTH=100% BORDER=1><TD>Source file "./server/notifications.py"<BR>The first line is 101</TD><TD></TD><TD>Source file "./server/notifications.py"<BR>The first line is 69</TD></TR><TR>
+<TD>
+def register_token(self, device_token):<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self.<span style="color: rgb(255, 0, 0);">call_sm_func</span>(self.<span style="color: rgb(255, 0, 0);">_SM</span>.register, device_token)</TD>
+<TD style="width: 10px;" BGCOLOR=RED> </TD><TD>
+def register_token(self, device_token):<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self.<span style="color: rgb(255, 0, 0);">call_ua_func</span>(self.<span style="color: rgb(255, 0, 0);">_UA</span>.register, device_token)</TD>
+</TR>
+<TR>
+<TD>
+def deregister_token(self, device_token):<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self.<span style="color: rgb(255, 0, 0);">call_sm_func</span>(self.<span style="color: rgb(255, 0, 0);">_SM</span>.deregister, device_token)</TD>
+<TD style="width: 10px;" BGCOLOR=RED> </TD><TD>
+def deregister_token(self, device_token):<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self.<span style="color: rgb(255, 0, 0);">call_ua_func</span>(self.<span style="color: rgb(255, 0, 0);">_UA</span>.deregister, device_token)</TD>
+</TR>
+<TR>
+<TD>
+def push(self, payload, device_tokens=None):<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self.<span style="color: rgb(255, 0, 0);">call_sm_func</span>(self.<span style="color: rgb(255, 0, 0);">_SM</span>.push, payload, device_tokens=device_tokens)</TD>
+<TD style="width: 10px;" BGCOLOR=RED> </TD><TD>
+def push(self, payload, device_tokens=None):<BR>
+&nbsp;&nbsp;&nbsp;&nbsp;self.<span style="color: rgb(255, 0, 0);">call_ua_func</span>(self.<span style="color: rgb(255, 0, 0);">_UA</span>.push, payload, device_tokens=device_tokens)</TD>
+</TR>
+</TABLE> </P> <HR><BR>
+<P><B>Clone # 7</B><BR>Distance between two fragments = 2 <BR>Clone size = 5<TABLE NOWRAP WIDTH=100% BORDER=1><TD>Source file "./server/api/v1/data_sources.py"<BR>The first line is 25</TD><TD></TD><TD>Source file "./server/models/v2/__init__.py"<BR>The first line is 7</TD></TR><TR>
+<TD>
+__author__ = 'Jon Grall'</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+__author__ = 'Jon Grall'</TD>
+</TR>
+<TR>
+<TD>
+__copyright__ = 'Copyright 2012, Just Landed LLC'</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+__copyright__ = 'Copyright 2012, Just Landed LLC'</TD>
+</TR>
+<TR>
+<TD>
+__email__ = 'jon@littledetails.net'</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+__email__ = 'jon@littledetails.net'</TD>
+</TR>
+<TR>
+<TD>
+FLIGHT_STATES = config['flight_states']</TD>
+<TD style="width: 10px;" BGCOLOR=AQUA> </TD><TD>
+FLIGHT_STATES = config['flight_states']</TD>
+</TR>
+<TR>
+<TD>
+<span style="color: rgb(255, 0, 0);">PUSH_TYPES</span> = config[<span style="color: rgb(255, 0, 0);">'push_types'</span>]</TD>
+<TD style="width: 10px;" BGCOLOR=RED> </TD><TD>
+<span style="color: rgb(255, 0, 0);">REMINDER_TYPES</span> = config[<span style="color: rgb(255, 0, 0);">'reminder_types'</span>]</TD>
+</TR>
+</TABLE> </P> <HR>
+    
+    
+    <HR>
+    Clone Digger is aimed to find software clones in Python and Java programs. It is provided under the GPL license and can be downloaded from the site <a href="http://clonedigger.sourceforge.net">http://clonedigger.sourceforge.net</a>
+    </BODY>
+</HTML>

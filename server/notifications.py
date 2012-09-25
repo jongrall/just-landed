@@ -38,6 +38,7 @@ class PushNotificationService(object):
 
     def deregister_token(self, device_token):
         """De-registers a device token from the service."""
+        pass
 
     def push(self, payload, device_tokens=None):
         """Pushes a notification payload using the push service to the supplied
@@ -362,23 +363,15 @@ class FlightArrivedAlert(_FlightAlert):
     def message(self):
         # Show terminal info if we have it
         terminal = self._flight.destination.terminal
+        args = (self._user_flight_num, self._origin_city_or_airport, self._flight.destination.best_name)
+
         if terminal:
             if terminal == 'I':
-                return 'Flight %s from %s just landed at %s international terminal.' % (
-                        self._user_flight_num,
-                        self._origin_city_or_airport,
-                        self._flight.destination.best_name)
+                return 'Flight %s from %s just landed at %s international terminal.' % args
             else:
-                return 'Flight %s from %s just landed at %s terminal %s.' % (
-                    self._user_flight_num,
-                    self._origin_city_or_airport,
-                    self._flight.destination.best_name,
-                    terminal)
+                return 'Flight %s from %s just landed at %s terminal %s.' % args + (terminal,)
         else:
-            return 'Flight %s from %s just landed at %s.' % (
-                self._user_flight_num,
-                self._origin_city_or_airport,
-                self._flight.destination.best_name)
+            return 'Flight %s from %s just landed at %s.' % args
 
     @property
     def notification_type(self):
@@ -396,26 +389,16 @@ class FlightPlanChangeAlert(_FlightAlert):
         flight_status = self._flight.status
         time_diff = self._flight.estimated_arrival_time - utils.timestamp(date=datetime.utcnow())
         pretty_interval = utils.pretty_time_interval(time_diff, round_days=True)
+        args = (self._user_flight_num, self._origin_city_or_airport,
+                self._flight.destination.best_name, pretty_interval)
 
         # Figure out what changed about the flight
         if flight_status == FLIGHT_STATES.DELAYED:
-            return 'Flight %s from %s is delayed. Estimated to arrive at %s in %s.' % (
-                    self._user_flight_num,
-                    self._origin_city_or_airport,
-                    self._flight.destination.best_name,
-                    pretty_interval)
+            return 'Flight %s from %s is delayed. Estimated to arrive at %s in %s.' % args
         elif flight_status == FLIGHT_STATES.EARLY:
-            return 'Flight %s from %s is early. Estimated to arrive at %s in %s.' % (
-                    self._user_flight_num,
-                    self._origin_city_or_airport,
-                    self._flight.destination.best_name,
-                    pretty_interval)
+            return 'Flight %s from %s is early. Estimated to arrive at %s in %s.' % args
         elif flight_status == FLIGHT_STATES.ON_TIME:
-            return 'Flight %s from %s is on time. Estimated to arrive at %s in %s.' % (
-                    self._user_flight_num,
-                    self._origin_city_or_airport,
-                    self._flight.destination.best_name,
-                    pretty_interval)
+            return 'Flight %s from %s is on time. Estimated to arrive at %s in %s.' % args
 
     @property
     def notification_type(self):
