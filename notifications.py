@@ -5,7 +5,6 @@ __copyright__ = "Copyright 2012, Just Landed LLC"
 __email__ = "jon@littledetails.net"
 
 import logging
-import os
 import pickle
 from datetime import datetime
 
@@ -26,7 +25,7 @@ push_types = config['push_types']
 FLIGHT_STATES = config['flight_states']
 
 ###############################################################################
-"""Push Notification Services"""
+# Push Notification Services
 ###############################################################################
 
 class PushNotificationService(object):
@@ -52,6 +51,7 @@ class UrbanAirshipService(PushNotificationService):
 
     """
     def __init__(self):
+        super(UrbanAirshipService, self).__init__()
         ua_creds = ua_credentials()
         self._UA = urbanairship.Airship(**ua_creds)
 
@@ -80,6 +80,7 @@ class StackMobService(PushNotificationService):
     """Concrete implementation of a PushNotificationService using StackMob."""
 
     def __init__(self):
+        super(StackMobService, self).__init__()
         creds = stackmob_credentials()
         kwargs = {
             'production' : not on_development(),
@@ -108,7 +109,7 @@ class StackMobService(PushNotificationService):
         self.call_sm_func(self._SM.push, payload, device_tokens=device_tokens)
 
 ###############################################################################
-"""Helper Methods for Deferring Notification Work"""
+# Helper Methods for Deferring Notification Work
 ###############################################################################
 
 def _defer(method, *args, **kwargs):
@@ -144,7 +145,7 @@ def deregister_token(device_token, **kwargs):
     _defer('deregister_token', device_token, **kwargs)
 
 
-def push(cls, payload, **kwargs):
+def push(payload, **kwargs):
     """Convenience method for pushing notifications to iOS devices using a
     taskqueue.
 
@@ -156,7 +157,7 @@ def push(cls, payload, **kwargs):
     _defer('push', payload, **kwargs)
 
 ###############################################################################
-"""Request Handler for Push Notification Taskqueue Callback"""
+# Request Handler for Push Notification Taskqueue Callback
 ###############################################################################
 
 # Reliability: UrbanAirship is the primary push service, StackMob is a fallback
@@ -184,16 +185,16 @@ class PushWorker(BaseHandler):
         if debug_push:
             if method == 'register_token':
                 token = args[0]
-                logging.info('REGISTERING DEVICE TOKEN: %s' % token)
+                logging.info('REGISTERING DEVICE TOKEN: %s', token)
             elif method == 'deregister_token':
                 token = args[0]
-                logging.info('DE-REGISTERING DEVICE TOKEN: %s' % token)
+                logging.info('DE-REGISTERING DEVICE TOKEN: %s', token)
             elif method == 'push':
                 token = kwds.get('device_tokens')[0]
                 # FIXME: Assumes iOS
                 data = args[0]
                 message = data['aps']['alert']
-                logging.info('PUSHING MESSAGE TO %s: \n%s' % (token, message))
+                logging.info('PUSHING MESSAGE TO %s: \n%s', token, message)
 
         # Reliability: check that the push service supports the method we want to call
         try:
@@ -204,7 +205,7 @@ class PushWorker(BaseHandler):
                 push_token = args[0]
                 # Optimization: cache push token registration so it doesn't happen every time
                 if not memcache.set(push_token, True, config['max_push_token_age']):
-                    logging.error('Unable to cache push token: %s' % push_token)
+                    logging.error('Unable to cache push token: %s', push_token)
 
         # Reliability: don't allow push notification exceptions to propagate
         except Exception as e:
@@ -224,8 +225,8 @@ class PushWorker(BaseHandler):
 
 
 ###############################################################################
-"""Convenience Functions for sending push notifications to a user about
-specific types of events."""
+# Convenience Functions for sending push notifications to a user about
+# specific types of events.
 ###############################################################################
 
 class _Alert(object):

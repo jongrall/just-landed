@@ -16,7 +16,7 @@ from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 
 from main import BaseHandler, BaseAPIHandler, AuthenticatedAPIHandler
-from data_sources import FlightAwareSource, BingMapsDistanceSource, GoogleDistanceSource
+from api.v1.data_sources import FlightAwareSource, BingMapsDistanceSource, GoogleDistanceSource
 from custom_exceptions import *
 import utils
 
@@ -30,7 +30,7 @@ distance_source = BingMapsDistanceSource()
 fallback_distance_source = GoogleDistanceSource()
 
 ###############################################################################
-"""Search / Lookup"""
+# Search / Lookup
 ###############################################################################
 
 class SearchHandler(AuthenticatedAPIHandler):
@@ -73,7 +73,7 @@ class SearchHandler(AuthenticatedAPIHandler):
         self.respond(flight_data)
 
 ###############################################################################
-"""Tracking Flights"""
+# Tracking Flights
 ###############################################################################
 
 class TrackWorker(BaseHandler):
@@ -275,7 +275,7 @@ class UntrackHandler(AuthenticatedAPIHandler):
         self.respond({'untracked' : flight_id})
 
 ###############################################################################
-"""Processing Alerts"""
+# Processing Alerts
 ###############################################################################
 
 class AlertWorker(BaseHandler):
@@ -325,7 +325,7 @@ class AlertHandler(BaseAPIHandler):
             taskqueue.Queue('process-alert').add(task)
             self.respond({'alert_id' : alert_body.get('alert_id')})
         else:
-            logging.error('Unknown user-agent or host posting alert: (%s, %s)' %
-                            (self.request.environ.get('HTTP_USER_AGENT'),
-                            self.request.remote_addr))
+            logging.error('Unknown user-agent or host posting alert: (%s, %s)',
+                            self.request.environ.get('HTTP_USER_AGENT'),
+                            self.request.remote_addr)
             self.response.set_status(403) # Forbidden host posting alert

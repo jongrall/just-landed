@@ -15,9 +15,9 @@ from zlib import adler32
 # Add lib to the system path
 LIB_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lib')
 if LIB_DIR not in sys.path:
-  sys.path[0:0] = [LIB_DIR]
+    sys.path[0:0] = [LIB_DIR]
 
-from google.appengine.ext import webapp, ndb
+from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
@@ -28,7 +28,7 @@ from google.appengine.runtime.apiproxy_errors import (OverQuotaError,
 from lib.webapp2_extras.routes import PathPrefixRoute, HandlerPrefixRoute
 
 from custom_exceptions import *
-from config import config, on_development, on_staging, google_analytics_account
+from config import config, on_development, google_analytics_account
 import utils
 
 Route = webapp.Route
@@ -51,7 +51,7 @@ template_context = {
 template_dir = config['template_dir']
 
 ###############################################################################
-"""Custom Request Handlers"""
+# Custom Request Handlers
 ###############################################################################
 
 class BaseHandler(webapp.RequestHandler):
@@ -208,7 +208,7 @@ class AuthenticatedAPIHandler(BaseAPIHandler):
             self.abort(403)
 
 ###############################################################################
-"""Routes & WSGI App Instantiation"""
+# Routes & WSGI App Instantiation
 ###############################################################################
 
 routes = [

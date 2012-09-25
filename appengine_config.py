@@ -4,7 +4,7 @@ __author__ = "Jon Grall"
 __copyright__ = "Copyright 2012, Just Landed LLC"
 __email__ = "jon@littledetails.net"
 
-from config import on_production, on_staging
+from config import on_production
 
 # Numerical limits on how much information is saved for each event.
 # MAX_STACK limits the number of stack frames saved; MAX_LOCALS limits
