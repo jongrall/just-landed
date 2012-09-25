@@ -207,8 +207,8 @@ class FlightAwareTrackedFlight(_TrackedFlight):
             new_flight.set_or_update_flight_reminders(flight, driving_time)
 
         if debug_datastore:
-            logging.info('USER %s STARTED TRACKING FLIGHT %s' % (parent.string_id(), flight.flight_id))
-            logging.info('USER SUBSCRIBED TO ALERT %s' % alert_id)
+            logging.info('USER %s STARTED TRACKING FLIGHT %s', parent.string_id(), flight.flight_id)
+            logging.info('USER SUBSCRIBED TO ALERT %s', alert_id)
 
         return new_flight
 
@@ -225,7 +225,7 @@ class FlightAwareTrackedFlight(_TrackedFlight):
             if next_flight.key.string_id() == flight_id:
                 raise tasklets.Return(next_flight)
         if orphaned_alert:
-            logging.info('ORPHANED ALERT %d' % alert_id)
+            logging.info('ORPHANED ALERT %d', alert_id)
 
     @classmethod
     @ndb.tasklet
@@ -311,15 +311,15 @@ class FlightAwareTrackedFlight(_TrackedFlight):
         if new_data != self.last_flight_data:
             self.last_flight_data = new_data
             if debug_datastore:
-                logging.info('FLIGHT DATA UPDATED %s' % self.key.string_id())
+                logging.info('FLIGHT DATA UPDATED %s', self.key.string_id())
         if alert_id != self.alert_id:
             self.alert_id = alert_id
             if debug_datastore:
-                logging.info('FLIGHT ALERT ID UPDATED %s' % alert_id)
+                logging.info('FLIGHT ALERT ID UPDATED %s', alert_id)
         if reminder_lead_time and reminder_lead_time != self.reminder_lead_time:
             self.reminder_lead_time = reminder_lead_time
             if debug_datastore:
-                logging.info('FLIGHT REMINDER LEAD TIME CHANGED %d' % reminder_lead_time)
+                logging.info('FLIGHT REMINDER LEAD TIME CHANGED %d', reminder_lead_time)
 
         # If we have driving time, update their reminders
         if driving_time is not None:
@@ -335,8 +335,6 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     def set_or_update_flight_reminders(self, flight, driving_time):
         assert isinstance(flight, Flight)
         assert isinstance(driving_time, (int, long))
-
-        flight_id = flight.flight_id
 
         # If the flight is canceled or diverted, remove the alerts and don't add or update them
         if flight.status in [FLIGHT_STATES.CANCELED, FLIGHT_STATES.DIVERTED]:
@@ -484,7 +482,7 @@ class iOSUser(_User):
                                   play_flight_sounds=play_flight_sounds)
 
         if debug_datastore:
-            logging.info('CREATED NEW USER %s' % uuid)
+            logging.info('CREATED NEW USER %s', uuid)
         return user
 
     @classmethod
@@ -518,7 +516,7 @@ class iOSUser(_User):
                user_latitude=None, user_longitude=None, push_token=None,
                send_reminders=None, send_flight_events=None, play_flight_sounds=None):
         if debug_datastore:
-            logging.info('UPDATING EXISTING USER %s' % self.key.string_id())
+            logging.info('UPDATING EXISTING USER %s', self.key.string_id())
 
         # Only update the version if it has changed
         if app_version and app_version != self.app_version:

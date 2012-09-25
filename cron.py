@@ -19,7 +19,7 @@ from api.v1.data_sources import FlightAwareSource
 from custom_exceptions import *
 from notifications import LeaveSoonAlert, LeaveNowAlert
 import reporting
-from reporting import report_event, report_event_transactionally
+from reporting import report_event_transactionally
 import utils
 
 source = FlightAwareSource()
@@ -68,7 +68,7 @@ class UntrackOldFlightsWorker(BaseHandler):
                 }))
 
             if untrack_tasks:
-                logging.info('UNTRACKING %d OLD FLIGHTS' % len(untrack_tasks))
+                logging.info('UNTRACKING %d OLD FLIGHTS', len(untrack_tasks))
                 for task_batch in utils.chunks(untrack_tasks, 100): # Batch size 100 is max
                     taskqueue.Queue('untrack').add(task_batch)
 
@@ -118,7 +118,7 @@ class SendRemindersWorker(BaseHandler):
                     if outbox:
                         yield flight.put_async() # Save the changes to the flight reminders
                         for r in outbox:
-                            r.push(_transactional=True, play_flight_sounds=user.wants_flight_sounds()) # Transactional push
+                            r.push(_transactional=True, play_flight_sounds=user.wants_flight_sounds())
                             if isinstance(r, LeaveSoonAlert):
                                 report_event_transactionally(reporting.SENT_LEAVE_SOON_NOTIFICATION)
                             else:
@@ -161,7 +161,7 @@ class ClearOrphanedAlertsWorker(BaseHandler):
 
             # Do the removal
             if orphaned_alerts:
-                logging.info('DELETING %d ORPHANED ALERTS' % len(orphaned_alerts))
+                logging.info('DELETING %d ORPHANED ALERTS', len(orphaned_alerts))
                 yield source.delete_alerts(orphaned_alerts, orphaned=True)
 
 
@@ -206,17 +206,17 @@ class OutageCheckerWorker(BaseHandler):
                     last_error_date = error_dates[-1]
 
                     if (len(error_dates) == 0 or
-                       last_error_date < now - timedelta(seconds=config['outage_over_wait'])):
-                       # Outage is over, prime system to detect another outage
-                       report['alert_sent'] = False
-                       report['outage_start_date'] = None
-                       to_set[error_cache_key] = report
+                         last_error_date < now - timedelta(seconds=config['outage_over_wait'])):
+                         # Outage is over, prime system to detect another outage
+                         report['alert_sent'] = False
+                         report['outage_start_date'] = None
+                         to_set[error_cache_key] = report
 
-                       # Record that we need to send an sms for this outage
-                       last_error_seconds_ago = abs(now - last_error_date).total_seconds()
-                       outage_duration = abs(last_error_date - outage_start_date).total_seconds()
-                       outage_end_date = datetime.now(utils.Pacific) - timedelta(seconds=last_error_seconds_ago)
-                       sms_to_send.append("[%s] Outage over.\n%s stopped. Outage lasted %s." %
+                         # Record that we need to send an sms for this outage
+                         last_error_seconds_ago = abs(now - last_error_date).total_seconds()
+                         outage_duration = abs(last_error_date - outage_start_date).total_seconds()
+                         outage_end_date = datetime.now(utils.Pacific) - timedelta(seconds=last_error_seconds_ago)
+                         sms_to_send.append("[%s] Outage over.\n%s stopped. Outage lasted %s." %
                                               (outage_end_date.strftime('%T'),
                                               error_name,
                                               utils.pretty_time_interval(outage_duration)))

@@ -7,13 +7,12 @@ __email__ = "jon@littledetails.net"
 import logging
 
 from google.appengine.ext import ndb
-from google.appengine.ext.ndb import tasklets
 from google.appengine.api import taskqueue
 
 from api.v1.data_sources import FlightAwareSource
 from main import StaticHandler, BaseHandler, BaseAPIHandler
 from models.v2 import FlightAwareTrackedFlight
-from config import config, on_development, on_staging
+from config import on_development, on_staging
 import utils
 
 source = FlightAwareSource()
@@ -111,4 +110,4 @@ class ResetAlertsWorker(BaseHandler):
 
         for key in all_keys:
             yield reset_alert_txn(key)
-        logging.info('RESET %d ALERTS' % len(all_keys))
+        logging.info('RESET %d ALERTS', len(all_keys))
