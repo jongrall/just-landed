@@ -106,20 +106,20 @@ class SendRemindersWorker(BaseHandler):
                     now = datetime.utcnow()
                     unsent_reminders = flight.get_unsent_reminders()
 
-                    for r in unsent_reminders:
-                        if r.fire_time <= now:
+                    for rem in unsent_reminders:
+                        if rem.fire_time <= now:
                             # Max 5 transactional tasks per txn
-                            if len(outbox) <= 5 and user.wants_notification_type(r.reminder_type):
-                                r.sent = True # Mark sent
-                                if r.reminder_type == reminder_types.LEAVE_SOON:
-                                    outbox.append(LeaveSoonAlert(user.push_token, r.body))
+                            if len(outbox) <= 5 and user.wants_notification_type(rem.reminder_type):
+                                rem.sent = True # Mark sent
+                                if rem.reminder_type == reminder_types.LEAVE_SOON:
+                                    outbox.append(LeaveSoonAlert(user.push_token, rem.body))
                                 else:
-                                    outbox.append(LeaveNowAlert(user.push_token, r.body))
+                                    outbox.append(LeaveNowAlert(user.push_token, rem.body))
                     if outbox:
                         yield flight.put_async() # Save the changes to the flight reminders
-                        for r in outbox:
-                            r.push(_transactional=True, play_flight_sounds=user.wants_flight_sounds())
-                            if isinstance(r, LeaveSoonAlert):
+                        for alert in outbox:
+                            alert.push(_transactional=True, play_flight_sounds=user.wants_flight_sounds())
+                            if isinstance(alert, LeaveSoonAlert):
                                 report_event_transactionally(reporting.SENT_LEAVE_SOON_NOTIFICATION)
                             else:
                                 report_event_transactionally(reporting.SENT_LEAVE_NOW_NOTIFICATION)
@@ -136,10 +136,10 @@ class ClearOrphanedAlertsWorker(BaseHandler):
             alerts = yield source.get_all_alerts()
 
             # Get all the valid alert ids
-            def eligible_alert(a):
+            def eligible_alert(somealert):
                 # Eligible for deletion if created at least an hour ago
                 # Prevents alerts that were just created in a transaction from being cleared when cron runs
-                alert_created = a.get('alert_created')
+                alert_created = somealert.get('alert_created')
                 if not alert_created or not isinstance(alert_created, (int, long)):
                     return False
                 hour_ago = datetime.utcnow() - timedelta(hours=1)
@@ -206,17 +206,17 @@ class OutageCheckerWorker(BaseHandler):
                     last_error_date = error_dates[-1]
 
                     if (len(error_dates) == 0 or
-                         last_error_date < now - timedelta(seconds=config['outage_over_wait'])):
-                         # Outage is over, prime system to detect another outage
-                         report['alert_sent'] = False
-                         report['outage_start_date'] = None
-                         to_set[error_cache_key] = report
+                        last_error_date < now - timedelta(seconds=config['outage_over_wait'])):
+                        # Outage is over, prime system to detect another outage
+                        report['alert_sent'] = False
+                        report['outage_start_date'] = None
+                        to_set[error_cache_key] = report
 
-                         # Record that we need to send an sms for this outage
-                         last_error_seconds_ago = abs(now - last_error_date).total_seconds()
-                         outage_duration = abs(last_error_date - outage_start_date).total_seconds()
-                         outage_end_date = datetime.now(utils.Pacific) - timedelta(seconds=last_error_seconds_ago)
-                         sms_to_send.append("[%s] Outage over.\n%s stopped. Outage lasted %s." %
+                        # Record that we need to send an sms for this outage
+                        last_error_seconds_ago = abs(now - last_error_date).total_seconds()
+                        outage_duration = abs(last_error_date - outage_start_date).total_seconds()
+                        outage_end_date = datetime.now(utils.Pacific) - timedelta(seconds=last_error_seconds_ago)
+                        sms_to_send.append("[%s] Outage over.\n%s stopped. Outage lasted %s." %
                                               (outage_end_date.strftime('%T'),
                                               error_name,
                                               utils.pretty_time_interval(outage_duration)))
