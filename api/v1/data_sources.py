@@ -36,7 +36,7 @@ from google.appengine.api.urlfetch import DownloadError
 from google.appengine.runtime.apiproxy_errors import DeadlineExceededError
 
 from config import config, on_development, flightaware_credentials
-from connections import Connection, build_url
+from api.v1.connections import Connection, build_url
 from models.v2 import (Airport, Airline, FlightAwareTrackedFlight, iOSUser,
     Origin, Destination, Flight)
 from custom_exceptions import *
@@ -574,8 +574,8 @@ class FlightAwareSource (FlightDataSource):
         flights = memcache.get(lookup_cache_key)
 
         def cache_stale():
-            for f in flights:
-                if f.is_old_flight:
+            for flight in flights:
+                if flight.is_old_flight:
                     return True
             return False
 
@@ -649,9 +649,9 @@ class FlightAwareSource (FlightDataSource):
 
             # Optimization: cache flight info so /track doesn't have cache miss on selecting a flight
             flights_to_cache = {}
-            for f in flights:
-                cache_key = FlightAwareSource.flight_result_cache_key(f.flight_id)
-                flights_to_cache[cache_key] = f
+            for flight in flights:
+                cache_key = FlightAwareSource.flight_result_cache_key(flight.flight_id)
+                flights_to_cache[cache_key] = flight
 
             # Optimization: set multiple memcache keys in one async rpc
             cache_flights_rpc = memcache_client.set_multi_async(
@@ -697,7 +697,7 @@ class FlightAwareSource (FlightDataSource):
 
         # Only process the alert if we still care about it
         if not stored_flight:
-            logging.info('IGNORING ALERT %d FOR FLIGHT %s' % (alert_id, flight_id))
+            logging.info('IGNORING ALERT %d FOR FLIGHT %s', alert_id, flight_id)
             raise tasklets.Return()
         else:
             flight_num = stored_flight.user_flight_num
@@ -772,7 +772,7 @@ class FlightAwareSource (FlightDataSource):
                     alert_type = FlightCanceledAlert
 
                 else:
-                    logging.info('Unhandled eventcode: %s' % event_code)
+                    logging.info('Unhandled eventcode: %s', event_code)
 
                 # Push the notification if we need to send one
                 if alert_type:
@@ -782,13 +782,13 @@ class FlightAwareSource (FlightDataSource):
                 # IMPORTANT: Fire off a /track for the user, which will update their reminders
                 yield self.do_track(request_handler, flight_id, u_key.string_id())
 
-                logging.info('ALERT %d %s CALLBACK PROCESSED' % (alert_id, event_code.upper()))
+                logging.info('ALERT %d %s CALLBACK PROCESSED', alert_id, event_code.upper())
 
             elif u and not u.push_enabled:
-                logging.info('ALERT %d PROCESSED FOR USER %s WITH PUSH DISABLED' % (alert_id, u.key.string_id()))
+                logging.info('ALERT %d PROCESSED FOR USER %s WITH PUSH DISABLED', alert_id, u.key.string_id())
 
             elif not u:
-                logging.error('ALERT %d HAS FLIGHT %s BUT NO USER %s!' % (alert_id, flight_id, u_key.string_id()))
+                logging.error('ALERT %d HAS FLIGHT %s BUT NO USER %s!', alert_id, flight_id, u_key.string_id())
 
     @ndb.tasklet
     def set_alert(self, **kwargs):

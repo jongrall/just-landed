@@ -27,7 +27,10 @@ from config import config, on_development, on_staging, google_analytics_account,
 from custom_exceptions import *
 import utils
 
-from lib import pyga
+from lib.pyga.requests import Tracker as GoogleAnalyticsTracker
+from lib.pyga.entities import Visitor as GoogleAnalyticsVisitor
+from lib.pyga.entities import Event as GoogleAnalyticsEvent
+from lib.pyga.entities import Session as GoogleAnalyticsSession
 
 # Enable to log informational messages about reported events
 debug_reporting = on_development() and False
@@ -130,19 +133,14 @@ class GoogleAnalyticsService(ReportingService):
     provided by Google Analytics."""
     def __init__(self):
         super(GoogleAnalyticsService, self).__init__()
-        from pyga.requests import Tracker
-        from pyga.entities import Visitor
-        from pyga.entities import Event
-        self._visitor = Visitor()
-        self._eventClass = Event
-        self._tracker = Tracker(account_id=google_analytics_account(),
-                                domain_name=domain_name())
+        self._visitor = GoogleAnalyticsVisitor()
+        self._eventClass = GoogleAnalyticsEvent
+        self._tracker = GoogleAnalyticsTracker(account_id=google_analytics_account(),
+                                                domain_name=domain_name())
 
     def report(self, event_name, **properties):
         """Reports an event to Google Analytics."""
         assert isinstance(event_name, basestring) and len(event_name)
-        from pyga.entities import Session
-
         if debug_reporting:
             logging.info('Reporting event: %s', event_name)
 
@@ -153,7 +151,7 @@ class GoogleAnalyticsService(ReportingService):
                                  noninteraction=True) # Shouldn't impact bounce rate
 
         try:
-            self._tracker.track_event(event, Session(), self._visitor)
+            self._tracker.track_event(event, GoogleAnalyticsSession(), self._visitor)
 
         # Reliability: don't allow reporting exceptions to propagate
         except Exception as e:

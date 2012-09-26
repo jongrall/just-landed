@@ -83,19 +83,19 @@ def sorted_dict_keys(somedict):
     keys.sort()
     return keys
 
-def dictinvert(d):
+def dictinvert(somedict):
     """Inverts a dictionary, turning values into keys. Handles duplicate values
     by creating a list of values from repeated keys."""
     inv = {}
-    for k, v in d.iteritems():
+    for k, v in somedict.iteritems():
         keys = inv.setdefault(v, [])
         keys.append(k)
     return inv
 
-def chunks(l, n):
+def chunks(alist, chunk_size):
     """Splits a list into n-sized chunks."""
-    for i in xrange(0, len(l), n):
-        yield l[i:i+n]
+    for i in xrange(0, len(alist), chunk_size):
+        yield alist[i:i+chunk_size]
 
 def sorted_request_params(somedict):
     """Returns an HTTP query string built from the keys and values supplied,
@@ -272,13 +272,13 @@ def sanitize_flight_number(f_num):
     f_num = f_num.upper().replace(' ', '')
     chars = []
     strip = True
-    for c in f_num:
-        if strip and c.isdigit():
-            if int(c) == 0:
+    for char in f_num:
+        if strip and char.isdigit():
+            if int(char) == 0:
                 continue
             else:
                 strip = False
-        chars.append(c)
+        chars.append(char)
     return ''.join(chars)
 
 def valid_flight_number(f_num):
@@ -422,6 +422,7 @@ DSTEND = datetime(1, 10, 25, 1)
 
 class USTimeZone(tzinfo):
     def __init__(self, hours, reprname, stdname, dstname):
+        super(USTimeZone, self).__init__()
         self.stdoffset = timedelta(hours=hours)
         self.reprname = reprname
         self.stdname = stdname
@@ -675,17 +676,17 @@ def disabled_services():
     }
     return [k for k in system_status.keys() if not system_status[k]]
 
-def try_reporting_outage(disabled_services):
+def try_reporting_outage(affected_services):
     """Given a list of disabled App Engine services, tries to send an SMS alert
     to the admin advising them of which services are down.
 
     """
-    assert disabled_services
+    assert affected_services
 
     # Without urlfetch we're hosed, and without memcache we'll potentially send a flood of sms
     if url_fetch_enabled() and memcache_enabled():
         outage = ['Just Landed App Outage\n',
-                   ': DISABLED\n'.join(disabled_services),
+                   ': DISABLED\n'.join(affected_services),
                    ': DISABLED']
         outage_message = ''.join(outage)
         outage_cache_key = 'outage_%s' % adler32(outage_message)
@@ -744,9 +745,8 @@ class ReportOutageWorker(webapp.RequestHandler):
             return
 
         exception = pickle.loads(str(self.request.params.get('exception')))
-        error_name = type(exception).__name__
         error_cache_key = service_error_cache_key(exception)
-        send_sms = False
+        sms = False
         rate = 0.0
         now = datetime.utcnow()
         client = memcache.Client()
@@ -773,8 +773,8 @@ class ReportOutageWorker(webapp.RequestHandler):
                 report['error_dates'] = error_dates[-config['min_outage_errors']:]
 
                 # Figure out if we need to send an sms notification to admins
-                send_sms = not report['alert_sent'] and is_error_rate_high(report['error_dates'])
-                if send_sms:
+                sms = not report['alert_sent'] and is_error_rate_high(report['error_dates'])
+                if sms:
                     rate = error_rate(report['error_dates'])
                     report['alert_sent'] = True # We will be sending the alert shortly
                     report['outage_start_date'] = now # Use now as the outage start date
@@ -784,7 +784,7 @@ class ReportOutageWorker(webapp.RequestHandler):
                 else:
                     retries += 1
 
-        if send_sms:
+        if sms:
             sms_alert_admin("[%s] %s\nError rate: %.2f/min" %
                             (datetime.now(Pacific).strftime('%T'),
                             exception.message,
