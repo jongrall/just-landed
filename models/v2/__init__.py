@@ -216,8 +216,8 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     @ndb.tasklet
     def get_by_flight_id_alert_id(cls, flight_id, alert_id):
         assert utils.is_valid_fa_flight_id(flight_id)
-        q = cls.query(cls.alert_id == int(alert_id))
-        qit = q.iter()
+        qry = cls.query(cls.alert_id == int(alert_id))
+        qit = qry.iter()
         orphaned_alert = True
         while (yield qit.has_next_async()):
             next_flight = qit.next()
@@ -230,8 +230,8 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     @classmethod
     @ndb.tasklet
     def all_flight_keys(cls):
-        q = cls.query()
-        qit = q.iter(keys_only=True)
+        qry = cls.query()
+        qit = qry.iter(keys_only=True)
         keys = []
         while (yield qit.has_next_async()):
             keys.append(qit.next())
@@ -255,11 +255,11 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     @ndb.tasklet
     def flight_ids_tracked_by_user(cls, user_key):
         assert isinstance(user_key, ndb.Key)
-        q = cls.query(ancestor=user_key)
+        qry = cls.query(ancestor=user_key)
         @ndb.tasklet
         def cbk(flight_key):
             raise tasklets.Return(flight_key.string_id())
-        flight_ids = yield q.map_async(cbk, keys_only=True)
+        flight_ids = yield qry.map_async(cbk, keys_only=True)
         raise tasklets.Return(flight_ids)
 
     @classmethod
@@ -267,8 +267,8 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     def old_flight_keys(cls):
         maybe_old = []
         definitely_old = []
-        q = cls.query()
-        qit = q.iter()
+        qry = cls.query()
+        qit = qry.iter()
         while (yield qit.has_next_async()):
             flight_ent = qit.next()
             flight_key = flight_ent.key
@@ -290,8 +290,8 @@ class FlightAwareTrackedFlight(_TrackedFlight):
     @classmethod
     @ndb.tasklet
     def flight_alert_in_use(cls, alert_id):
-        q = cls.query(cls.alert_id == alert_id)
-        count = yield q.count_async(limit=1)
+        qry = cls.query(cls.alert_id == alert_id)
+        count = yield qry.count_async(limit=1)
         if count > 0:
             raise tasklets.Return(True)
         else:
@@ -327,9 +327,9 @@ class FlightAwareTrackedFlight(_TrackedFlight):
 
     def get_unsent_reminders(self):
         unsent = []
-        for r in self.reminders:
-            if r.sent == False:
-                unsent.append(r)
+        for rem in self.reminders:
+            if rem.sent == False:
+                unsent.append(rem)
         return unsent
 
     def set_or_update_flight_reminders(self, flight, driving_time):
@@ -384,15 +384,15 @@ class FlightAwareTrackedFlight(_TrackedFlight):
                                        body=leave_now_body)
             self.reminders = [leave_soon, leave_now]
         else:
-            for r in self.reminders:
+            for rem in self.reminders:
                 # Only update unsent reminders (stops reminders from potentially being sent again)
-                if r.sent == False:
-                    if r.reminder_type == REMINDER_TYPES.LEAVE_SOON:
-                        r.fire_time = leave_soon_time
-                        r.body = leave_soon_body
+                if rem.sent == False:
+                    if rem.reminder_type == REMINDER_TYPES.LEAVE_SOON:
+                        rem.fire_time = leave_soon_time
+                        rem.body = leave_soon_body
                     else:
-                        r.fire_time = leave_now_time
-                        r.body = leave_now_body
+                        rem.fire_time = leave_now_time
+                        rem.body = leave_now_body
 
 
 class PushNotificationSetting(ndb.Model):
