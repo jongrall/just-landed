@@ -836,7 +836,7 @@ class FlightAwareSource (FlightDataSource):
         if not error and alert_info:
             alerts = alert_info.get('alerts')
             if debug_alerts:
-                logging.info('%d ALERTS ARE SET' % len(alerts))
+                logging.info('%d ALERTS ARE SET', len(alerts))
             raise tasklets.Return(alerts)
         else:
             raise UnableToGetAlertsException()
@@ -855,7 +855,7 @@ class FlightAwareSource (FlightDataSource):
 
         if not error and success == 1:
             if debug_alerts:
-                logging.info('DELETED ALERT %d' % alert_id)
+                logging.info('DELETED ALERT %d', alert_id)
             if orphaned:
                 report_event(reporting.DELETED_ORPHANED_ALERT)
             raise tasklets.Return(True)
@@ -879,7 +879,7 @@ class FlightAwareSource (FlightDataSource):
         alerts = yield self.get_all_alerts()
         alert_ids = [alert.get('alert_id') for alert in alerts]
         if debug_alerts:
-            logging.info('CLEARING %d ALERTS' % len(alert_ids))
+            logging.info('CLEARING %d ALERTS', len(alert_ids))
 
         # Optimization: defer removal of all alerts
         alert_ids = [str(alert_id) for alert_id in alert_ids if isinstance(alert_id, (int, long))]
@@ -976,7 +976,7 @@ class FlightAwareSource (FlightDataSource):
                             'uuid' : uuid,
                         }))
                         taskqueue.Queue('untrack').add(untrack_tasks)
-                    logging.info('USER TRACKING %d OTHER FLIGHTS, NOW UNTRACKED' % len(other_flight_ids))
+                    logging.info('USER TRACKING %d OTHER FLIGHTS, NOW UNTRACKED', len(other_flight_ids))
 
             # Tell UrbanAirship about expired push tokens
             if old_push_token and push_token != old_push_token:
