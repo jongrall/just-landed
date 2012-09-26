@@ -36,7 +36,7 @@ from google.appengine.api.urlfetch import DownloadError
 from google.appengine.runtime.apiproxy_errors import DeadlineExceededError
 
 from config import config, on_development, flightaware_credentials
-from api.v1.connections import Connection, build_url
+from connections import Connection, build_url
 from models.v2 import (Airport, Airline, FlightAwareTrackedFlight, iOSUser,
     Origin, Destination, Flight)
 from custom_exceptions import *
