@@ -370,7 +370,7 @@ class FlightArrivedAlert(_FlightAlert):
             if terminal == 'I':
                 return 'Flight %s from %s just landed at %s international terminal.' % args
             else:
-                return 'Flight %s from %s just landed at %s terminal %s.' % args + (terminal,)
+                return 'Flight %s from %s just landed at %s terminal %s.' % (args + (terminal,))
         else:
             return 'Flight %s from %s just landed at %s.' % args
 
