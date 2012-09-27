@@ -794,15 +794,13 @@ class FlightAwareSource (FlightDataSource):
     def set_alert(self, **kwargs):
         flight_id = kwargs.get('flight_id')
         assert utils.is_valid_fa_flight_id(flight_id)
-        flight_num = utils.flight_num_from_fa_flight_id(flight_id)
-        assert utils.valid_flight_number(flight_num)
 
         # Set the alert with FlightAware and keep a record of it in our system
         channels = "{16 e_filed e_departure e_arrival e_diverted e_cancelled}"
         try:
             result = yield self.conn.get_json('/SetAlert',
                                 args={'alert_id': 0,
-                                    'ident': flight_num,
+                                    'ident': flight_id,
                                     'channels': channels,
                                     'max_weekly': 1000})
         except (DownloadError, DeadlineExceededError, ValueError) as e:
