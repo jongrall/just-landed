@@ -77,3 +77,7 @@ a.app-store-button img {
 #footer .footer-wrapper {
 	left: 0;
 }
+
+#presslink {
+    display: none;
+}

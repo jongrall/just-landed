@@ -112,12 +112,7 @@ ol li {
     text-align: center;
     margin: 100px 0 40px 0;
     color: #77a0bf;
-    opacity: 0.5;
     -webkit-transition: opacity 0.2s linear;
-}
-
-#footer:hover {
-    opacity: 1;
 }
 
 #footer a {
