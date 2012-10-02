@@ -12,8 +12,9 @@ import urllib
 from google.appengine.ext import ndb
 from google.appengine.ext.ndb import tasklets
 
-def build_url(base, path, args={}):
+def build_url(base, path, args=None):
     """Builds a properly encoded URL from base, path and query arguments."""
+    args = args or {}
     url = base + path
     if args:
         encoded_args = urllib.urlencode(args)
@@ -36,8 +37,9 @@ class Connection(object):
             self._ssl = True
 
     @ndb.tasklet
-    def request(self, url, payload=None, method='GET', headers={}, deadline=10):
+    def request(self, url, payload=None, method='GET', headers=None, deadline=10):
         """Helper for making asynchornous HTTP requests."""
+        headers = headers or {}
         if self._auth:
             headers.update({
                 'Authorization': 'Basic %s' % self._auth,
@@ -49,8 +51,9 @@ class Connection(object):
         raise ndb.Return(result)
 
     @ndb.tasklet
-    def get_json(self, path, args, payload=None, headers={}, deadline=10):
+    def get_json(self, path, args, payload=None, headers=None, deadline=10):
         """Convenience function for issuing a JSON GET request."""
+        headers = headers or {}
         url = build_url(self._base_url, path, args)
         result = yield self.request(url, payload=payload, method='GET', headers=headers,
                         deadline=deadline)

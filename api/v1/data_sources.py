@@ -190,8 +190,9 @@ class FlightAwareSource (FlightDataSource):
             logging.info('DELETED FLIGHT INFO CACHE KEYS %s', keys)
 
     @classmethod
-    def clear_flight_lookup_cache(cls, flight_numbers=[]):
+    def clear_flight_lookup_cache(cls, flight_numbers=None):
         # De-dupe
+        flight_numbers = flight_numbers or []
         flight_numbers = set(flight_numbers)
         cache_keys = [cls.lookup_flights_cache_key(f_num) for f_num in flight_numbers]
 
@@ -266,7 +267,9 @@ class FlightAwareSource (FlightDataSource):
                             validate_certificate=full_track_url.startswith('https'))
 
     @ndb.tasklet
-    def raw_flight_data_to_flight(self, data, sanitized_flight_num, airport_info={}, return_none_on_error=False):
+    def raw_flight_data_to_flight(self, data, sanitized_flight_num, airport_info=None, return_none_on_error=False):
+        airport_info = airport_info or {}
+        
         try:
             if data and utils.valid_flight_number(sanitized_flight_num):
                 # Keep a subset of the response fields
