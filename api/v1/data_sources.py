@@ -826,7 +826,7 @@ class FlightAwareSource (FlightDataSource):
     @ndb.tasklet
     def get_all_alerts(self):
         try:
-            result = yield self.conn.get_json('/GetAlerts', args={})
+            result = yield self.conn.get_json('/GetAlerts')
         except (DownloadError, DeadlineExceededError, ValueError) as e:
             raise FlightAwareUnavailableError()
 

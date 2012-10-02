@@ -449,7 +449,7 @@ class MapreduceSpec(JsonMixin):
                name,
                mapreduce_id,
                mapper_spec,
-               params={},
+               params=None,
                hooks_class_name=None):
     """Create new MapreduceSpec.
 
@@ -470,7 +470,7 @@ class MapreduceSpec(JsonMixin):
     self.name = name
     self.mapreduce_id = mapreduce_id
     self.mapper = MapperSpec.from_json(mapper_spec)
-    self.params = params
+    self.params = params or {}
     self.hooks_class_name = hooks_class_name
     self.__hooks = None
     self.get_hooks()  # Fail fast on an invalid hook class.

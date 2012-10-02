@@ -51,8 +51,9 @@ class Connection(object):
         raise ndb.Return(result)
 
     @ndb.tasklet
-    def get_json(self, path, args, payload=None, headers=None, deadline=10):
+    def get_json(self, path, args=None, payload=None, headers=None, deadline=10):
         """Convenience function for issuing a JSON GET request."""
+        args = args or {}
         headers = headers or {}
         url = build_url(self._base_url, path, args)
         result = yield self.request(url, payload=payload, method='GET', headers=headers,
