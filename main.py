@@ -130,8 +130,9 @@ class StaticHandler(BaseHandler):
         self.response.headers['Cache-Control'] = 'public, max-age=7200' # 2hr cache
         self.response.headers['Pragma'] = 'Public'
 
-    def get(self, page_name="", context={}, use_cache=True):
+    def get(self, page_name="", context=None, use_cache=True):
         # Optimization: use memcache to cache static page content
+        context = context or {}
         use_cache = use_cache and not on_development()
 
         if use_cache:

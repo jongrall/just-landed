@@ -1,0 +1,115 @@
+/* Press Page
+------------------------------------------------------------ */
+
+@font-face {
+	font-family: 'Sign Painter';
+	src: url('/static/fonts/sign_painter-webfont.ttf') format('truetype');
+	font-weight: normal;
+	font-style: normal;
+}
+
+.plane {
+	background-position-y: 30%;
+}
+
+#sub-content {
+	width: 640px;
+	margin: 0 auto;
+}
+
+#sub-content h2 {
+	font-size: 26px;
+	text-align: center;
+	margin: 0 0 25px 0;
+}
+
+#coverage {
+	height: 240px;
+	width: 770px;
+	color: #fff;
+	margin: 20px auto 0 auto;
+	text-shadow: 0 1px 2px rgba(0, 0, 30, 0.3);
+}
+
+.pressquote {
+	margin: auto;
+	text-align: center;
+	display: none;
+}
+
+.pressquote p {
+	display: inline-block;
+	color: #fff;
+	font-family: 'Sign Painter';
+	font-size: 35px;
+	margin: 5px 0 0 0;
+	vertical-align: middle;
+}
+
+.pressquote span {
+	font-family: "Lucida Grande", "Lucida Sans Unicode", Geneva, sans-serif;
+	font-size: 30px;
+}
+
+.pressquote img {
+	display: inline-block;
+	margin-left: 25px;
+	margin: 0 0 0 25px;
+	vertical-align: middle;
+}
+
+#footer {
+	margin-top: 60px;
+}
+
+a.press-kit-button {
+	display: block;
+	background-color: #ff5b00;
+	background-image: -o-linear-gradient(top, #ff7800, #ff5b00);
+	background-image: -moz-linear-gradient(top, #ff7800, #ff5b00);
+	background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #ff7800), color-stop(1.0, #ff5b00));
+	height: 70px;
+	text-align: center;
+	color: #fff;
+	width: 240px;
+	font-weight: bold;
+	margin: 20px auto 0 auto;
+	font-size: 30px;
+	border: 1px solid rgba(0, 0, 0, 0.4);
+	border-bottom: none;
+	-o-border-radius: 5px;
+	-moz-border-radius: 5px;
+	-webkit-border-radius: 5px;
+	border-radius: 5px;
+	-o-box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), inset 0 -1px rgba(0, 0, 0, 0.2), inset 0 -4px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 30, 0.6);
+	-moz-box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), inset 0 -1px rgba(0, 0, 0, 0.2), inset 0 -4px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 30, 0.6);
+	-webkit-box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), inset 0 -1px rgba(0, 0, 0, 0.2), inset 0 -4px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 30, 0.6);
+	box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), inset 0 -1px rgba(0, 0, 0, 0.2), inset 0 -4px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 30, 0.6);
+}
+
+a.press-kit-button img {
+	display: block;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+}
+
+a.press-kit-button:hover {
+	background-image: -o-linear-gradient(top, #ff8111, #ff6611);
+	background-image: -moz-linear-gradient(top, #ff8111, #ff6611);
+	background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #ff8111), color-stop(1.0, #ff6611));
+}
+
+a.press-kit-button:active {
+	position: relative;
+	top: 4px;
+	height: 66px;
+	margin-bottom: 4px;
+	background-image: -o-linear-gradient(top, #ff5b00, #ff7800);
+	background-image: -moz-linear-gradient(top, #ff5b00, #ff7800);
+	background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #ff5b00), color-stop(1.0, #ff7800));
+	border-color: #702700;
+	-o-box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8), 0 1px rgba(255, 255, 255, 0.3);
+	-moz-box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8), 0 1px rgba(255, 255, 255, 0.3);
+	-webkit-box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8), 0 1px rgba(255, 255, 255, 0.3);
+	box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8), 0 1px rgba(255, 255, 255, 0.3);
+}

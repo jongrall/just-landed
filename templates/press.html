@@ -1,0 +1,116 @@
+{% extends "base_clouds.html" %}
+
+{% block page_title %}Press &nbsp; &middot; &nbsp; Just Landed&trade;{% endblock %}
+
+{% block extra_css %}
+	{{ block.super }}
+	<link rel="stylesheet" href="/static/css/{{ version }}/press.css" />
+{% endblock %}
+
+{% block clouds_content %}
+	<div class="centered clear" id="coverage">
+		<!-- PRESS QUOTES -->
+		<div class="pressquote">
+			<a href="http://appadvice.com/appnn/2012/06/be-on-time-every-time-with-little-details-new-travel-app-just-landed" target="_blank">
+				<p><span>&ldquo;</span>Be on time, every time.<span>&rdquo;</span></p>
+				<img src="/static/images/press_logos/{{ version }}/appadvice.png"/>
+			</a>
+		</div>
+		
+ 		<div class="pressquote">
+	 		<a href="http://www.appolicious.com/articles/12294-just-landed-totally-hit-its-mark" target="_blank">
+	 			<p><span>&ldquo;</span>Just Landed totally hit its mark.<span>&rdquo;</span></p>
+				<img src="/static/images/press_logos/{{ version }}/appolicious.png"/>
+			</a>
+		</div>
+		
+		<div class="pressquote">
+			<a href="http://www.cntraveler.com/daily-traveler/2012/06/Promised-to-Pick-Someone-Up-at-the-Airport-This-iPhone-App-is-for-You" target="_blank">
+				<p><span>&ldquo;</span>Promised to pick someone up? This is for you.<span>&rdquo;</span></p>
+				<img src="/static/images/press_logos/{{ version }}/cn_traveler.png"/>
+			</a>
+		</div>
+		
+		<div class="pressquote">
+			<a href="http://lifehacker.com/5916281/just-landed-notifies-you-when-its-time-to-leave-for-a-seamless-airport-pickup" target="_blank">
+				<p><span>&ldquo;</span>Seamless airport pickup.<span>&rdquo;</span></p>
+				<img src="/static/images/press_logos/{{ version }}/lifehacker.png"/>
+			</a>
+		</div>
+		
+		<div class="pressquote">
+			<a href="http://mashable.com/2012/08/08/top-mobile-apps-design/" target="_blank">
+				<p><span>&ldquo;</span>The app is beautifully designed.<span>&rdquo;</span></p>
+				<img src="/static/images/press_logos/{{ version }}/mashable.png"/>
+			</a>
+		</div>
+		
+		<div class="pressquote">
+			<a href="http://www.maclife.com/article/reviews/just_landed_review" target="_blank">
+				<p><span>&ldquo;</span>No more waiting around in airports.<span>&rdquo;</span></p>
+				<img src="/static/images/press_logos/{{ version }}/maclife.png"/>
+			</a>
+		</div>
+	</div>
+
+{% endblock %}
+
+{% block more_clouds_content %}
+	<!-- BOTTOM CONTENT -->
+	<div class="centered">
+		<!-- ABOUT COPY -->
+		<div id="sub-content" class="clear">
+			<h2>Just Landed&trade; In The Press</h2>
+			<p>Since launching in June 2012, the Just Landed iPhone app has been covered by a number of major technology news sites including <a href="http://lifehacker.com/5916281/just-landed-notifies-you-when-its-time-to-leave-for-a-seamless-airport-pickup" target="_blank">Lifehacker</a>, <a href="http://mashable.com/2012/08/08/top-mobile-apps-design/" target="_blank">Mashable</a> and <a href="http://www.maclife.com/article/reviews/just_landed_review" target="_blank">MacLife</a>, as well as dozens of blogs. We&rsquo;ve received hundreds of rave reviews from our users, and even been featured by Apple multiple times in &quot;What&rsquo;s Hot&quot;, &quot;New &amp; Noteworthy&quot; and &quot;Travel Essentials&quot; on the iTunes App Store.</p>
+			<p>If you&rsquo;re a member of the press and would like to write about Just Landed, please don&rsquo;t hesitate to <a href="mailto:press@getjustlanded.com?subject=Need%20Just%20Landed%20Promo%20Code">request a promo code</a> so that you can try the app for free, and be sure to download our press kit.</p>
+			<a href="/static/files/{{ version }}/just_landed_press_kit.zip" id="press-kit-button-desktop" class="press-kit-button clear"><img src="/static/images/press/{{ version }}/press_button_text_retina.png" width="240" height="67" alt="Get Press Kit" /></a>
+		</div>
+	</div>
+{% endblock %}
+
+
+{% block extra_js %}
+	{{ block.super }}
+	<script type="text/javascript">
+		(function($){
+		
+			$.fn.shuffle = function() {
+		
+				var allElems = this.get(),
+					getRandom = function(max) {
+						return Math.floor(Math.random() * max);
+					},
+					shuffled = $.map(allElems, function(){
+						var random = getRandom(allElems.length),
+							randEl = $(allElems[random]).clone(true)[0];
+						allElems.splice(random, 1);
+						return randEl;
+				   });
+		
+				this.each(function(i){
+					$(this).replaceWith($(shuffled[i]));
+				});
+		
+				return $(shuffled);
+		
+			};
+		
+		})(jQuery);
+		
+		$('.pressquote').shuffle();
+		var quoteCount = $('.pressquote').size();
+		var curQuote = 0;
+		$('.pressquote').eq(curQuote).fadeIn(500);
+		
+		function transition() {
+			var nextQuote = (curQuote + 1) >= quoteCount ? 0 : curQuote + 1;
+			$('.pressquote').eq(curQuote).fadeOut(500, function (){
+				$('.pressquote').eq(nextQuote).fadeIn(500);
+				curQuote = nextQuote;
+			});
+		}
+		
+		setInterval("transition()", 4000);
+		
+	</script>
+{% endblock %}

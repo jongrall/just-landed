@@ -780,6 +780,7 @@ airlines_iata_to_icao = {
     'WK' : 'EDW',
     'WN' : 'SWA',
     'WO' : 'WOA',
+    'WP' : 'MKU',
     'WR' : 'HRH',
     'WS' : 'WJA',
     'WT' : 'WSG',
