@@ -694,9 +694,6 @@ class FlightAwareSource (FlightDataSource):
 
         # Cache freshness: clear memcache keys for flight info
         FlightAwareSource.clear_flight_info_cache(flight_id)
-        
-        # Cache freshness: clear memcache keys for lookup
-        FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
         # Lookup the flight that the alert is about
         stored_flight = yield FlightAwareTrackedFlight.get_by_flight_id_alert_id(flight_id, alert_id)
@@ -708,6 +705,9 @@ class FlightAwareSource (FlightDataSource):
         else:
             flight_num = stored_flight.user_flight_num
             alerted_flight = None
+            
+            # Cache freshness: clear memcache keys for lookup
+            FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
             # Get current and last flight information for the flight mentioned by the alert
             if event_code == 'cancelled':
