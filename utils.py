@@ -589,7 +589,7 @@ def valid_email(email):
 ###############################################################################
 
 def send_sms(to, body, from_phone=config['twilio']['just_landed_phone']):
-    """Sends an sms message.
+    """Sends an sms message. Truncates body to 160 characters (SMS max).
 
     Arguments:
     - `to` : The phone number to send to.
@@ -599,10 +599,9 @@ def send_sms(to, body, from_phone=config['twilio']['just_landed_phone']):
     """
     assert to, 'No to phone number'
     assert from_phone, 'No from phone number'
-    assert len(body) <= 160, 'SMS message too long %d/160 characters: %s' % (len(body), body)
     twilio_client.sms.messages.create(to=to,
                                       from_=from_phone,
-                                      body=body)
+                                      body=body[:160])
 
 def sms_alert_admin(message):
     """Send an SMS alert to the admins. Intended purpose: report 500 errors."""

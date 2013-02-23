@@ -67,7 +67,7 @@ class StackMob(object):
         self.headers, response = self.http.request(url, method, body=body, headers=headers)
         status = int(self.headers['status'])
 
-        if 200 <= status < 300 or status == 400: # 400 can be existing registered token (doesn't work like UA)
+        if 200 <= status < 300 or status in [400, 409]: # 400/409 can be existing registered token (doesn't work like UA)
             return
         elif status == 401:
             raise Unauthorized()
