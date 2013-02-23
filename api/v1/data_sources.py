@@ -694,6 +694,9 @@ class FlightAwareSource (FlightDataSource):
 
         # Cache freshness: clear memcache keys for flight info
         FlightAwareSource.clear_flight_info_cache(flight_id)
+        
+        # Cache freshness: clear memcache keys for lookup
+        FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
         # Lookup the flight that the alert is about
         stored_flight = yield FlightAwareTrackedFlight.get_by_flight_id_alert_id(flight_id, alert_id)
@@ -705,9 +708,6 @@ class FlightAwareSource (FlightDataSource):
         else:
             flight_num = stored_flight.user_flight_num
             alerted_flight = None
-
-            # Cache freshness: clear memcache keys for lookup
-            FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
             # Get current and last flight information for the flight mentioned by the alert
             if event_code == 'cancelled':
@@ -1022,9 +1022,10 @@ class FlightAwareSource (FlightDataSource):
 
     @ndb.tasklet
     def untrack_flight(self, flight_id, **kwargs):
+        flight_cls = FlightAwareTrackedFlight
         uuid = kwargs.get('uuid')
         u_key = ndb.Key(iOSUser, uuid) # FIXME: Assumes iOS
-        f_key = ndb.Key(FlightAwareTrackedFlight, flight_id, parent=u_key)
+        f_key = ndb.Key(flight_cls, flight_id, parent=u_key)
 
         @ndb.tasklet
         def untrack_txn():
@@ -1043,12 +1044,17 @@ class FlightAwareSource (FlightDataSource):
             if alert_id > 0:
                 # Delete the alert now that it's no longer needed
                 yield self.delete_alert(alert_id)
-
-            # Cache freshness: clear cache for this flight_id
-            FlightAwareSource.clear_flight_info_cache(flight_id)
-
-            # Cache freshness: clear lookup cache for the flight ident
-            FlightAwareSource.clear_flight_lookup_cache([flight_num])
+            
+            still_tracked = yield flight_cls.is_flight_tracked_by_another_user(flight_id, uuid)
+    
+            # MONEY-SAVING OPTIMIZATION: Only flush cache on /untrack if needed
+            # If it's no longer being tracked, we can't rely on alerts to flush the cache        
+            if not still_tracked:
+                # Cache freshness: clear cache for this flight_id
+                FlightAwareSource.clear_flight_info_cache(flight_id)
+    
+                # Cache freshness: clear lookup cache for the flight ident
+                FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
     def authenticate_remote_request(self, request):
         """Returns True if the incoming request is in fact from the trusted
