@@ -250,6 +250,18 @@ class FlightAwareTrackedFlight(_TrackedFlight):
         flight_keys = yield cls.all_flight_keys()
         flight_ids = list(set([k.string_id() for k in flight_keys]))
         raise tasklets.Return(flight_ids)
+        
+    @classmethod
+    @ndb.tasklet
+    def is_flight_tracked_by_another_user(cls, flight_id, uuid):
+        qry = cls.query()
+        qit = qry.iter(keys_only=True)
+        while (yield qit.has_next_async()):
+            next_key = qit.next()
+            if (next_key.string_id() == flight_id and 
+                next_key.parent().string_id() != uuid):
+                raise tasklets.Return(True)
+        raise tasklets.Return(False)
 
     @classmethod
     @ndb.tasklet
