@@ -95,7 +95,7 @@ class StackMobService(PushNotificationService):
         except stackmob.Unauthorized:
             raise StackMobUnauthorizedError()
         except stackmob.StackMobFailure as e:
-            raise StackMobUnknownError(status_code=e.code, message='StackMob Failure')
+            raise StackMobUnknownError(status_code=e.code, message=e.message)
         except Exception:
             raise StackMobUnavailableError()
 
