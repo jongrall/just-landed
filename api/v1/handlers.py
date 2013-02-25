@@ -238,7 +238,9 @@ class TrackHandler(AuthenticatedAPIHandler):
                 'send_reminders' : send_reminders,
                 'send_flight_events' : send_flight_events,
                 'play_flight_sounds' : play_flight_sounds,
-            })
+            },
+            retry_options=taskqueue.TaskRetryOptions(task_retry_limit=25,
+                                                    task_age_limit=14400))
             taskqueue.Queue('track').add(task)
 
 
