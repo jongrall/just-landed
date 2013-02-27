@@ -240,7 +240,8 @@ class TrackHandler(AuthenticatedAPIHandler):
                 'play_flight_sounds' : play_flight_sounds,
             },
             retry_options=taskqueue.TaskRetryOptions(task_retry_limit=25,
-                                                    task_age_limit=14400))
+                                                    task_age_limit=14400,
+                                                    min_backoff_seconds=15))
             taskqueue.Queue('track').add(task)
 
 
