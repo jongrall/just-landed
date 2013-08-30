@@ -14,13 +14,60 @@ import sys
 import logging
 import csv
 import os
+import json
+import urllib
+import urllib2
 
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
 
-from connections import Connection
+def build_url(base, path, args=None):
+    """Builds a properly encoded URL from base, path and query arguments."""
+    args = args or {}
+    url = base + path
+    if args:
+        encoded_args = urllib.urlencode(args)
+        url = url + '?' + encoded_args
+    return url
 
-GOOGLE_PLACES_KEY = 'AIzaSyCN0SpDuAhLxC9bH9gFsGMO2PPlNo7PDLw'
+
+class Connection(object):
+    """Connection class to help with making HTTP requests."""
+    def __init__(self, base_url, username=None, password=None):
+        self._base_url = base_url
+        self._auth = None
+        self._ssl = False
+        if username:
+            assert password
+            self._username = username
+            self._password = password
+            self._auth = ('%s:%s' % (username, password)).encode('base64')[:-1]
+        if base_url.startswith('https'):
+            self._ssl = True
+
+    def request(self, url, payload=None, method='GET', headers=None, deadline=10):
+        """Helper for making asynchornous HTTP requests."""
+        headers = headers or {}
+        if self._auth:
+            headers.update({
+                'Authorization': 'Basic %s' % self._auth,
+            })
+        the_request = urllib2.Request(url, data=payload, headers=headers)
+
+        result = urllib2.urlopen(the_request, payload, deadline)
+        return result
+
+    def get_json(self, path, args=None, payload=None, headers=None, deadline=10):
+        """Convenience function for issuing a JSON GET request."""
+        args = args or {}
+        headers = headers or {}
+        url = build_url(self._base_url, path, args)
+        result = self.request(url, payload=payload, method='GET', headers=headers,
+                                deadline=deadline)
+        parsed_json = json.loads(result.read())
+        return result.getcode(), parsed_json
+
+GOOGLE_PLACES_KEY = 'AIzaSyBl3IT4ddZT2wuKFV-3UZgKkmyk4mIg0G8'
 MAX_TO_PROCESS = 0
 
 def scrub_locations():
@@ -39,7 +86,7 @@ def scrub_locations():
     dest_file = open('airports_rev.csv', 'a')
     airport_data = csv.reader(src_file)
     revised_airport_data = csv.writer(dest_file)
-    google_places = Connection('http://maps.googleapis.com/maps/api/place')
+    google_places = Connection('https://maps.googleapis.com/maps/api/place')
     geo_names = Connection('http://api.geonames.org')
     count = 0
     left_alone = 0
@@ -69,7 +116,7 @@ def scrub_locations():
                     'sensor' : 'false',
                     'types' : 'airport',
                 }
-                status_code, resp = google_places.get_json('/search/json', args)
+                status_code, resp = google_places.get_json('/nearbysearch/json', args)
 
                 # Get the timezone info from GeoNames
                 args = {

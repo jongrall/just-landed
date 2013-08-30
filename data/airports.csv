@@ -905,7 +905,6 @@ FAAG,AGZ,Aggeneys,Aggeneys,South Africa,-29.281767,18.813869,2648,2,U
 FABE,VIY,Bhisho,Bisho,South Africa,-32.89715,27.279111,1950,2,U
 FABL,BFN,Bloemfontein Intl,Bloemfontein,South Africa,-29.092722,26.302444,4458,2,U
 FACT,CPT,Cape Town Intl,Cape Town,South Africa,-33.964806,18.601667,151,2,U
-FADN,DUR,Durban Intl,Durban,South Africa,-29.970089,30.950519,33,2,U
 FAEL,ELS,East London,East London,South Africa,-33.035569,27.825939,435,2,U
 FAGC,GCJ,Grand Central,Johannesburg,South Africa,-25.986267,28.140061,5325,2,U
 FAGG,GRJ,George,George,South Africa,-34.005553,22.378889,648,2,U
@@ -916,6 +915,7 @@ FAKM,KIM,Kimberley,Kimberley,South Africa,-28.802834,24.765167,3950,2,U
 FAKN,MQP,Kruger Mpumalanga International Airport,Mpumalanga,South Africa,-25.3832,31.1056,2829,2,U
 FAKZ,KLZ,Kleinsee,Kleinsee,South Africa,-29.688403,17.094006,270,2,U
 FALA,HLA,Lanseria,Johannesburg,South Africa,-25.938514,27.926133,4517,2,U
+FALE,DUR,King Shaka International Airport,Durban,South Africa,-29.616667,31.108333,295,2,U
 FALY,LAY,Ladysmith,Ladysmith,South Africa,-28.581667,29.749722,3548,2,U
 FAMD,AAM,Malamala Airport,Malamala,South Africa,-24.818111,31.544584,1124,2,U
 FAMG,MGH,Margate,Margate,South Africa,-30.857408,30.343019,495,2,U
@@ -4013,7 +4013,7 @@ TJMZ,MAZ,Eugenio Maria De Hostos,Mayaguez,Puerto Rico,18.255694,-67.148472,28,-4
 TJPS,PSE,Mercedita,Ponce,Puerto Rico,18.008306,-66.563028,29,-4,U
 TJRV,RVR,Jose Aponte de la Torre Airport,Ceiba,Puerto Rico,18.245278,-65.643333,38,-4,A
 TJSJ,SJU,Luis Munoz Marin Intl,San Juan,Puerto Rico,18.439417,-66.001833,9,-4,U
-TKPK,SKB,Robert L Bradshaw,Basse Terre,Saint Kitts and Nevis,17.311194,-62.718667,170,-4,U
+TKPK,SKB,Robert L Bradshaw Intl Airport,Saint Kitts,Saint Kitts and Nevis,17.311194,-62.718667,170,-4,U
 TKPN,NEV,Vance Winkworth Amory International Airport,Charlestown,Saint Kitts and Nevis,17.205678,-62.589869,14,-4,U
 TLPC,SLU,George F L Charles,Castries,Saint Lucia,14.020228,-60.992936,22,-4,U
 TLPL,UVF,Hewanorra Intl,Hewandorra,Saint Lucia,13.733194,-60.952597,14,-4,U
