@@ -243,7 +243,8 @@ def is_old_fa_flight(raw_fa_flight_data):
     # Flight was cancelled, see if it is old cancellation
     elif departure_timestamp == -1:
         duration_secs = fa_flight_ete_to_duration(raw_fa_flight_data['filed_ete'])
-        sched_arrival = datetime.utcfromtimestamp(departure_timestamp + duration_secs)
+        filed_departure_timestamp = raw_fa_flight_data['filed_departuretime']
+        sched_arrival = datetime.utcfromtimestamp(filed_departure_timestamp + duration_secs)
         return sched_arrival < hours_ago
 
     # Not arrived, not cancelled => not old

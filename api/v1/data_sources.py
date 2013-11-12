@@ -26,6 +26,7 @@ __email__ = "jon@littledetails.net"
 
 import logging
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 # We use memcache service to cache results from 3rd party APIs. This improves
 # performance and also reduces our bill :)
@@ -269,7 +270,7 @@ class FlightAwareSource (FlightDataSource):
     @ndb.tasklet
     def raw_flight_data_to_flight(self, data, sanitized_flight_num, airport_info=None, return_none_on_error=False):
         airport_info = airport_info or {}
-        
+
         try:
             if data and utils.valid_flight_number(sanitized_flight_num):
                 # Keep a subset of the response fields
@@ -619,6 +620,31 @@ class FlightAwareSource (FlightDataSource):
                 else:
                     offset += 15
 
+            # BEGIN FlightAware DIVERTED bug workaround (flights marked as diverted but then rescheduled)
+            flights_by_departure = defaultdict(list)
+            for data in flight_data:
+                filed_departure = data['filed_departuretime']
+                flights_by_departure[filed_departure].append(data)
+
+            not_mistakenly_diverted = []
+            for departure_time in flights_by_departure:
+                flights_filed_for_same_time = flights_by_departure[departure_time]
+                num_flights_same_time = len(flights_filed_for_same_time)
+                if num_flights_same_time <= 1:
+                    not_mistakenly_diverted.extend(flights_filed_for_same_time)
+                else:
+                    non_diverted_exists = False
+                    for flight in flights_filed_for_same_time:
+                        if flight['diverted'] != 't':
+                            not_mistakenly_diverted.append(flight)
+                            non_diverted_exists = True
+
+                    if not non_diverted_exists:
+                        not_mistakenly_diverted.extend(list(flights_filed_for_same_time))
+
+            flight_data = not_mistakenly_diverted
+            ## END WORKAROUND
+
             # Get information on all the airports involved
             airport_codes = set()
             for data in flight_data:
@@ -705,7 +731,7 @@ class FlightAwareSource (FlightDataSource):
         else:
             flight_num = stored_flight.user_flight_num
             alerted_flight = None
-            
+
             # Cache freshness: clear memcache keys for lookup
             FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
@@ -1044,15 +1070,15 @@ class FlightAwareSource (FlightDataSource):
             if alert_id > 0:
                 # Delete the alert now that it's no longer needed
                 yield self.delete_alert(alert_id)
-            
+
             still_tracked = yield flight_cls.is_flight_tracked_by_another_user(flight_id, uuid)
-    
+
             # MONEY-SAVING OPTIMIZATION: Only flush cache on /untrack if needed
-            # If it's no longer being tracked, we can't rely on alerts to flush the cache        
+            # If it's no longer being tracked, we can't rely on alerts to flush the cache
             if not still_tracked:
                 # Cache freshness: clear cache for this flight_id
                 FlightAwareSource.clear_flight_info_cache(flight_id)
-    
+
                 # Cache freshness: clear lookup cache for the flight ident
                 FlightAwareSource.clear_flight_lookup_cache([flight_num])
 
