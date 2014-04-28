@@ -161,7 +161,7 @@ def push(payload, **kwargs):
 ###############################################################################
 
 # Reliability: UrbanAirship is the primary push service, PushBots is a fallback
-push_service = PushBotsService()
+push_service = UrbanAirshipService()
 fallback_push_service = PushBotsService()
 
 class PushWorker(BaseHandler):
