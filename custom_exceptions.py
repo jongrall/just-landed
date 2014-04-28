@@ -1,7 +1,7 @@
 """custom_exceptions.py: defines all the exceptions thrown by Just Landed."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed LLC"
+__copyright__ = "Copyright 2012, Little Details LLC"
 __email__ = "jon@littledetails.net"
 
 ###############################################################################
@@ -199,10 +199,10 @@ class UrbanAirshipUnavailableError(PushNotificationsUnavailableError):
         super(UrbanAirshipUnavailableError, self).__init__()
         self.message = 'Urban Airship is unavailable.'
 
-class StackMobUnavailableError(PushNotificationsUnavailableError):
+class PushBotsUnavailableError(PushNotificationsUnavailableError):
     def __init__(self):
-        super(StackMobUnavailableError, self).__init__()
-        self.message = 'StackMob is unavailable.'
+        super(PushBotsUnavailableError, self).__init__()
+        self.message = 'PushBots is unavailable.'
 
 class PushNotificationsUnauthorizedError(Exception):
     def __init__(self):
@@ -215,10 +215,10 @@ class UrbanAirshipUnauthorizedError(PushNotificationsUnauthorizedError):
         super(UrbanAirshipUnauthorizedError, self).__init__()
         self.message = 'Urban Airship request is unauthorized.'
 
-class StackMobUnauthorizedError(PushNotificationsUnauthorizedError):
+class PushBotsUnauthorizedError(PushNotificationsUnauthorizedError):
     def __init__(self):
-        super(StackMobUnauthorizedError, self).__init__()
-        self.message = 'StackMob request is unauthorized.'
+        super(PushBotsUnauthorizedError, self).__init__()
+        self.message = 'PushBots request is unauthorized.'
 
 class PushNotificationsUnknownError(Exception):
     def __init__(self, status_code=500, message=''):
@@ -230,6 +230,6 @@ class UrbanAirshipUnknownError(PushNotificationsUnknownError):
     def __init__(self, status_code=500, message=''):
         super(UrbanAirshipUnknownError, self).__init__(status_code, message)
 
-class StackMobUnknownError(PushNotificationsUnknownError):
+class PushBotsUnknownError(PushNotificationsUnknownError):
     def __init__(self, status_code=500, message=''):
-        super(StackMobUnknownError, self).__init__(status_code, message)
+        super(PushBotsUnknownError, self).__init__(status_code, message)

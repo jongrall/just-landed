@@ -1,7 +1,7 @@
 """notifications.py: Utilities for sending push notifications via Urban Airship."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed LLC"
+__copyright__ = "Copyright 2012, Little Details LLC"
 __email__ = "jon@littledetails.net"
 
 import logging
@@ -11,11 +11,11 @@ from datetime import datetime
 from google.appengine.api import memcache, taskqueue
 
 from lib import urbanairship
-from lib import stackmob
+from lib import pushbots
 
 from custom_exceptions import *
 from main import BaseHandler
-from config import config, on_development, ua_credentials, stackmob_credentials
+from config import config, on_development, ua_credentials, pushbots_credentials
 import utils
 
 # Enable to log informational messages about push notification activity
@@ -76,37 +76,37 @@ class UrbanAirshipService(PushNotificationService):
         self.call_ua_func(self._UA.push, payload, device_tokens=device_tokens)
 
 
-class StackMobService(PushNotificationService):
-    """Concrete implementation of a PushNotificationService using StackMob."""
+class PushBotsService(PushNotificationService):
+    """Concrete implementation of a PushNotificationService using PushBots."""
 
     def __init__(self):
-        super(StackMobService, self).__init__()
-        creds = stackmob_credentials()
+        super(PushBotsService, self).__init__()
+        creds = pushbots_credentials()
         kwargs = {
             'production' : not on_development(),
         }
         kwargs.update(creds)
-        self._SM = stackmob.StackMob(**kwargs)
+        self._PB = pushbots.PushBots(**kwargs)
 
-    def call_sm_func(self, func, *args, **kwargs):
+    def call_pb_func(self, func, *args, **kwargs):
         # Reliability: intercept & translate exceptions
         try:
             func(*args, **kwargs)
-        except stackmob.Unauthorized:
-            raise StackMobUnauthorizedError()
-        except stackmob.StackMobFailure as e:
-            raise StackMobUnknownError(status_code=e.code, message=e.message)
+        except pushbots.Unauthorized:
+            raise PushBotsUnauthorizedError()
+        except pushbots.PushBotsFailure as e:
+            raise PushBotsUnknownError(status_code=e.code, message=e.message)
         except Exception:
-            raise StackMobUnavailableError()
+            raise PushBotsUnavailableError()
 
     def register_token(self, device_token):
-        self.call_sm_func(self._SM.register, device_token)
+        self.call_pb_func(self._PB.register, device_token)
 
     def deregister_token(self, device_token):
-        self.call_sm_func(self._SM.deregister, device_token)
+        self.call_pb_func(self._PB.deregister, device_token)
 
     def push(self, payload, device_tokens=None):
-        self.call_sm_func(self._SM.push, payload, device_tokens=device_tokens)
+        self.call_pb_func(self._PB.push, payload, device_tokens=device_tokens)
 
 ###############################################################################
 # Helper Methods for Deferring Notification Work
@@ -160,9 +160,9 @@ def push(payload, **kwargs):
 # Request Handler for Push Notification Taskqueue Callback
 ###############################################################################
 
-# Reliability: UrbanAirship is the primary push service, StackMob is a fallback
-push_service = UrbanAirshipService()
-fallback_push_service = StackMobService()
+# Reliability: UrbanAirship is the primary push service, PushBots is a fallback
+push_service = PushBotsService()
+fallback_push_service = PushBotsService()
 
 class PushWorker(BaseHandler):
     """Taskqueue worker for sending push notifications."""
@@ -239,7 +239,7 @@ class _Alert(object):
     def push(self, **kwargs):
         """Push the alert (adds to taskqueue for processing)."""
         data =  self.payload
-        kwargs['device_tokens'] = [self._device_token]
+        kwargs['device_tokens'] = [self._device_token] # Single device token
         play_flight_sounds = kwargs.get('play_flight_sounds')
 
         # Disable flight sounds if specified

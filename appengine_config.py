@@ -1,7 +1,7 @@
 """appengine_config.py: Additional App-Engine specific config."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed LLC"
+__copyright__ = "Copyright 2012, Little Details LLC"
 __email__ = "jon@littledetails.net"
 
 from config import on_production

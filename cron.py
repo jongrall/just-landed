@@ -1,7 +1,7 @@
 """cron.py: Handlers for cron jobs."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed LLC"
+__copyright__ = "Copyright 2012, Little Details LLC"
 __email__ = "jon@littledetails.net"
 
 import logging
@@ -173,7 +173,7 @@ class OutageCheckerWorker(BaseHandler):
             BingMapsUnavailableError(),
             GoogleDistanceAPIUnavailableError(),
             UrbanAirshipUnavailableError(),
-            StackMobUnavailableError(),
+            PushBotsUnavailableError(),
             # MixpanelUnavailableError(), # No longer used
             GoogleAnalyticsUnavailableError(),
         ]
