@@ -1,7 +1,7 @@
 """airline_codes.py: Utilities for mapping airline IATA codes to ICAO codes."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed LLC"
+__copyright__ = "Copyright 2012, Little Details LLC"
 __email__ = "jon@littledetails.net"
 
 airlines_iata_to_icao = {

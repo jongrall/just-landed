@@ -5,7 +5,7 @@ in memory as a way of keeping data organized and providing a clear interface.
 """
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed LLC"
+__copyright__ = "Copyright 2012, Little Details LLC"
 __email__ = "jon@littledetails.net"
 
 import logging

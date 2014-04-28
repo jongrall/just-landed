@@ -1,7 +1,7 @@
 """config.py: This module contains all settings for the Just Landed app."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed LLC"
+__copyright__ = "Copyright 2012, Little Details LLC"
 __email__ = "jon@littledetails.net"
 
 import os
@@ -174,7 +174,7 @@ config['max_push_token_age'] = 7200
 
 # Domain names
 config['domain_name'] = {
-    'development' : 'c-98-207-175-25.hsd1.ca.comcast.net',
+    'development' : '75-101-52-119.dsl.static.sonic.net',
     'staging' : 'staging.getjustlanded.com',
     'production' : 'www.getjustlanded.com',
 }
@@ -185,7 +185,7 @@ def domain_name():
 
 # Server urls and api credentials that are used to sign requests
 config['server_url'] = {
-    'development' : 'http://c-98-207-175-25.hsd1.ca.comcast.net',
+    'development' : 'http://75-101-52-119.dsl.static.sonic.net:8082',
     'staging' : 'https://just-landed-staging.appspot.com',
     'production' : 'https://just-landed.appspot.com',
 }
@@ -401,27 +401,27 @@ def ua_credentials():
     app_mode = config['app']['mode']
     return config['urbanairship'][app_mode]
 
-config['stackmob'] = {
+config['pushbots'] = {
     'development': {
-        'public_key' : 'df6126cd-906e-4ee7-b09b-d12208646bb5',
-        'private_key' : 'fe2a94b0-d732-4639-90d1-c6b80a4a9bc0',
+        'app_id' : '535daf211d0ab1d1768b4585',
+        'secret' : '1cc366e5c794faef1a0b63efa2e6c6f5',
     },
 
     # Note: staging uses production push cert & creds
     'staging': {
-        'public_key' : 'e417f04b-56d2-4fa9-92c5-c0f8fccfac35',
-        'private_key' : '0d7b2a49-bc1d-406f-a918-39b4b538afe1',
+        'app_id' : '535daf7b1d0ab1d2768b4589',
+        'secret' : '243a42cf7afe5ff6568f6c9c1bcc04d6',
     },
 
     'production': {
-        'public_key' : 'e417f04b-56d2-4fa9-92c5-c0f8fccfac35',
-        'private_key' : '0d7b2a49-bc1d-406f-a918-39b4b538afe1',
+        'app_id' : '535daf7b1d0ab1d2768b4589',
+        'secret' : '243a42cf7afe5ff6568f6c9c1bcc04d6',
     },
 }
 
-def stackmob_credentials():
+def pushbots_credentials():
     app_mode = config['app']['mode']
-    return config['stackmob'][app_mode]
+    return config['pushbots'][app_mode]
 
 ###############################################################################
 # Twilio Configuration

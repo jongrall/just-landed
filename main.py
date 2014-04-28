@@ -3,7 +3,7 @@
 """main.py: Main WSGI app instantiation and configuration for Just Landed."""
 
 __author__ = "Jon Grall"
-__copyright__ = "Copyright 2012, Just Landed LLC"
+__copyright__ = "Copyright 2012, Little Details LLC"
 __email__ = "jon@littledetails.net"
 
 import logging
