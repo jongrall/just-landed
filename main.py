@@ -70,13 +70,13 @@ class BaseHandler(webapp.RequestHandler):
 
         outage_errors = (FlightDataUnavailableError,
                          DrivingTimeUnavailableError,
-                         PushNotificationsUnavailableError)
+                         DeadlineExceededError,
+                         PushBotsUnavailableError)
                          # ReportingServiceUnavailableError)
 
         urgent_errors = (OverQuotaError,
                          CapabilityDisabledError,
                          FeatureNotEnabledError,
-                         DeadlineExceededError,
                          PushNotificationsUnauthorizedError,
                          PushNotificationsUnknownError,
                          MalformedDrivingDataException,
