@@ -229,6 +229,12 @@ def fa_flight_ete_to_duration(filed_ete):
         raise ValueError()
     return (int(flight_duration[0] or 0) * 3600) + (int(flight_duration[1] or 0) * 60)
 
+def is_old_or_duration_invalid_fa_flight(raw_fa_flight_data):
+	try:
+		return is_old_fa_flight(raw_fa_flight_data)
+	except ValueError:
+		return True # Invalid duration
+
 def is_old_fa_flight(raw_fa_flight_data):
     """Tests whether a FlightAware flight is old or not."""
     arrival_timestamp = raw_fa_flight_data['actualarrivaltime']

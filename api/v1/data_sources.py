@@ -611,7 +611,7 @@ class FlightAwareSource (FlightDataSource):
                 data = data['FlightInfoExResult']['flights']
 
                 # Filter out old flights before conversion to Flight
-                current_flights = [f for f in data if not utils.is_old_fa_flight(f)]
+                current_flights = [f for f in data if not utils.is_old_or_duration_invalid_fa_flight(f)]
                 flight_data.extend(current_flights)
 
                 # If we have some old flights, or less than 15 flights for this batch, we're done
