@@ -382,18 +382,18 @@ config['mixpanel'] = {
 config['urbanairship'] = {
   'development': {
     'key': '9HBQrA0ISk2WzkJkWAst1g',
-    'secret': 'Ok15UGaPRJqWfTUdmcn7sA',
+    'secret': 'As7ncmdUTfWqJRPaGU51kO',
   },
 
   # Note: staging uses production push cert & creds
   'staging': {
     'key': 'WZR0ix1mRCeTBmIaLUIi8g',
-    'secret': 'Z6c6j5gCRpOseuOjcIpeGQ',
+    'secret': 'QGepIcjOuesOpRCg5j6c6Z',
   },
 
   'production': {
     'key': 'WZR0ix1mRCeTBmIaLUIi8g',
-    'secret': 'Z6c6j5gCRpOseuOjcIpeGQ',
+    'secret': 'QGepIcjOuesOpRCg5j6c6Z',
   },
 }
 
