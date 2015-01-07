@@ -160,9 +160,9 @@ def push(payload, **kwargs):
 # Request Handler for Push Notification Taskqueue Callback
 ###############################################################################
 
-# Reliability: UrbanAirship is the primary push service, PushBots is a fallback
-push_service = UrbanAirshipService()
-fallback_push_service = PushBotsService()
+# Reliability: PushBots is the primary push service, UrbanAirship is a fallback
+push_service = PushBotsService()
+fallback_push_service = UrbanAirshipService()
 
 class PushWorker(BaseHandler):
     """Taskqueue worker for sending push notifications."""
