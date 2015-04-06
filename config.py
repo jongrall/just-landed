@@ -262,6 +262,7 @@ config['flightaware'] = {
         '70.42.6.128/25',
         '72.251.200.64/26',
         '89.151.84.224/28',
+		'2600:0C13:1002:0004::/64',
     ],
 
     # Cache expiration for flight data from /search
