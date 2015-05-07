@@ -10,10 +10,10 @@
         <div id="iphone" style="background-image: url('/static/images/homepage/{{ version }}/iphone.png');">
         	<!-- Video Play Buttons -->
             <div id="video-button" class="paused" style="background-image: url('/static/images/homepage/{{ version }}/video_play_retina.png');"></div>
-            
+
         	<!-- iPhone Glare -->
             <div id="iphone-glare" style="background-image: url('/static/images/homepage/{{ version }}/iphone_glare.png');"></div>
-            
+
             <!-- HTML5 Video -->
             <video width="280" height="420" preload="auto" loop="loop" poster="/static/movies/{{ version }}/poster.png">
                 <source src="/static/movies/{{ version }}/jl_screencast.mp4" type="video/mp4" />
@@ -29,8 +29,8 @@
             <h1 id="logo"><a href="/" style="background-image: url('/static/images/{{ version }}/logo_retina.png');">Just Landed&trade;</a></h1>
             <h2 id="tagline" style="background-image: url('/static/images/{{ version }}/tagline_retina.png');">&ellip;getting you there on time</h2>
 
-            <a href="http://itunes.com/apps/littledetailsllc/justlanded" target="_blank" id="app-store-button-desktop" class="app-store-button"><img src="/static/images/homepage/{{ version }}/app_store_button_text_retina.png" width="350" height="67" alt="Get the App!" /></a>
-            <a href="itms-apps://itunes.com/apps/littledetailsllc/justlanded" id="app-store-button-iphone" class="app-store-button"><img src="/static/images/homepage/{{ version }}/app_store_button_text_retina.png" width="350" height="67" alt="Get the App!" /></a>
+            <a href="https://itunes.apple.com/app/id520338005?mt=8&uo=6&at=1000l3kI&ct=jlwebsite" target="_blank" id="app-store-button-desktop" class="app-store-button"><img src="/static/images/homepage/{{ version }}/app_store_button_text_retina.png" width="350" height="67" alt="Get the App!" /></a>
+            <a href="https://itunes.apple.com/app/id520338005?mt=8&uo=6&at=1000l3kI&ct=jlwebsite" id="app-store-button-iphone" class="app-store-button"><img src="/static/images/homepage/{{ version }}/app_store_button_text_retina.png" width="350" height="67" alt="Get the App!" /></a>
         </div>
     </div>
 {% endblock %}
@@ -63,7 +63,7 @@
 
     <script type="text/javascript">
     	var $videoButton = $('#video-button');
-    	
+
         $(document).ready(function() {
             // Show the fallback image only if the browser doesn't support <video>
             if (Modernizr.video) {
@@ -77,19 +77,19 @@
             if ($('video').get(0).paused) {
             	// Play the video
                 $('video').get(0).play();
-                
+
                 // Change to pause and hide
                 $videoButton.attr('style', 'background-image: url("/static/images/homepage/{{ version }}/video_pause_retina.png");').removeClass('paused').hide();
             }
             else {
             	// Pause the video
                 $('video').get(0).pause();
-                
+
                 // Change to play and show
                 $videoButton.attr('src', 'background-image: url("/static/images/homepage/{{ version }}/video_play_retina.png");').addClass('paused').show();
             }
         });
-        
+
         $('#iphone').hover(
         	function() {
 	        	$videoButton.show();
