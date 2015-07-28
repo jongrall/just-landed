@@ -94,7 +94,7 @@ class SendRemindersWorker(BaseHandler):
                         f_id = f_key.string_id()
                         error = OrphanedFlightError(flight_id=f_id)
                         logging.exception(error) # Don't throw, just log
-                        utils.sms_report_exception(error)
+                        # utils.sms_report_exception(error)
                         raise tasklets.Return()
 
                     elif not user.push_enabled: # Only send reminders to users with push enabled

@@ -632,7 +632,7 @@ def sms_report_exception(exception):
 
     if not memcache.get(exception_memcache_key):
         memcache.set(exception_memcache_key, exception, config['exception_cache_time'])
-        sms_alert_admin("[%s] Just Landed %s\n%s" %
+        sms_alert_admin("[%s] JL %s\n%s" %
                         (datetime.now(Pacific).strftime('%T'),
                         type(exception).__name__,
                         exception.message))

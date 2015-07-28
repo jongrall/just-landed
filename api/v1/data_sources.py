@@ -332,7 +332,7 @@ class FlightAwareSource (FlightDataSource):
         except FlightDurationUnknown as e:
             if return_none_on_error:
                 logging.exception(e) # Report it, but recover gracefully
-                utils.sms_report_exception(e)
+                # utils.sms_report_exception(e)
                 raise tasklets.Return()
             else:
                 raise e # Re-raise the exception
@@ -662,7 +662,7 @@ class FlightAwareSource (FlightDataSource):
                 if airport is None:
                     e = AirportNotFoundException(code, sanitized_f_num)
                     logging.exception(e)
-                    utils.sms_report_exception(e)
+                    # utils.sms_report_exception(e)
 
             # Convert raw flight data to instances of Flight
             flights = yield [self.raw_flight_data_to_flight(data,

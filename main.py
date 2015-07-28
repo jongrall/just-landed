@@ -83,9 +83,9 @@ class BaseHandler(webapp.RequestHandler):
                          MalformedDrivingDataException,
                          DrivingAPIQuotaException,
                          DrivingTimeUnauthorizedException,
-                         AirportNotFoundException,
+                         # AirportNotFoundException,
                          UnableToSetAlertException,
-                         FlightDurationUnknown,
+                         # FlightDurationUnknown,
                          InvalidAlertCallbackException,
                          EventClassNotFoundException,
                          UnableToCreateUniqueEventKey)
