@@ -153,6 +153,11 @@ class BingMapsUnavailableError(DrivingTimeUnavailableError):
         super(BingMapsUnavailableError, self).__init__()
         self.message = 'Bing Maps API is unavailable.'
 
+class HereRoutesUnavailableError(DrivingTimeUnavailableError):
+    def __init__(self):
+        super(HereRoutesUnavailableError, self).__init__()
+        self.message = 'Here Routes API is unavailable.'
+
 class GoogleDistanceAPIUnavailableError(DrivingTimeUnavailableError):
     def __init__(self):
         super(GoogleDistanceAPIUnavailableError, self).__init__()

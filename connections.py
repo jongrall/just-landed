@@ -60,3 +60,14 @@ class Connection(object):
                         deadline=deadline)
         parsed_json = json.loads(result.content)
         raise tasklets.Return(parsed_json)
+
+    @ndb.tasklet
+    def get_json_with_status(self, path, args=None, payload=None, headers=None, deadline=10):
+        """Convenience function for issuing a JSON GET request."""
+        args = args or {}
+        headers = headers or {}
+        url = build_url(self._base_url, path, args)
+        result = yield self.request(url, payload=payload, method='GET', headers=headers,
+                        deadline=deadline)
+        parsed_json = json.loads(result.content)
+        raise tasklets.Return(parsed_json, result.status_code)

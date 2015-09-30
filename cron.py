@@ -172,6 +172,7 @@ class OutageCheckerWorker(BaseHandler):
             FlightAwareUnavailableError(),
             BingMapsUnavailableError(),
             GoogleDistanceAPIUnavailableError(),
+			HereRoutesUnavailableError(),
             UrbanAirshipUnavailableError(),
             PushBotsUnavailableError(),
             # MixpanelUnavailableError(), # No longer used

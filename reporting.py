@@ -68,6 +68,7 @@ FA_DELETED_ALERT = 'FlightAware.DeletedAlert'
 FA_FLIGHT_ALERT_CALLBACK = 'FlightAware.AlertCallback'
 GOOG_FETCH_DRIVING_TIME = 'Google.DrivingTime'
 BING_FETCH_DRIVING_TIME = 'Bing.DrivingTime'
+HERE_ROUTES_FETCH_DRIVING_TIME = 'Here.DrivingTime'
 
 ###############################################################################
 # Reporting Service

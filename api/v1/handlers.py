@@ -16,7 +16,7 @@ from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 
 from main import BaseHandler, BaseAPIHandler, AuthenticatedAPIHandler
-from api.v1.data_sources import FlightAwareSource, BingMapsDistanceSource, GoogleDistanceSource
+from api.v1.data_sources import FlightAwareSource, BingMapsDistanceSource, HereRoutesDistanceSource, GoogleDistanceSource
 from custom_exceptions import *
 import utils
 
@@ -25,9 +25,10 @@ from reporting import log_event, FlightSearchEvent, FlightSearchMissEvent, UserA
 # Currently using FlightAware for flight data
 source = FlightAwareSource()
 
-# Bing maps driving distance with Google as fallback
-distance_source = BingMapsDistanceSource()
+# Driving time sources with fallbacks
+distance_source = HereRoutesDistanceSource()
 fallback_distance_source = GoogleDistanceSource()
+last_resort_distance_source = BingMapsDistanceSource()
 
 ###############################################################################
 # Search / Lookup
@@ -185,7 +186,7 @@ class TrackHandler(AuthenticatedAPIHandler):
                                         dest_longitude)):
 
             # Fail gracefully if we can't get driving distance
-            for driving_source in [distance_source, fallback_distance_source]:
+            for driving_source in [distance_source, fallback_distance_source, last_resort_distance_source]:
                 try:
                     driving_time = yield driving_source.driving_time(latitude,
                                                                      longitude,
@@ -198,7 +199,7 @@ class TrackHandler(AuthenticatedAPIHandler):
                     if isinstance(e, NoDrivingRouteException):
                         logging.warn(e) # No route is a warn, skip fallback service
                         break
-                    if driving_source == fallback_distance_source:
+                    if driving_source == last_resort_distance_source:
                         raise # Give up, re-raise
                     else:
                         logging.exception(e)

@@ -1307,3 +1307,94 @@ class BingMapsDistanceSource (DrivingTimeDataSource):
                 raise DrivingAPIQuotaException()
             else:
                 raise BingMapsUnavailableError()
+
+
+class HereRoutesDistanceSource (DrivingTimeDataSource):
+    """Concrete subclass of DrivingTimeDataSource that pulls its data from the
+    commercial Here Routes REST API:
+
+    https://developer.here.com/rest-apis/documentation/routing/topics/quick-start.html
+
+    """
+    @property
+    def base_url(self):
+        return 'http://route.cit.api.here.com/routing/7.2'
+
+    def __init__(self):
+        self.conn = Connection(self.base_url)
+
+    @ndb.tasklet
+    def driving_time(self, origin_lat, origin_lon, dest_lat, dest_lon, **kwargs):
+        """Implements driving_time method of DrivingTimeDataSource.
+
+        Fields:
+        - `origin_lat` : The latitude of the origin to route from.
+        - `origin_lon` : The longitude of the origin to route from.
+        - `dest_lat` : The latitude of the destination to route to.
+        - `dest_lon` : The longitude of the destination to route to.
+        - `use_cache` : Whether or not to use memcache. Will always update the cache
+                        when fetching new data regardless of whether this is set.
+
+        """
+        driving_cache_key = HereRoutesDistanceSource.driving_cache_key(origin_lat,
+																	origin_lon,
+                                                                 	dest_lat,
+                                                                 	dest_lon)
+        use_cache = kwargs.get('use_cache')
+
+        # Default to using cache if not specified
+        if use_cache is None:
+            use_cache = True
+
+        time = None
+        if use_cache:
+            time = memcache.get(driving_cache_key)
+        elif debug_cache:
+            logging.info('IGNORING DRIVING CACHE')
+
+        if time is not None:
+            if use_cache and debug_cache:
+                logging.info('DRIVING CACHE HIT')
+            raise tasklets.Return(time)
+        else:
+            if use_cache and debug_cache:
+                logging.info('DRIVING CACHE MISS')
+
+            params = {
+                'app_id' : config['here']['app_id'],
+				'app_code' : config['here']['app_code'],
+                'waypoint0' : 'geo!%f,%f' % (origin_lat, origin_lon),
+                'waypoint1' : 'geo!%f,%f' % (dest_lat, dest_lon),
+                'mode' : 'fastest;car;traffic:enabled',
+				'metricSystem' : 'imperial',
+				'representation' : 'overview',
+            }
+
+            try:
+                data, status = yield self.conn.get_json_with_status('/calculateroute.json', args=params)
+            except (DownloadError, DeadlineExceededError) as e:
+                raise HereRoutesUnavailableError()
+
+            report_event(reporting.HERE_ROUTES_FETCH_DRIVING_TIME)
+
+            if status == 200:
+                try:
+                    time = data['response']['route'][0]['summary']['travelTime']
+                    # Optimization: cache driving time w/ traffic
+                    if not memcache.set(driving_cache_key, time, config['traffic_cache_time']):
+                        logging.error("Unable to cache driving time!")
+                    elif debug_cache:
+                        logging.info('DRIVING CACHE SET')
+                    raise tasklets.Return(time)
+                except (KeyError, IndexError, TypeError):
+                    raise MalformedDrivingDataException(origin_lat, origin_lon,
+                                                      dest_lat, dest_lon, data)
+            elif status in [401, 403]:
+                raise DrivingTimeUnauthorizedException()
+            elif status in [400, 404]:
+                raise NoDrivingRouteException(status, origin_lat, origin_lon,
+                                              dest_lat, dest_lon)
+            elif status == 403:
+                raise DrivingAPIQuotaException()
+            else:
+                raise HereRoutesUnavailableError()

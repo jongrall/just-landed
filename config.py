@@ -360,6 +360,12 @@ config['bing_maps'] = {
     'key' : 'AgxrJjwYLm84MqrzSfMO8NehyoZkE639by3KZi2lGrg0NEVpKEbRo2hS2ONwxo75',
 }
 
+# Here.com Credentials (jon@littledetails.net)
+config['here'] = {
+	'app_id' : 'ZpYdBjOQa8dYeS9Tx8n6',
+    'app_code' : 'aDcgQVqZbXAp-uODmg75nw',
+}
+
 ###############################################################################
 # Mixpanel API Tokens for Server-Side Event Tracking
 ###############################################################################
