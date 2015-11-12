@@ -1365,7 +1365,7 @@ class HereRoutesDistanceSource (DrivingTimeDataSource):
 				'app_code' : config['here']['app_code'],
                 'waypoint0' : 'geo!%f,%f' % (origin_lat, origin_lon),
                 'waypoint1' : 'geo!%f,%f' % (dest_lat, dest_lon),
-                'mode' : 'fastest;car;traffic:enabled',
+                'mode' : 'fastest;car;traffic:disabled',
 				'metricSystem' : 'imperial',
 				'representation' : 'overview',
             }
