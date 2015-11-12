@@ -1389,7 +1389,7 @@ class HereRoutesDistanceSource (DrivingTimeDataSource):
                 except (KeyError, IndexError, TypeError):
                     raise MalformedDrivingDataException(origin_lat, origin_lon,
                                                       dest_lat, dest_lon, data)
-            elif status in [401, 403]:
+            elif status in [401]:
                 raise DrivingTimeUnauthorizedException()
             elif status in [400, 404]:
                 raise NoDrivingRouteException(status, origin_lat, origin_lon,
