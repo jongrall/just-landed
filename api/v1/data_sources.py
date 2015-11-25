@@ -1318,7 +1318,7 @@ class HereRoutesDistanceSource (DrivingTimeDataSource):
     """
     @property
     def base_url(self):
-        return 'http://route.cit.api.here.com/routing/7.2'
+        return 'http://route.api.here.com/routing/7.2'
 
     def __init__(self):
         self.conn = Connection(self.base_url)
