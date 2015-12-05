@@ -1380,8 +1380,8 @@ class HereRoutesDistanceSource (DrivingTimeDataSource):
             if status == 200:
                 try:
                     time = data['response']['route'][0]['summary']['travelTime']
-                    # Optimization: cache driving time w/ traffic
-                    if not memcache.set(driving_cache_key, time, config['traffic_cache_time']):
+                    # Optimization: cache forever, not real-time traffic anymore
+                    if not memcache.set(driving_cache_key, time):
                         logging.error("Unable to cache driving time!")
                     elif debug_cache:
                         logging.info('DRIVING CACHE SET')
