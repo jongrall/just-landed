@@ -104,6 +104,17 @@
     margin: 0 0 40px 0;
 }
 
+/* Shut Down Notice */
+#shutdown_notice {
+	display: block;
+    color: #fff;
+	font-size:20px;
+	font-weight: bold;
+	margin: 0 auto;
+	text-decoration: underline;
+	text-align: center;
+}
+
 /* App Store Button */
 
 #app-store-button-iphone {
