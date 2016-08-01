@@ -133,7 +133,7 @@ class ClearOrphanedAlertsWorker(BaseHandler):
     def get(self):
         # Only do something if the datastore allows writes
         if not config['maintenance_in_progress'] and utils.datastore_writes_enabled():
-            alerts = yield source.get_all_alerts()
+            alerts = yield source.get_all_alerts(deadline=300)
 
             # Get all the valid alert ids
             def eligible_alert(somealert):

@@ -24,7 +24,7 @@ class FlightAwareAdminHandler(StaticHandler):
         ability to clear flight alerts.
 
         """
-        alerts = yield source.get_all_alerts()
+        alerts = yield source.get_all_alerts(deadline=45) # Longer deadline
         alert_count = len(alerts)
         tracking_count = len((yield FlightAwareTrackedFlight.all_tracked_flight_ids()))
         users_tracking_count = len((yield FlightAwareTrackedFlight.all_users_tracking()))

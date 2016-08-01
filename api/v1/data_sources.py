@@ -850,9 +850,9 @@ class FlightAwareSource (FlightDataSource):
              raise UnableToSetAlertException(reason='Bad Alert ID')
 
     @ndb.tasklet
-    def get_all_alerts(self):
+    def get_all_alerts(self, deadline=10):
         try:
-            result = yield self.conn.get_json('/GetAlerts')
+            result = yield self.conn.get_json('/GetAlerts', deadline=deadline)
         except (DownloadError, DeadlineExceededError, ValueError) as e:
             raise FlightAwareUnavailableError()
 
@@ -903,7 +903,7 @@ class FlightAwareSource (FlightDataSource):
 
     @ndb.tasklet
     def clear_all_alerts(self):
-        alerts = yield self.get_all_alerts()
+        alerts = yield self.get_all_alerts(deadline=45)
         alert_ids = [alert.get('alert_id') for alert in alerts]
         if debug_alerts:
             logging.info('CLEARING %d ALERTS', len(alert_ids))
