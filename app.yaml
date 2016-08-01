@@ -22,24 +22,6 @@ libraries:
 - name: webob
   version: "1.1.1"
 
-pagespeed:
-  url_blacklist:
-  - http://*/api/*
-  - http://*/admin/*
-  - http://*/cron/*
-  - http://*/_ah/*
-  - http://*/mapreduce/*
-  - https://*/api/*
-  - https://*/admin/*
-  - https://*/cron/*
-  - https://*/_ah/*
-  - https://*/mapreduce/*
-  enabled_rewriters:
-  - InlineJs
-  - InlineImages
-  - MinifyCss
-  - ImageAddDimensions
-
 handlers:
 # robots.txt and favicon.ico
 - url: /(robots\.txt|favicon\.ico)
