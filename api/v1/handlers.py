@@ -45,8 +45,6 @@ class SearchHandler(AuthenticatedAPIHandler):
         This handler responds to the client using JSON.
 
         """
-        self.abort(503, detail='The Just Landed service was shut down on 7/31/2016.')
-
 		# FIXME: Assumes iOS device for now
         uuid = self.request.headers.get('X-Just-Landed-UUID')
         sanitized_f_num = utils.sanitize_flight_number(flight_number)

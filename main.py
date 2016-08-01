@@ -200,6 +200,7 @@ class AuthenticatedAPIHandler(BaseAPIHandler):
 
     """
     def dispatch(self):
+        self.abort(503, detail='The Just Landed service was shut down on 7/31/2016.') # SHUTDOWN 7/31
         is_server = self.request.headers.get('User-Agent').startswith('AppEngine')
         self.client = (is_server and 'Server') or 'iOS'
 
@@ -233,14 +234,14 @@ routes = [
                 handler_method='reset_alerts'),
         ]),
     ]),
-    PathPrefixRoute('/cron',[
-        HandlerPrefixRoute('cron.', [
-        Route('/untrack_old_flights', 'UntrackOldFlightsWorker'),
-        Route('/send_reminders', 'SendRemindersWorker'),
-        Route('/clear_orphaned_alerts', 'ClearOrphanedAlertsWorker'),
-        Route('/detect_finished_outages', 'OutageCheckerWorker'),
-        ]),
-    ]),
+    # PathPrefixRoute('/cron',[
+    #     HandlerPrefixRoute('cron.', [
+    #     Route('/untrack_old_flights', 'UntrackOldFlightsWorker'),
+    #     Route('/send_reminders', 'SendRemindersWorker'),
+    #     Route('/clear_orphaned_alerts', 'ClearOrphanedAlertsWorker'),
+    #     Route('/detect_finished_outages', 'OutageCheckerWorker'),
+    #     ]),
+    # ]),
     PathPrefixRoute('/_ah', [
         Route('/queue/track', handler='api.v1.handlers.TrackWorker'),
         Route('/queue/delayed-track', handler='api.v1.handlers.DelayedTrackWorker'),
