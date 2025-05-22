@@ -1,1 +1,9 @@
-The Just Landed Google App Engine server code.
+This is the Just Landed Google App Engine server code that accompanied the iOS app (just-landed-ios).
+
+This server used paid APIs like FlightAware (circa 2012), UrbanAirship, Microsoft Maps (pre-Azure days) and was primarily responsible for caching some data, persisting other data (using BigTable) and serving iOS clients using a versioned REST API secured with a shared secret.
+
+The code was designed to run on Google App Engine (circa 2012, not ported to Python 3, not currently supported on Google Cloud).
+
+Just Landed was shut down in 2016, and almost 10 years later it seems reasonable to make the code public to anyone who might be interested. Use it at your own risk as you see fit.
+
+I was the sole author of this project, and as such, the code is somewhat lacking in documentation, tests, and is generally somewhat sloppy in places. But hey, it worked!
